@@ -1,0 +1,124 @@
+<!-- ============================================= -->
+<!-- Extend                                        -->
+<!-- ============================================= -->
+<!-- $Header: /cvs/adempiere/extend/build.xml,v 1.1 2006/04/21 17:55:19 jjanke Exp $ -->
+
+<project name="extend" default="dist" basedir=".">
+
+  <description>
+    This buildfile is used to build the extend subproject within 
+    the Adempiere project.
+  </description>
+
+  <!-- set global properties for this build -->
+  <property name="src" value="src"/>
+  <property name="build.dir" value="build"/>
+  <property name="dist.dir" value="."/>
+  <property name="jar.path" value="../lib"/>
+  <property name="jar.name" value="Extend"/>
+
+  <!-- set path to include the necessary jar files for javac -->
+  <path id="project.class.path">
+    <pathelement path="${classpath}"/>
+    <pathelement path="${jar.path}/CCTools.jar"/>
+	<pathelement path="${jar.path}/jboss.jar"/>
+    <pathelement path="../base/build"/>
+    <pathelement path="../tools/lib/junit.jar"/>
+    <pathelement path="../adempiere/Adempiere/lib/Adempiere.jar" />
+	<fileset dir="../tools/lib/testing/">
+		<include name="*.jar"/>
+	</fileset> 
+  </path>
+
+  <target name="init" description="initialization target">
+    <echo message="=========== Build Extend"/>
+    <!-- create the time stamp -->
+    <tstamp/>
+    <!-- create the build directory structure used by compile -->
+    <mkdir dir="${build.dir}"/>
+    <!-- check for the distribution directory -->
+    <available file="${dist.dir}" type="dir" property="dist.dir.exists"/>
+  </target>
+
+  <target name="makedir" depends="init" unless="dist.dir.exists">
+    <!-- create the distribution directory if not available -->
+    <mkdir dir="${dist}/${dist.dir}"/>
+  </target>
+  
+  <target name="compile" depends="makedir">
+    <!-- compile the java code from ${src} into ${build.dir} -->
+    <javac target="1.6" srcdir="${src}" destdir="${build.dir}" deprecation="on" debug="on">
+      <classpath refid="project.class.path"/>
+    </javac>
+    <!-- copy all image & sound files from src to the build directory -->
+    <copy todir="${build.dir}">
+      <fileset dir="${src}">
+        <include name="**/images/*"/>
+        <include name="**/*.gif"/>
+        <include name="**/*.jpg"/>
+        <include name="**/*.wav"/>
+        <include name="**/*.htm"/>
+        <include name="**/*.html"/>
+        <include name="**/*.properties"/>
+        <exclude name="**/package.html"/>
+      </fileset>
+    </copy>
+  </target>
+
+
+  <!-- =========================================== -->
+  <!-- Distribution                                -->
+  <!-- =========================================== -->
+  <target name="dist" depends="compile">
+    <!-- put everything from ${build.dir} into the ${jar.name}.jar file -->
+    <jar jarfile="${dist.dir}/${jar.name}.jar" basedir="${build.dir}"/>
+  </target>
+
+  <path id="class.path.test">
+    <pathelement path="${build.dir}"/>
+    <pathelement path="${classpath}"/>
+    <pathelement path="${jar.path}/CCTools.jar"/>
+    <pathelement path="../base/build"/>
+    <pathelement path="../tools/lib/junit.jar"/>
+    <pathelement path="../adempiere/Adempiere/lib/Adempiere.jar" />
+    <pathelement path="../adempiere/Adempiere/lib/jboss.jar" />
+    <pathelement path="../adempiere/Adempiere/lib/oracle.jar" />
+    <pathelement path="../adempiere/Adempiere/lib/postgresql.jar" />
+    <pathelement path="./Extend.jar" />
+    <!-- pathelement path="/root/RmiJdbc/dist/lib/RmiJdbc.jar" / -->
+  </path>
+
+<target name="functionaltest" depends="dist">
+    <junit>
+      <classpath refid="class.path.test" />
+      <formatter type="brief" usefile="false" />
+      <test name="test.functional.MUserTest" />
+      <test name="test.functional.MLocationTest" />
+      <test name="test.functional.MBPartnerTest" />
+      <test name="test.functional.MBPGroupTest" />
+      <test name="test.functional.MBPartnerLocationTest" />
+      <test name="test.functional.MSessionTest" />
+      <test name="test.functional.PackOutTest" />
+      <test name="test.functional.MWFNodePlaceHolderTest" />
+      <test name="test.functional.XMLValidateTest" />
+      <!-- test name="test.functional.XMLImportStructureTest" / -->
+      <!-- test name="test.functional.BPMigrationTest" / -->
+    </junit>
+  </target>
+
+<target name="run" depends="dist">
+      <java fork="true" classname="test.functional.XMLImportStructureTest">
+        <classpath refid="class.path.test" />
+      </java>
+  </target>
+
+
+
+
+  <target name="clean">
+    <!-- Delete the ${build.dir} directory trees -->
+    <delete dir="${build.dir}"/>
+    <delete file="${dist.dir}/${jar.name}.jar" failonerror="false"/>
+  </target>
+
+</project>

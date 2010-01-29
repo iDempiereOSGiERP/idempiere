@@ -1,0 +1,175 @@
+<!-- ================================================ -->
+<!-- Adempiere Build                                   -->
+<!-- ================================================ -->
+<!-- $Header: /cvs/adempiere/utils_dev/build.xml,v 1.4 2006/10/12 00:03:11 jjanke Exp $ -->
+<project name="adempiere" default="complete" basedir="../">
+	<description>
+    This buildfile is used to build the Adempiere system.
+  </description>
+	<!-- set global properties for this build -->
+	<!--<property environment="env"/>-->
+  <import file="./properties.xml"/>
+	<property name="src" value="src"/>
+	<property name="build.dir" value="build"/>
+	<target name="init" description="initialization target">
+		<echo message="=========== Build Adempiere - ${env.ENCODING}"/>
+		<!-- Create the time stamp -->
+		<tstamp/>
+	</target>
+	<target name="jar" depends="init">
+		<ant inheritAll="false" dir="tools"/>
+		<ant inheritAll="false" dir="base"/>
+		<ant inheritAll="false" dir="extend"/>
+		<ant inheritAll="false" dir="client"/>
+		<ant inheritAll="false" dir="JasperReports"/>
+		<ant inheritAll="false" dir="JasperReportsWebApp"/>
+		<ant inheritAll="false" dir="serverRoot"/>
+		<ant inheritAll="false" dir="serverApps"/>
+		<ant inheritAll="false" dir="webStore"/>
+		<ant inheritAll="false" dir="webCM"/>
+		<ant inheritAll="false" dir="sqlj"/>
+		<ant inheritAll="false" dir="posterita/posterita"/>
+		<ant inheritAll="false" dir="zkwebui"/>
+	</target>
+	<target name="build" depends="jar">
+		<ant inheritAll="false" dir="install"/>		
+	</target>	
+	<target name="clean">
+		<ant inheritAll="false" dir="tools" target="clean"/>
+		<ant inheritAll="false" dir="base" target="clean"/>
+		<ant inheritAll="false" dir="extend" target="clean"/>
+		<ant inheritAll="false" dir="JasperReports" target="clean"/>
+		<ant inheritAll="false" dir="JasperReportsWebApp" target="clean"/>
+		<ant inheritAll="false" dir="client" target="clean"/>
+		<ant inheritAll="false" dir="serverRoot" target="clean"/>
+		<ant inheritAll="false" dir="serverApps" target="clean"/>
+		<ant inheritAll="false" dir="webStore" target="clean"/>
+		<ant inheritAll="false" dir="webCM" target="clean"/>
+		<ant inheritAll="false" dir="sqlj" target="clean"/>
+		<ant inheritAll="false" dir="posterita/posterita" target="clean"/>
+		<ant inheritAll="false" dir="install" target="clean"/>
+		<ant inheritAll="false" dir="zkwebui" target="clean"/>
+	</target>
+
+  <target name="clean-all" depends="clean">
+    <delete dir="${env.ADEMPIERE_ROOT}"/>
+  </target>
+
+    <target name="update-adempiere-jar" depends="init">
+		<ant inheritAll="false" dir="base" target="compile"/>
+		<ant inheritAll="false" dir="extend" target="compile"/>
+		<ant inheritAll="false" dir="client"/>
+	</target>
+	
+	<target name="update-serverRoot" depends="init">
+		<ant inheritAll="false" dir="serverRoot"/>
+	</target>
+	
+	<!-- ================================================ -->
+	<!-- Adempiere Local Install                           -->
+	<!-- ================================================ -->
+	<target name="install" depends="" description="Environment dependent">
+		<echo message="=========== Install Adempiere"/>
+		<copy todir="${env.ADEMPIERE_INSTALL}" verbose="true">
+			<fileset dir="install/build" includes="Adempiere_*"/>
+		</copy>
+		<!-- Delete Existing stuff, but not utils + data 	-->
+		<delete failonerror="false">
+			<fileset dir="${env.ADEMPIERE_HOME}/lib"/>
+			<fileset dir="${env.ADEMPIERE_HOME}/jboss"/>
+		</delete>
+		<!-- Unzip Install File			-->
+		<unzip src="install/build/Adempiere_${env.ADEMPIERE_VERSION_FILE}.zip" 
+			dest="${env.ADEMPIERE_ROOT}" 
+			overwrite="yes"/>
+		<!-- Run Setup				-->
+		<!--
+		<input addproperty="runSetupInput" 
+			message="Run Setup(Y/N) ? " 
+			validargs="Y,y,N,n"/>
+		
+		<antcall target="runSetup"/>
+		-->
+	</target>
+	
+	<!-- ================================================ -->
+	<!-- Adempiere Local Update                           -->
+	<!-- ================================================ -->
+	<target name="updateDeploy" depends="" description="Environment dependent">
+		<echo message="=========== Update Adempiere"/>
+		<copy todir="${env.ADEMPIERE_INSTALL}">
+			<fileset dir="install/build" includes="Adempiere_*"/>
+		</copy>
+		<!-- Unzip Install File			-->
+		<unzip src="install/build/Adempiere_${env.ADEMPIERE_VERSION_FILE}.zip" 
+			dest="${env.ADEMPIERE_ROOT}" 
+			overwrite="yes"/>
+		<!-- Run Setup				-->
+		<antcall target="runUpdateWin"></antcall>
+		<antcall target="runUpdateNonWin"></antcall>
+	</target>
+	
+	<target name="runSetupInit">
+		<condition property="isWindows">
+			<os family="windows" />
+		</condition>
+	</target>
+	
+	<target name="runSetupWin" depends="runSetupInit" if="isWindows" >
+		<exec dir="${env.ADEMPIERE_HOME}" executable="RUN_setup.bat" 
+			spawn="false" resolveexecutable="true">
+		</exec>
+	</target>
+	
+  <target name="runSetupNonWin" depends="runSetupInit" unless="isWindows" >
+    <chmod dir="${env.ADEMPIERE_HOME}" perm="ugo+rx" includes="RUN_setup.sh"/>
+		<exec dir="${env.ADEMPIERE_HOME}" executable="RUN_setup.sh" 
+			spawn="false" resolveexecutable="true">
+		</exec>
+	</target>
+	
+	<target name="runSetupCheck">
+		<condition property="setup.yes">
+			<or>
+				<equals arg1="y" arg2="${runSetupInput}"/>
+				<equals arg1="Y" arg2="${runSetupInput}"/>
+			</or>
+		</condition>
+	</target>
+	
+	<target name="runSetup" depends="runSetupCheck" if="setup.yes">
+		<antcall target="runSetupWin"></antcall>
+		<antcall target="runSetupNonWin"></antcall>
+	</target>
+
+	<target name="runUpdateWin" depends="runSetupInit" if="isWindows" >
+		<exec dir="${env.ADEMPIERE_HOME}" executable="RUN_update.bat" 
+			spawn="false" resolveexecutable="true">
+		</exec>
+	</target>
+	
+  <target name="runUpdateNonWin" depends="runSetupInit" unless="isWindows" >
+    <chmod dir="${env.ADEMPIERE_HOME}" perm="ugo+rx" includes="RUN_update.sh"/>
+		<exec dir="${env.ADEMPIERE_HOME}" executable="RUN_update.sh" 
+			spawn="false" resolveexecutable="true">
+		</exec>
+	</target>
+
+	<!-- ================================================ -->
+	<!-- complete                                         -->
+	<!-- ================================================ -->
+	<target name="complete" depends="build, install">
+	</target>
+	
+	<!-- ================================================ -->
+	<!-- update                                           -->
+	<!-- ================================================ -->
+	<target name="update" depends="build, updateDeploy">
+	</target>
+
+	<!-- ================================================ -->
+	<!-- Transfer Install                                 -->
+	<!-- ================================================ -->
+	<target name="transfer" depends="complete" description="Transfer to Distribution media">
+	</target>
+</project>
