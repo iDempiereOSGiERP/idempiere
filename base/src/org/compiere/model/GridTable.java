@@ -30,6 +30,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -89,7 +90,9 @@ public class GridTable extends AbstractTableModel
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 9013625748218987868L;
+	private static final long serialVersionUID = 7799823493936826600L;
+	
+	public static final String DATA_REFRESH_MESSAGE = "Refreshed";
 
 	/**
 	 *	JDBC Based Buffered Table
@@ -129,7 +132,7 @@ public class GridTable extends AbstractTableModel
 		m_WindowNo = WindowNo;
 		m_TabNo = TabNo;
 		m_withAccessControl = withAccessControl;
-		m_virtual = virtual && MTable.get(ctx, AD_Table_ID).isHighVolume();
+		m_virtual = virtual;
 	}	//	MTable
 
 	private static CLogger		log = CLogger.getCLogger(GridTable.class.getName());
@@ -144,8 +147,6 @@ public class GridTable extends AbstractTableModel
 	private boolean			    m_deleteable = true;
 	//virtual table state variables
 	private boolean				m_virtual;
-	private	int					m_cacheStart;
-	private int					m_cacheEnd;
 	public static final String CTX_KeyColumnName = "KeyColumnName";
 	//
 
@@ -168,6 +169,7 @@ public class GridTable extends AbstractTableModel
 	//	The buffer for all data
 	private volatile ArrayList<Object[]>	m_buffer = new ArrayList<Object[]>(100);
 	private volatile ArrayList<MSort>		m_sort = new ArrayList<MSort>(100);
+	private volatile Map<Integer, Object[]> m_virtualBuffer = new HashMap<Integer, Object[]>(100);
 	/** Original row data               */
 	private Object[]			m_rowData = null;
 	/** Original data [row,col,data]    */
@@ -212,8 +214,12 @@ public class GridTable extends AbstractTableModel
 
 	/** Vetoable Change Bean support    */
 	private VetoableChangeSupport   m_vetoableChangeSupport = new VetoableChangeSupport(this);
+	private Thread m_loaderThread;
 	/** Property of Vetoable Bean support "RowChange" */
 	public static final String  PROPERTY = "MTable-RowSave";
+
+	private final static Integer NEW_ROW_ID = Integer.valueOf(-1);
+	private static final int DEFAULT_FETCH_SIZE = 200;
 
 	/**
 	 *	Set Table Name
@@ -591,17 +597,24 @@ public class GridTable extends AbstractTableModel
 		m_loader = new Loader();
 		m_rowCount = m_loader.open(maxRows);
 		if (m_virtual)
-			m_buffer = new ArrayList<Object[]>(210);
+		{
+			m_buffer = null;
+			m_virtualBuffer = new HashMap<Integer, Object[]>(210);
+		}
 		else
+		{
 			m_buffer = new ArrayList<Object[]>(m_rowCount+10);
+		}
 		m_sort = new ArrayList<MSort>(m_rowCount+10);
-		m_cacheStart = m_cacheEnd = -1;
 		if (m_rowCount > 0)
 		{
 			if (m_rowCount < 1000)
 				m_loader.run();
 			else
-				m_loader.start();
+			{
+				m_loaderThread = new Thread(m_loader, "TLoader");
+				m_loaderThread.start();
+			}
 		}
 		else
 			m_loader.close();
@@ -638,13 +651,13 @@ public class GridTable extends AbstractTableModel
 	public void loadComplete()
 	{
 		//  Wait for loader
-		if (m_loader != null)
+		if (m_loaderThread != null)
 		{
-			if (m_loader.isAlive())
+			if (m_loaderThread.isAlive())
 			{
 				try
 				{
-					m_loader.join();
+					m_loaderThread.join();
 				}
 				catch (InterruptedException ie)
 				{
@@ -666,7 +679,7 @@ public class GridTable extends AbstractTableModel
 	 */
 	public boolean isLoading()
 	{
-		if (m_loader != null && m_loader.isAlive())
+		if (m_loaderThread != null && m_loaderThread.isAlive())
 			return true;
 		return false;
 	}   //  isLoading
@@ -705,10 +718,10 @@ public class GridTable extends AbstractTableModel
 		}
 
 		//	Stop loader
-		while (m_loader != null && m_loader.isAlive())
+		while (m_loaderThread != null && m_loaderThread.isAlive())
 		{
 			log.fine("Interrupting Loader ...");
-			m_loader.interrupt();
+			m_loaderThread.interrupt();
 			try
 			{
 				Thread.sleep(200);		//	.2 second
@@ -721,13 +734,20 @@ public class GridTable extends AbstractTableModel
 			dataSave(false);	//	not manual
 
 		if (m_buffer != null)
+		{
 			m_buffer.clear();
-		m_buffer = null;
+			m_buffer = null;
+		}
 		if (m_sort != null)
+		{
 			m_sort.clear();
-		m_sort = null;
-
-		m_cacheStart = m_cacheEnd = -1;
+			m_sort = null;
+		}
+		if (m_virtualBuffer != null)
+		{
+			m_virtualBuffer.clear();
+			m_virtualBuffer = null;
+		}
 
 		if (finalCall)
 			dispose();
@@ -757,10 +777,12 @@ public class GridTable extends AbstractTableModel
 		m_parameterWHERE = null;
 		//  clear data arrays
 		m_buffer = null;
+		m_virtualBuffer = null;
 		m_sort = null;
 		m_rowData = null;
 		m_oldValue = null;
 		m_loader = null;
+		m_loaderThread = null;
 	}   //  dispose
 
 	/**
@@ -835,8 +857,15 @@ public class GridTable extends AbstractTableModel
 	public void sort (int col, boolean ascending)
 	{
 		log.info("#" + col + " " + ascending);
+		if (col < 0) {
+			return;
+		}
 		if (getRowCount() == 0)
 			return;
+
+		//cache changed row
+		Object[] changedRow = m_rowChanged >= 0 ? getDataAtRow(m_rowChanged) : null;
+
 		GridField field = getField (col);
 		//	RowIDs are not sorted
 		if (field.getDisplayType() == DisplayType.RowID)
@@ -864,8 +893,26 @@ public class GridTable extends AbstractTableModel
 		Collections.sort(m_sort, sort);
 		if (m_virtual)
 		{
-			m_buffer.clear();
-			m_cacheStart = m_cacheEnd = -1;
+			Object[] newRow = m_virtualBuffer.get(NEW_ROW_ID);
+			m_virtualBuffer.clear();
+			if (newRow != null && newRow.length > 0)
+				m_virtualBuffer.put(NEW_ROW_ID, newRow);
+
+			if (changedRow != null && changedRow.length > 0)
+			{
+				if (changedRow[m_indexKeyColumn] != null && (Integer)changedRow[m_indexKeyColumn] > 0)
+				{
+					m_virtualBuffer.put((Integer)changedRow[m_indexKeyColumn], changedRow);
+					for(int i = 0; i < m_sort.size(); i++)
+					{
+						if (m_sort.get(i).index == (Integer)changedRow[m_indexKeyColumn])
+						{
+							m_rowChanged = i;
+							break;
+						}
+					}
+				}
+			}
 
 			//release sort memory
 			for (int i = 0; i < m_sort.size(); i++)
@@ -933,7 +980,7 @@ public class GridTable extends AbstractTableModel
 
 		//	need to wait for data read into buffer
 		int loops = 0;
-		while (row >= m_sort.size() && m_loader.isAlive() && loops < 15)
+		while (row >= m_sort.size() && m_loaderThread != null && m_loaderThread.isAlive() && loops < 15)
 		{
 			log.fine("Waiting for loader row=" + row + ", size=" + m_sort.size());
 			try
@@ -963,20 +1010,22 @@ public class GridTable extends AbstractTableModel
 		return rowData[col];
 	}	//	getValueAt
 
-private Object[] getDataAtRow(int row)
+	private Object[] getDataAtRow(int row)
+	{
+		return getDataAtRow(row, true);
+	}
+
+	private Object[] getDataAtRow(int row, boolean fetchIfNotFound)
 	{
 		MSort sort = (MSort)m_sort.get(row);
 		Object[] rowData = null;
 		if (m_virtual)
 		{
-			int bufferrow = -1;
-			if (sort.index != -1 && (row < m_cacheStart || row > m_cacheEnd))
+			if (sort.index != NEW_ROW_ID && !(m_virtualBuffer.containsKey(sort.index)) && fetchIfNotFound)
 			{
-				fillBuffer(row);
+				fillBuffer(row, DEFAULT_FETCH_SIZE);
 			}
-			bufferrow = row - m_cacheStart;
-
-			rowData = (Object[])m_buffer.get(bufferrow);
+			rowData = (Object[])m_virtualBuffer.get(sort.index);
 		}
 		else
 		{
@@ -989,13 +1038,11 @@ private Object[] getDataAtRow(int row)
 		MSort sort = m_sort.get(row);
 		if (m_virtual)
 		{
-			int bufferrow = -1;
-			if (sort.index != -1 && (row < m_cacheStart || row > m_cacheEnd))
+			if (sort.index != NEW_ROW_ID && !(m_virtualBuffer.containsKey(sort.index)))
 			{
-				fillBuffer(row);
+				fillBuffer(row, DEFAULT_FETCH_SIZE);
 			}
-			bufferrow = row - m_cacheStart;
-			m_buffer.set(bufferrow, rowData);
+			m_virtualBuffer.put(sort.index, rowData);
 		}
 		else
 		{
@@ -1004,14 +1051,14 @@ private Object[] getDataAtRow(int row)
 
 	}
 
-	private void fillBuffer(int start)
+	private void fillBuffer(int start, int fetchSize)
 	{
 		//adjust start if needed
 		if (start > 0)
 		{
-			if (start + 200 >= m_sort.size())
+			if (start + fetchSize >= m_sort.size())
 			{
-				start = start - (200 - ( m_sort.size() - start ));
+				start = start - (fetchSize - ( m_sort.size() - start ));
 				if (start < 0)
 					start = 0;
 			}
@@ -1021,10 +1068,8 @@ private Object[] getDataAtRow(int row)
 			.append(" WHERE ")
 			.append(getKeyColumnName())
 			.append(" IN (");
-		m_cacheStart = start;
-		m_cacheEnd = m_cacheStart - 1;
-		Map<Integer, Integer>rowmap = new LinkedHashMap<Integer, Integer>(200);
-		for(int i = start; i < start+200 && i < m_sort.size(); i++)
+		Map<Integer, Integer>rowmap = new LinkedHashMap<Integer, Integer>(DEFAULT_FETCH_SIZE);
+		for(int i = start; i < start+fetchSize && i < m_sort.size(); i++)
 		{
 			if(i > start)
 				sql.append(",");
@@ -1032,9 +1077,21 @@ private Object[] getDataAtRow(int row)
 			rowmap.put(m_sort.get(i).index, i);
 		}
 		sql.append(")");
-		m_buffer = new ArrayList<Object[]>(210);
-		for(int i = 0; i < 200; i++)
-			m_buffer.add(null);
+
+		Object[] newRow = m_virtualBuffer.get(NEW_ROW_ID);
+		//cache changed row
+		Object[] changedRow = m_rowChanged >= 0 ? getDataAtRow(m_rowChanged, false) : null;
+		m_virtualBuffer = new HashMap<Integer, Object[]>(210);
+		if (newRow != null && newRow.length > 0)
+			m_virtualBuffer.put(NEW_ROW_ID, newRow);
+		if (changedRow != null && changedRow.length > 0)
+		{
+			if (changedRow[m_indexKeyColumn] != null && (Integer)changedRow[m_indexKeyColumn] > 0)
+			{
+				m_virtualBuffer.put((Integer)changedRow[m_indexKeyColumn], changedRow);
+			}
+		}
+
 		PreparedStatement stmt = null;
 		ResultSet rs = null;
 		try
@@ -1044,9 +1101,8 @@ private Object[] getDataAtRow(int row)
 			while(rs.next())
 			{
 				Object[] data = readData(rs);
-				int row = rowmap.remove(data[m_indexKeyColumn]);
-				m_buffer.set(row - m_cacheStart, data);
-				m_cacheEnd++;
+				rowmap.remove(data[m_indexKeyColumn]);
+				m_virtualBuffer.put((Integer)data[m_indexKeyColumn], data);
 			}
 			if (!rowmap.isEmpty())
 			{
@@ -1059,7 +1115,6 @@ private Object[] getDataAtRow(int row)
 				for(Integer row : toremove)
 				{
 					m_sort.remove(row);
-					m_buffer.remove(row - m_cacheStart);
 				}
 			}
 		}
@@ -1374,6 +1429,26 @@ private Object[] getDataAtRow(int row)
 		//	get updated row data
 		Object[] rowData = getDataAtRow(m_rowChanged);
 
+		// CarlosRuiz - globalqss - fix [1722226] - Usability - Record_ID = 0 on 9 tables can't be modified
+		boolean specialZeroUpdate = false;
+		if (!m_inserting // not inserting, updating a record 
+			&& manualCmd   // in a manual way (pushing the save button)
+			&& (Env.getAD_User_ID(m_ctx) == 0 || Env.getAD_User_ID(m_ctx) == 100)  // user must know what is doing -> just allowed to System or SuperUser (Hardcoded)
+			&& getKeyID(m_rowChanged) == 0) { // the record being changed has ID = 0
+			String tablename = getTableName(); // just the allowed tables (HardCoded)
+			if (tablename.equals("AD_Org") ||
+				tablename.equals("AD_ReportView") ||
+				tablename.equals("AD_Role") ||
+				tablename.equals("AD_System") ||
+				tablename.equals("AD_User") ||
+				tablename.equals("C_DocType") ||
+				tablename.equals("GL_Category") ||
+				tablename.equals("M_AttributeSet") ||
+				tablename.equals("M_AttributeSetInstance")) {
+				specialZeroUpdate = true;
+			}
+		}
+
 		//	Check Mandatory
 		String missingColumns = getMandatory(rowData);
 		if (missingColumns.length() != 0)
@@ -1391,7 +1466,7 @@ private Object[] getDataAtRow(int row)
 			Record_ID = getKeyID(m_rowChanged);
 		try
 		{
-			if (!m_tableName.endsWith("_Trl"))	//	translation tables have no model
+			if (!m_tableName.endsWith("_Trl") && !specialZeroUpdate)	//	translation tables have no model
 				return dataSavePO (Record_ID);
 		}
 		catch (Throwable e)
@@ -1909,7 +1984,14 @@ private Object[] getDataAtRow(int row)
 				if (m_virtual)
 				{
 					MSort sort = m_sort.get(m_rowChanged);
-					sort.index = getKeyID(m_rowChanged);
+					int oldId = sort.index;
+					int newId = getKeyID(m_rowChanged);
+					if (newId != oldId)
+					{
+						sort.index = newId;
+						Object[] data = m_virtualBuffer.remove(oldId);
+						m_virtualBuffer.put(newId, data);
+					}
 				}
 				fireTableRowsUpdated(m_rowChanged, m_rowChanged);
 			}
@@ -2053,6 +2135,19 @@ private Object[] getDataAtRow(int row)
 			fireDataStatusEEvent(msg, info, true);
 			return SAVE_ERROR;
 		}
+		else if (m_virtual && po.get_ID() > 0)
+		{
+			//update ID
+			MSort sort = m_sort.get(m_rowChanged);
+			int oldid = sort.index;
+			if (oldid != po.get_ID())
+			{
+				sort.index = po.get_ID();
+				Object[] data = m_virtualBuffer.remove(oldid);
+				data[m_indexKeyColumn] = sort.index;
+				m_virtualBuffer.put(sort.index, data);
+			}
+		}
 		
 		//	Refresh - update buffer
 		String whereClause = po.get_WhereClause(true);
@@ -2070,11 +2165,6 @@ private Object[] getDataAtRow(int row)
 				Object[] rowDataDB = readData(rs);
 				//	update buffer
 				setDataAtRow(m_rowChanged, rowDataDB);
-				if (m_virtual)
-				{
-					MSort sort = m_sort.get(m_rowChanged);
-					sort.index = getKeyID(m_rowChanged);
-				}
 				fireTableRowsUpdated(m_rowChanged, m_rowChanged);
 			}
 		}
@@ -2372,19 +2462,11 @@ private Object[] getDataAtRow(int row)
 
 		//	add Data at end of buffer
 		MSort newSort = m_virtual
-				? new MSort(-1, null)
+				? new MSort(NEW_ROW_ID, null)
 				: new MSort(m_sort.size(), null);	//	index
 		if (m_virtual)
 		{
-			m_buffer.add(m_newRow, rowData);
-			if (m_cacheStart == -1)
-			{
-				m_cacheStart = m_cacheEnd = m_newRow;
-			}
-			else if (m_cacheEnd < m_newRow)
-			{
-				m_cacheEnd = m_newRow;
-			}
+			m_virtualBuffer.put(NEW_ROW_ID, rowData);
 		}
 		else
 		{
@@ -2563,11 +2645,15 @@ private Object[] getDataAtRow(int row)
 		}
 
 		//	Get Sort
-		int bufferRow = m_virtual
-			? row - m_cacheStart
-			: sort.index;
-		//	Delete row in Buffer and shifts all below up
-		m_buffer.remove(bufferRow);
+		if (m_virtual)
+		{
+			m_virtualBuffer.remove(sort.index);
+		}
+		else
+		{
+			//	Delete row in Buffer and shifts all below up
+			m_buffer.remove(sort.index);
+		}
 		m_rowCount--;
 
 		//	Delete row in Sort
@@ -2578,24 +2664,8 @@ private Object[] getDataAtRow(int row)
 			for (int i = 0; i < m_sort.size(); i++)
 			{
 				MSort ptr = (MSort)m_sort.get(i);
-				if (ptr.index > bufferRow)
+				if (ptr.index > sort.index)
 					ptr.index--;	//	move up
-			}
-		}
-		else
-		{
-			if (m_cacheStart == row)
-			{
-				if (m_cacheStart < m_cacheEnd)
-					m_cacheStart++;
-				else
-					m_cacheStart = m_cacheEnd = -1;
-			}
-			else
-			{
-				m_cacheEnd--;
-				if (m_cacheStart > m_cacheEnd)
-					m_cacheStart = m_cacheEnd;
 			}
 		}
 
@@ -2626,23 +2696,18 @@ private Object[] getDataAtRow(int row)
 		{
 			//	Get Sort
 			MSort sort = (MSort)m_sort.get(m_newRow);
-			int bufferRow = m_virtual
-				? m_buffer.size() - 1
-				: sort.index;
-			//	Delete row in Buffer and shifts all below up
-			m_buffer.remove(bufferRow);
+			if (m_virtual)
+			{
+				m_virtualBuffer.remove(NEW_ROW_ID);
+			}
+			else
+			{
+				//	Delete row in Buffer and shifts all below up
+				m_buffer.remove(sort.index);
+			}
 			m_rowCount--;
 			//	Delete row in Sort
 			m_sort.remove(m_newRow);	//	pintint to the last column, so no adjustment
-			if (m_virtual)
-			{
-				if (m_cacheEnd == m_newRow)
-				{
-					m_cacheEnd--;
-					if (m_cacheStart > m_cacheEnd)
-						m_cacheStart = m_cacheEnd;
-				}
-			}
 			//
 			m_changed = false;
 			m_rowData = null;
@@ -2675,6 +2740,16 @@ private Object[] getDataAtRow(int row)
 	 *  @param row row
 	 */
 	public void dataRefresh (int row)
+	{
+		dataRefresh(row, true);
+	}
+
+	/**
+	 *	Refresh Row - ignore changes
+	 *  @param row row
+	 *  @param fireStatusEvent
+	 */
+	public void dataRefresh (int row, boolean fireStatusEvent)
 	{
 		log.info("Row=" + row);
 
@@ -2726,7 +2801,8 @@ private Object[] getDataAtRow(int row)
 		m_rowChanged = -1;
 		m_inserting = false;
 		fireTableRowsUpdated(row, row);
-		fireDataStatusIEvent("Refreshed", "");
+		if (fireStatusEvent)
+			fireDataStatusIEvent(DATA_REFRESH_MESSAGE, "");
 	}	//	dataRefresh
 
 
@@ -2734,6 +2810,15 @@ private Object[] getDataAtRow(int row)
 	 *	Refresh all Rows - ignore changes
 	 */
 	public void dataRefreshAll()
+	{
+		dataRefreshAll(true);
+	}
+
+	/**
+	 *	Refresh all Rows - ignore changes
+	 *  @param fireStatusEvent
+	 */
+	public void dataRefreshAll(boolean fireStatusEvent)
 	{
 		log.info("");
 		m_inserting = false;	//	should not happen
@@ -2746,7 +2831,8 @@ private Object[] getDataAtRow(int row)
 		m_rowChanged = -1;
 		m_inserting = false;
 		fireTableDataChanged();
-		fireDataStatusIEvent("Refreshed", "");
+		if (fireStatusEvent)
+			fireDataStatusIEvent(DATA_REFRESH_MESSAGE, "");
 	}	//	dataRefreshAll
 
 
@@ -2770,7 +2856,7 @@ private Object[] getDataAtRow(int row)
 		m_rowChanged = -1;
 		m_inserting = false;
 		fireTableDataChanged();
-		fireDataStatusIEvent("Refreshed", "");
+		fireDataStatusIEvent(DATA_REFRESH_MESSAGE, "");
 		return true;
 	}	//	dataRequery
 
@@ -3185,7 +3271,7 @@ private Object[] getDataAtRow(int row)
 	/**************************************************************************
 	 *	ASync Loader
 	 */
-	class Loader extends Thread implements Serializable
+	class Loader implements Serializable, Runnable
 	{
 		/**
 		 * 
@@ -3197,7 +3283,6 @@ private Object[] getDataAtRow(int row)
 		 */
 		public Loader()
 		{
-			super("TLoader");
 		}	//	Loader
 
 		private PreparedStatement   m_pstmt = null;
@@ -3296,7 +3381,7 @@ private Object[] getDataAtRow(int row)
 			{
 				while (m_rs.next())
 				{
-					if (this.isInterrupted())
+					if (Thread.interrupted())
 					{
 						log.fine("Interrupted");
 						close();
@@ -3325,8 +3410,8 @@ private Object[] getDataAtRow(int row)
 						//	give the other processes a chance
 						try
 						{
-							yield();
-							sleep(10);		//	.01 second
+							Thread.yield();
+							Thread.sleep(10);		//	.01 second
 						}
 						catch (InterruptedException ie)
 						{

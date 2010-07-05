@@ -76,16 +76,6 @@ public class WebUIServlet extends DHtmlLayoutServlet
         /**
          * Start ADempiere
          */
-        logger.info("Starting ADempiere...");
-        try
-        {
-            CLogMgt.initialize(false); 
-        }
-        catch(Exception ex)
-        {
-            logger.log(Level.SEVERE, "Could not initialize ADempiere logging Management", ex);
-        }
-
         boolean started = Adempiere.startup(false);
         if(!started)
         {

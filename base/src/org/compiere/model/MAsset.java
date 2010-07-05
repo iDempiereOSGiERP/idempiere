@@ -20,9 +20,8 @@ import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
-import java.util.logging.Level;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -37,6 +36,7 @@ import org.compiere.util.TimeUtil;
  *
  *  @author Jorg Janke
  *  @version $Id: MAsset.java,v 1.3 2006/07/30 00:51:03 jjanke Exp $
+ *  @author red1 - FR: [ 2214883 ] Remove SQL code and Replace for Query
  */
 public class MAsset extends X_A_Asset
 {
@@ -55,27 +55,10 @@ public class MAsset extends X_A_Asset
 	 */
 	public static MAsset getFromShipment (Properties ctx, int M_InOutLine_ID, String trxName)
 	{
-		MAsset retValue = null;
-		String sql = "SELECT * FROM A_Asset WHERE M_InOutLine_ID=?";
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		try
-		{
-			pstmt = DB.prepareStatement (sql, trxName);
-			pstmt.setInt (1, M_InOutLine_ID);
-			rs = pstmt.executeQuery ();
-			if (rs.next ())
-				retValue = new MAsset (ctx, rs, trxName);
-		}
-		catch (Exception e)
-		{
-			s_log.log (Level.SEVERE, sql, e);
-		}
-		finally
-		{
-			DB.close(rs, pstmt);
-			rs = null; pstmt = null;
-		}
+		final String whereClause = I_A_Asset.COLUMNNAME_M_InOutLine_ID+"=?";
+		MAsset retValue = new Query(ctx,I_A_Asset.Table_Name,whereClause,trxName)
+		.setParameters(M_InOutLine_ID)
+		.first();
 		return retValue;
 	}	//	getFromShipment
 	
@@ -264,28 +247,11 @@ public class MAsset extends X_A_Asset
 	 */
 	public MAssetDelivery[] getDeliveries()
 	{
-		ArrayList<MAssetDelivery> list = new ArrayList<MAssetDelivery>();
-
-		String sql = "SELECT * FROM A_Asset_Delivery WHERE A_Asset_ID=? ORDER BY Created DESC";
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		try
-		{
-			pstmt = DB.prepareStatement(sql, get_TrxName());
-			pstmt.setInt(1, getA_Asset_ID());
-			rs = pstmt.executeQuery();
-			while (rs.next())
-				list.add(new MAssetDelivery(getCtx(), rs, get_TrxName()));
-		}
-		catch (Exception e)
-		{
-			log.log(Level.SEVERE, sql, e);
-		}
-		finally
-		{
-			DB.close(rs, pstmt);
-			rs = null; pstmt = null;
-		}
+		final String whereClause = I_A_Asset_Delivery.COLUMNNAME_A_Asset_ID+"=?";
+		List<MAssetDelivery> list = new Query(getCtx(),I_A_Asset_Delivery.Table_Name,whereClause,get_TrxName())
+		.setParameters(getA_Asset_ID())
+		.setOrderBy("Created DESC")
+		.list();
 		//
 		MAssetDelivery[] retValue = new MAssetDelivery[list.size()];
 		list.toArray(retValue);
@@ -592,8 +558,7 @@ public class MAsset extends X_A_Asset
 				change.setA_Asset_ID(p_A_Asset_ID);
 				change.setA_Parent_Asset_ID(asset.getA_Parent_Asset_ID());
 				change.setChangeType("CRT");
-				MRefList RefList = new MRefList (getCtx(), 0, get_TrxName());	
-				change.setTextDetails(RefList.getListDescription (getCtx(),"A_Update_Type" , "CRT"));		    
+				change.setTextDetails(MRefList.getListDescription (getCtx(),"A_Update_Type" , "CRT"));		    
 				change.setIsInPosession(isOwned());
 				change.setIsDisposed(isDisposed());
 				change.setIsDepreciated(isDepreciated());
@@ -710,8 +675,7 @@ public class MAsset extends X_A_Asset
 						MAssetChange change = new MAssetChange (getCtx(), 0, get_TrxName());		    
 						change.setA_Asset_ID(p_A_Asset_ID);
 						change.setChangeType("UPD");
-						MRefList RefList = new MRefList (getCtx(), 0, get_TrxName());	
-						change.setTextDetails(RefList.getListDescription (getCtx(),"A_Update_Type" , "UPD"));
+						change.setTextDetails(MRefList.getListDescription (getCtx(),"A_Update_Type" , "UPD"));
 						change.setLot(getLot());
 						change.setSerNo(getSerNo());
 						change.setVersionNo(getVersionNo());

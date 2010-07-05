@@ -19,6 +19,7 @@ package org.adempiere.webui.panel;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -105,6 +106,12 @@ import org.zkoss.zul.Menupopup;
  * @author hengsin, hengsin.low@idalica.com
  * @see FR [2887701] https://sourceforge.net/tracker/?func=detail&atid=879335&aid=2887701&group_id=176962
  * @sponsor www.metas.de
+ *
+ * @author Teo Sarca, teo.sarca@gmail.com
+ *  	<li>BF [ 2992540 ] Grid/Panel not refreshed after process run
+ *  		https://sourceforge.net/tracker/?func=detail&aid=2992540&group_id=176962&atid=955896
+ *  	<li>BF [ 2985892 ] Opening a window using a new record query is not working
+ *  		https://sourceforge.net/tracker/?func=detail&aid=2985892&group_id=176962&atid=955896
  */
 public abstract class AbstractADWindowPanel extends AbstractUIPart implements ToolbarListener,
         EventListener, DataStatusListener, ActionListener, ASyncProcess
@@ -258,13 +265,15 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 			checkad_user_id = (Integer)currSess.getAttribute("Check_AD_User_ID");
 		if (checkad_user_id!=Env.getAD_User_ID(ctx))
 		{
-			String msg = "Bug 2832968 SessionUser="
+			String msg = "Timestamp=" + new Date() 
+					+ ", Bug 2832968 SessionUser="
 					+ checkad_user_id
 					+ ", ContextUser="
 					+ Env.getAD_User_ID(ctx)
 					+ ".  Please report conditions to your system administrator or in sf tracker 2832968";
-			logger.warning(msg);
-			throw new ApplicationException(msg);
+			ApplicationException ex = new ApplicationException(msg);
+			logger.log(Level.SEVERE, msg, ex);
+			throw ex;
 		}
 		// End of temporary code for [ adempiere-ZK Web Client-2832968 ] User context lost?
 
@@ -309,6 +318,7 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 	    			detailQuery = query;
 	    			query = new MQuery();
 	    			query.addRestriction("1=2");
+	    			query.setRecordCount(0);
 	    		}
 	    	}
 
@@ -589,6 +599,8 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 				onNew();
 		    else if (query == null && curTab.getRowCount() == 0 && Env.isAutoNew(ctx, curWindowNo))
 		    	onNew();
+		    else if (!curTab.isReadOnly() && curTab.isQueryNewRecord())
+		    	onNew();
 		}
 	}
 
@@ -792,7 +804,7 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 
 		if (gridWindow.isTransaction())
 		{
-			if (curTab.needSave(true, true)/* && !onSave(false)*/)
+			if (curTab.needSave(true, true) && !onSave(false))
 				return;
 
 			WOnlyCurrentDays ocd = new WOnlyCurrentDays();
@@ -997,7 +1009,7 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 		newTabpanel.activate(true);
 
 		back = (newTabIndex < oldTabIndex);
-		if (back)
+		if (back && newTabpanel.getTabLevel() > 0)
 		{
 			if (newTabpanel.getTabLevel() >= oldTabpanel.getTabLevel())
 				back = false;
@@ -1117,7 +1129,8 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
                 {
                     sb.replace(pos, pos+1, " - ");
             	}
-                boolean showPopup = e.isError() || (!GridTab.DEFAULT_STATUS_MESSAGE.equals(e.getAD_Message()));
+                boolean showPopup = e.isError() 
+                	|| (!GridTab.DEFAULT_STATUS_MESSAGE.equals(e.getAD_Message()) && !GridTable.DATA_REFRESH_MESSAGE.equals(e.getAD_Message()));
                 statusBar.setStatusLine (sb.toString (), e.isError (), showPopup);
             }
         }
@@ -1245,13 +1258,23 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
     }
 
     /**
+     * refresh all row
+     * @param fireEvent
+     */
+    public void onRefresh(boolean fireEvent)
+    {
+    	onSave(false);
+        curTab.dataRefreshAll(fireEvent);
+        curTabpanel.dynamicDisplay(0);
+        focusToActivePanel();
+    }
+
+    /**
      * @see ToolbarListener#onRefresh()
      */
     public void onRefresh()
     {
-        curTab.dataRefreshAll();
-        curTabpanel.dynamicDisplay(0);
-        focusToActivePanel();
+    	onRefresh(true);
     }
 
     /**
@@ -1355,6 +1378,9 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
     {
         if (curTab == null)
             return;
+        
+        if (!onSave(false))
+        	return;
 
         //  Gets Fields from AD_Field_v
         GridField[] findFields = GridField.createFields(ctx, curTab.getWindowNo(), 0,curTab.getAD_Tab_ID());
@@ -1374,7 +1400,7 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 	            curTabpanel.query(m_onlyCurrentRows, m_onlyCurrentDays, MRole.getDefault().getMaxQueryRecords());   //  autoSize
 	        }
 
-	        curTab.dataRefresh(); // Elaine 2008/07/25
+	        curTab.dataRefresh(false); // Elaine 2008/07/25
         }
         focusToActivePanel();
     }
@@ -1392,7 +1418,7 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
     	else
     	{
 	        curTab.dataIgnore();
-	        curTab.dataRefresh();
+	        curTab.dataRefresh(false);
 	        curTabpanel.dynamicDisplay(0);
 	        toolbar.enableIgnore(false);
     	}
@@ -1435,6 +1461,9 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 	        {
 	        	showLastError();
 	            return false;
+	        } else if (!onSaveEvent) //need manual refresh
+	        {
+	        	curTab.setCurrentRow(curTab.getCurrentRow());
 	        }
 	        curTabpanel.dynamicDisplay(0);
 	        curTabpanel.afterSave(onSaveEvent);
@@ -1640,9 +1669,6 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 		int table_ID = curTab.getAD_Table_ID();
 		int record_ID = curTab.getRecord_ID();
 
-		if (!getComponent().getDesktop().isServerPushEnabled())
-			getComponent().getDesktop().enableServerPush(true);
-
 		ProcessModalDialog dialog = new ProcessModalDialog(this,getWindowNo(),
 				AD_Process_ID,table_ID, record_ID, true);
 		if (dialog.isValid()) {
@@ -1732,7 +1758,8 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 					query.addRestriction(link, MQuery.EQUAL,
 						Env.getContext(ctx, curWindowNo, link));
 			}
-			new WZoomAcross (toolbar.getEvent().getTarget(), curTab.getTableName(), query);
+			new WZoomAcross(toolbar.getEvent().getTarget(), curTab
+					.getTableName(), curTab.getAD_Window_ID(), query);
 		}
 	}
 
@@ -1880,8 +1907,8 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 
 			if (vp.needSave())
 			{
-				onSave();
-				onRefresh();
+				onSave(false);
+				onRefresh(false);
 			}
 		} // PaymentRule
 
@@ -1981,7 +2008,7 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 					if (error != null)
 						FDialog.error(curWindowNo, null, "PostingError-N", error);
 
-					onRefresh();
+					onRefresh(false);
 				}
 			}
 			return;
@@ -2005,10 +2032,10 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 		//	Save item changed
 
 		if (curTab.needSave(true, false))
-			this.onSave();
-
-		if (!getComponent().getDesktop().isServerPushEnabled())
-			getComponent().getDesktop().enableServerPush(true);
+		{
+			if (!onSave(false))
+				return;
+		}
 
 		// call form
 		MProcess pr = new MProcess(ctx, wButton.getProcess_ID(), null);
@@ -2026,6 +2053,7 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 			form.setAttribute(Window.MODE_KEY, Window.MODE_EMBEDDED);
 			form.setAttribute(Window.INSERT_POSITION_KEY, Window.INSERT_NEXT);
 			SessionManager.getAppDesktop().showWindow(form);
+			onRefresh(false);
 		}
 		else
 		{
@@ -2039,6 +2067,7 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 				dialog.setPosition("center");
 				AEnv.showWindow(dialog);
 			}
+			onRefresh(false);
 		}
 	} // actionButton
 
@@ -2114,7 +2143,7 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 		{
 			try {
 				//get full control of desktop
-				Executions.activate(getComponent().getDesktop());
+				Executions.activate(getComponent().getDesktop(), 500);
 				try {
 					Clients.showBusy(null, true);
                 } catch(Error ex){
@@ -2154,7 +2183,7 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 		{
 			try {
 				//get full control of desktop
-				Executions.activate(getComponent().getDesktop());
+				Executions.activate(getComponent().getDesktop(), 500);
 				try {
 					if (notPrint)		//	refresh if not print
 					{
@@ -2175,7 +2204,7 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 
 	private void updateUI(ProcessInfo pi) {
 		//	Refresh data
-		curTab.dataRefresh();
+		curTab.dataRefresh(false);
 		//	Timeout
 		if (pi.isTimeout())		//	set temporarily to R/O
 			Env.setContext(ctx, curWindowNo, "Processed", "Y");
@@ -2188,7 +2217,6 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 		//	Get Log Info
 		ProcessInfoUtil.setLogFromDB(pi);
 		String logInfo = pi.getLogInfo();
-		//TODO: use better dialog for this
 		if (logInfo.length() > 0)
 			FDialog.info(curWindowNo, this.getComponent(), Env.getHeader(ctx, curWindowNo),
 				pi.getTitle() + "<br>" + logInfo);

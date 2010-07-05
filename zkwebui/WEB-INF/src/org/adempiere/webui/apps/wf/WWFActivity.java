@@ -43,6 +43,7 @@ import org.compiere.model.MLookup;
 import org.compiere.model.MLookupFactory;
 import org.compiere.model.MQuery;
 import org.compiere.model.MRefList;
+import org.compiere.model.MRole;
 import org.compiere.model.MSysConfig;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
@@ -142,7 +143,7 @@ public class WWFActivity extends ADForm implements EventListener
 	private void init()
 	{
 		Grid grid = new Grid();
-		grid.setWidth("99%");
+		grid.setWidth("100%");
         grid.setHeight("100%");
         grid.setStyle("margin:0; padding:0; position: absolute; align: center; valign: center;");
         grid.makeNoStrip();
@@ -243,6 +244,7 @@ public class WWFActivity extends ADForm implements EventListener
 		north.appendChild(listbox);
 		north.setSplittable(true);
 		north.setFlex(true);
+		north.setHeight("50%");
 		layout.appendChild(north);
 		north.setStyle("background-color: transparent");
 		listbox.addEventListener(Events.ON_SELECT, this);
@@ -310,6 +312,8 @@ public class WWFActivity extends ADForm implements EventListener
 			//
 			//+ ") ORDER BY a.Priority DESC, Created";
 		int AD_User_ID = Env.getAD_User_ID(Env.getCtx());
+		MRole role = MRole.get(Env.getCtx(), Env.getAD_Role_ID(Env.getCtx()));
+		sql = role.addAccessSQL(sql, "a", true, false);
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		try
@@ -367,6 +371,8 @@ public class WWFActivity extends ADForm implements EventListener
 			//
 			+ ") ORDER BY a.Priority DESC, Created";
 		int AD_User_ID = Env.getAD_User_ID(Env.getCtx());
+		MRole role = MRole.get(Env.getCtx(), Env.getAD_Role_ID(Env.getCtx()));
+		sql = role.addAccessSQL(sql, "a", true, false);
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		try

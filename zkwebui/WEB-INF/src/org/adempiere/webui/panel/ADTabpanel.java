@@ -94,8 +94,10 @@ import org.zkoss.zul.Treeitem;
 public class ADTabpanel extends Div implements Evaluatee, EventListener,
 DataStatusListener, IADTabpanel, VetoableChangeListener
 {
-
-	private static final long serialVersionUID = 6811039639239312863L;
+	/**
+	 * generated serial version ID
+	 */
+	private static final long serialVersionUID = 6945934489328360251L;
 
 	private static final CLogger logger;
 
@@ -226,6 +228,7 @@ DataStatusListener, IADTabpanel, VetoableChangeListener
         this.appendChild(listPanel);
         listPanel.setVisible(false);
         listPanel.setWindowNo(windowNo);
+        listPanel.setADWindowPanel(winPanel);
 
         gridTab.getTableModel().addVetoableChangeListener(this);
     }
@@ -985,6 +988,7 @@ DataStatusListener, IADTabpanel, VetoableChangeListener
 		listPanel.setVisible(!formComponent.isVisible());
 		if (listPanel.isVisible()) {
 			listPanel.refresh(gridTab);
+			listPanel.scrollToCurrentRow();
 		} else {
 			listPanel.deactivate();
 		}
@@ -1145,6 +1149,10 @@ DataStatusListener, IADTabpanel, VetoableChangeListener
 		return listPanel.isVisible();
 	}
 
+	/**
+	 * @param gTab
+	 * @return embedded panel or null if not found
+	 */
 	public IADTabpanel findEmbeddedPanel(GridTab gTab) {
 		IADTabpanel panel = null;
 		for(EmbeddedPanel ep : includedPanel) {
@@ -1153,6 +1161,14 @@ DataStatusListener, IADTabpanel, VetoableChangeListener
 			}
 		}
 		return panel;
+	}
+
+	/**
+	 * 
+	 * @return GridPanel
+	 */
+	public GridPanel getGridView() {
+		return listPanel;
 	}
 }
 

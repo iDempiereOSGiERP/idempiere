@@ -23,14 +23,14 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Model for C_DocType
  *  @author Adempiere (generated) 
- *  @version Release 3.5.4a - $Id$ */
+ *  @version Release 3.6.0LTS - $Id$ */
 public class X_C_DocType extends PO implements I_C_DocType, I_Persistent 
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20090915L;
+	private static final long serialVersionUID = 20100614L;
 
     /** Standard Constructor */
     public X_C_DocType (Properties ctx, int C_DocType_ID, String trxName)
@@ -53,6 +53,8 @@ public class X_C_DocType extends PO implements I_C_DocType, I_Persistent
 			setIsIndexed (false);
 			setIsInTransit (false);
 			setIsPickQAConfirm (false);
+			setIsPrepareSplitDocument (true);
+// Y
 			setIsShipConfirm (false);
 			setIsSOTrx (false);
 			setIsSplitWhenDifference (false);
@@ -751,6 +753,30 @@ public class X_C_DocType extends PO implements I_C_DocType, I_Persistent
 	public boolean isPickQAConfirm () 
 	{
 		Object oo = get_Value(COLUMNNAME_IsPickQAConfirm);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
+	/** Set Prepare Split Document.
+		@param IsPrepareSplitDocument 
+		Prepare generated split shipment/receipt document
+	  */
+	public void setIsPrepareSplitDocument (boolean IsPrepareSplitDocument)
+	{
+		set_Value (COLUMNNAME_IsPrepareSplitDocument, Boolean.valueOf(IsPrepareSplitDocument));
+	}
+
+	/** Get Prepare Split Document.
+		@return Prepare generated split shipment/receipt document
+	  */
+	public boolean isPrepareSplitDocument () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsPrepareSplitDocument);
 		if (oo != null) 
 		{
 			 if (oo instanceof Boolean) 

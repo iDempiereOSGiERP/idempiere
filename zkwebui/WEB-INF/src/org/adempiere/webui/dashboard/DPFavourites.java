@@ -109,10 +109,11 @@ public class DPFavourites extends DashboardPanel implements EventListener {
 			while (en.hasMoreElements())
 			{
 				MTreeNode nd = (MTreeNode)en.nextElement();
-				if (nd.isOnBar()) {				
+				if (nd.isOnBar()) {
 					String label = nd.toString().trim();
 					ToolBarButton btnFavItem = new ToolBarButton(String.valueOf(nd.getNode_ID()));
 					btnFavItem.setLabel(label);
+					btnFavItem.setImage(getIconFile(nd));
 					btnFavItem.setDraggable(DELETE_FAV_DROPPABLE);
 					btnFavItem.addEventListener(Events.ON_CLICK, this);
 					btnFavItem.addEventListener(Events.ON_DROP, this);
@@ -226,7 +227,7 @@ public class DPFavourites extends DashboardPanel implements EventListener {
 	}
 
     /**
-     * Add menu treeitem into the user favourite panel
+     * Add menu treeitem into the user favorite panel
      * @param treeitem
      */
 	public void addItem(Treeitem treeitem) {
@@ -239,6 +240,7 @@ public class DPFavourites extends DashboardPanel implements EventListener {
 				String label = treeitem.getLabel().trim();
 				ToolBarButton btnFavItem = new ToolBarButton(String.valueOf(Node_ID));
 				btnFavItem.setLabel(label);
+				btnFavItem.setImage(treeitem.getImage());
 				btnFavItem.setDraggable(DELETE_FAV_DROPPABLE);
 				btnFavItem.addEventListener(Events.ON_CLICK, this);
 				btnFavItem.addEventListener(Events.ON_DROP, this);
@@ -247,5 +249,17 @@ public class DPFavourites extends DashboardPanel implements EventListener {
 				bxFav.invalidate();
 			}
 		}
+	}
+	
+	private String getIconFile(MTreeNode mt) {
+		if (mt.isWindow())
+			return "images/mWindow.png";
+		if (mt.isReport())
+			return "images/mReport.png";
+		if (mt.isProcess())
+			return "images/mProcess.png";
+		if (mt.isWorkFlow())
+			return "images/mWorkFlow.png";
+		return "images/mWindow.png";
 	}
 }

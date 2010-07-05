@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for C_OrderLine
  *  @author Adempiere (generated) 
- *  @version Release 3.5.4a
+ *  @version Release 3.6.0LTS
  */
 public interface I_C_OrderLine 
 {
@@ -601,6 +601,19 @@ public interface I_C_OrderLine
 	  * The document has been processed
 	  */
 	public boolean isProcessed();
+
+    /** Column name QtyAllocated */
+    public static final String COLUMNNAME_QtyAllocated = "QtyAllocated";
+
+	/** Set Qty Allocated.
+	  * Allocated quantity
+	  */
+	public void setQtyAllocated (BigDecimal QtyAllocated);
+
+	/** Get Qty Allocated.
+	  * Allocated quantity
+	  */
+	public BigDecimal getQtyAllocated();
 
     /** Column name QtyDelivered */
     public static final String COLUMNNAME_QtyDelivered = "QtyDelivered";

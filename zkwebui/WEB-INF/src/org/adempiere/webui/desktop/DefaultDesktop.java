@@ -22,11 +22,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Serializable;
 import java.net.URL;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.util.logging.Level;
 
-import org.adempiere.webui.apps.ProcessDialog;
 import org.adempiere.webui.apps.graph.WGraph;
 import org.adempiere.webui.apps.graph.WPerformanceDetail;
 import org.adempiere.webui.component.Tabpanel;
@@ -35,21 +32,17 @@ import org.adempiere.webui.dashboard.DPActivities;
 import org.adempiere.webui.dashboard.DashboardPanel;
 import org.adempiere.webui.dashboard.DashboardRunnable;
 import org.adempiere.webui.event.MenuListener;
-import org.adempiere.webui.panel.ADForm;
 import org.adempiere.webui.panel.HeaderPanel;
 import org.adempiere.webui.panel.SidePanel;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.util.IServerPushCallback;
 import org.adempiere.webui.util.ServerPushTemplate;
 import org.adempiere.webui.util.UserPreference;
-import org.adempiere.webui.window.ADWindow;
+import org.compiere.model.I_AD_Menu;
+import org.compiere.model.MDashboardContent;
 import org.compiere.model.MGoal;
-import org.compiere.model.MMenu;
-import org.compiere.model.MQuery;
-import org.compiere.model.X_AD_Menu;
 import org.compiere.model.X_PA_DashboardContent;
 import org.compiere.util.CLogger;
-import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.zkoss.zk.au.out.AuScript;
@@ -82,8 +75,10 @@ import org.zkoss.zul.Toolbarbutton;
  */
 public class DefaultDesktop extends TabbedDesktop implements MenuListener, Serializable, EventListener, IServerPushCallback
 {
-
-	private static final long serialVersionUID = 6320678631023300467L;
+	/**
+	 * generated serial version ID 
+	 */
+	private static final long serialVersionUID = -8203958978173990301L;
 
 	private static final CLogger logger = CLogger.getCLogger(DefaultDesktop.class);
 
@@ -178,31 +173,16 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
         Portalchildren portalchildren = null;
         int currentColumnNo = 0;
 
-        String sql = "SELECT COUNT(DISTINCT COLUMNNO) "
-        	+ "FROM PA_DASHBOARDCONTENT "
-        	+ "WHERE (AD_CLIENT_ID=0 OR AD_CLIENT_ID=?) AND ISACTIVE='Y'";
+        int noOfCols = 0;
+        int width = 0;
 
-        int noOfCols = DB.getSQLValue(null, sql,
-        		Env.getAD_Client_ID(Env.getCtx()));
-
-        int width = noOfCols <= 0 ? 100 : 100/noOfCols;
-
-		sql =  "SELECT x.*, m.AD_MENU_ID "
-			+ "FROM PA_DASHBOARDCONTENT x "
-			+ "LEFT OUTER JOIN AD_MENU m ON x.AD_WINDOW_ID=m.AD_WINDOW_ID "
-			+ "WHERE (x.AD_CLIENT_ID=0 OR x.AD_CLIENT_ID=?) AND x.ISACTIVE='Y' "
-			+ "ORDER BY x.COLUMNNO, x.AD_CLIENT_ID, x.LINE ";
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		try
+        try
 		{
-			pstmt = DB.prepareStatement(sql, null);
-			pstmt.setInt(1, Env.getAD_Client_ID(Env.getCtx()));
-			rs = pstmt.executeQuery();
-
-			while (rs.next())
+            noOfCols = MDashboardContent.getForSessionColumnCount();
+            width = noOfCols <= 0 ? 100 : 100 / noOfCols;
+            for (final MDashboardContent dp : MDashboardContent.getForSession())
 			{
-	        	int columnNo = rs.getInt(X_PA_DashboardContent.COLUMNNAME_ColumnNo);
+	        	int columnNo = dp.getColumnNo();
 	        	if(portalchildren == null || currentColumnNo != columnNo)
 	        	{
 	        		portalchildren = new Portalchildren();
@@ -215,14 +195,13 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 
 	        	Panel panel = new Panel();
 	        	panel.setStyle("margin-bottom:10px");
-	        	panel.setTitle(rs.getString(X_PA_DashboardContent.COLUMNNAME_Name));
+	        	panel.setTitle(dp.getName());
 
-	        	String description = rs.getString(X_PA_DashboardContent.COLUMNNAME_Description);
+	        	String description = dp.getDescription();
             	if(description != null)
             		panel.setTooltiptext(description);
 
-            	String collapsible = rs.getString(X_PA_DashboardContent.COLUMNNAME_IsCollapsible);
-            	panel.setCollapsible(collapsible.equals("Y"));
+            	panel.setCollapsible(dp.isCollapsible());
 
 	        	panel.setBorder("normal");
 	        	portalchildren.appendChild(panel);
@@ -232,13 +211,12 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 	            boolean panelEmpty = true;
 
 	            // HTML content
-	            String htmlContent = rs.getString(X_PA_DashboardContent.COLUMNNAME_HTML);
+	            String htmlContent = dp.getHTML();
 	            if(htmlContent != null)
 	            {
 		            StringBuffer result = new StringBuffer("<html><head>");
 
-		    		URL url = getClass().getClassLoader().
-					getResource("org/compiere/images/PAPanel.css");
+		    		URL url = getClass().getClassLoader().getResource("org/compiere/images/PAPanel.css");
 					InputStreamReader ins;
 					try {
 						ins = new InputStreamReader(url.openStream());
@@ -264,12 +242,12 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 	            }
 
 	        	// Window
-	        	int AD_Window_ID = rs.getInt(X_PA_DashboardContent.COLUMNNAME_AD_Window_ID);
+	        	int AD_Window_ID = dp.getAD_Window_ID();
 	        	if(AD_Window_ID > 0)
 	        	{
-		        	int AD_Menu_ID = rs.getInt(X_AD_Menu.COLUMNNAME_AD_Menu_ID);
+		        	int AD_Menu_ID = dp.getAD_Menu_ID();
 					ToolBarButton btn = new ToolBarButton(String.valueOf(AD_Menu_ID));
-					MMenu menu = new MMenu(Env.getCtx(), AD_Menu_ID, null);
+					I_AD_Menu menu = dp.getAD_Menu();
 					btn.setLabel(menu.getName());
 					btn.addEventListener(Events.ON_CLICK, this);
 					content.appendChild(btn);
@@ -277,7 +255,7 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 	        	}
 
 	        	// Goal
-	        	int PA_Goal_ID = rs.getInt(X_PA_DashboardContent.COLUMNNAME_PA_Goal_ID);
+	        	int PA_Goal_ID = dp.getPA_Goal_ID();
 	        	if(PA_Goal_ID > 0)
 	        	{
 	        		//link to open performance detail
@@ -295,7 +273,7 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 		            });
 		            content.appendChild(link);
 
-		            String goalDisplay = rs.getString(X_PA_DashboardContent.COLUMNNAME_GoalDisplay);
+		            String goalDisplay = dp.getGoalDisplay();
 		            MGoal goal = new MGoal(Env.getCtx(), PA_Goal_ID, null);
 		            WGraph graph = new WGraph(goal, 55, false, true, 
 		            		!(X_PA_DashboardContent.GOALDISPLAY_Chart.equals(goalDisplay)),
@@ -305,7 +283,7 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 	        	}
 
 	            // ZUL file url
-	        	String url = rs.getString(X_PA_DashboardContent.COLUMNNAME_ZulFilePath);
+	        	String url = dp.getZulFilePath();
 	        	if(url != null)
 	        	{
 		        	try {
@@ -335,10 +313,13 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 	        	if (panelEmpty)
 	        		panel.detach();
 	        }
-		} catch(Exception e) {
+		}
+        catch (Exception e)
+        {
 			logger.log(Level.WARNING, "Failed to create dashboard content", e);
-		} finally {
-			DB.close(rs, pstmt);
+		}
+        finally
+        {
 		}
         //
 
@@ -397,6 +378,16 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 		if (this.page != page) {
 			layout.setPage(page);
 			this.page = page;
+			if (dashboardThread != null && dashboardThread.isAlive()) {
+				dashboardRunnable.stop();
+				dashboardThread.interrupt();
+
+				DashboardRunnable tmp = dashboardRunnable;
+				dashboardRunnable = new DashboardRunnable(tmp, layout.getDesktop(), this);
+				dashboardThread = new Thread(dashboardRunnable, "UpdateInfo");
+		        dashboardThread.setDaemon(true);
+		        dashboardThread.start();
+			}
 		}
 	}
 
@@ -440,38 +431,8 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 	}
 
 	@Override
-	public ADWindow openWindow(int windowId) {
+	protected void preOpenNewTab() 
+	{
 		autoHideMenu();
-		return super.openWindow(windowId);
-	}
-
-	@Override
-	public ADForm openForm(int formId) {
-		autoHideMenu();
-		return super.openForm(formId);
-	}
-
-	@Override
-	public ProcessDialog openProcessDialog(int processId, boolean soTrx) {
-		autoHideMenu();
-		return super.openProcessDialog(processId, soTrx);
-	}
-
-	@Override
-	public void openTask(int taskId) {
-		autoHideMenu();
-		super.openTask(taskId);
-	}
-
-	@Override
-	public void openWorkflow(int workflowID) {
-		autoHideMenu();
-		super.openWorkflow(workflowID);
-	}
-
-	@Override
-	public void showWindow(int AD_Window_ID, MQuery query) {
-		autoHideMenu();
-		super.showWindow(AD_Window_ID, query);
-	}
+	}	
 }

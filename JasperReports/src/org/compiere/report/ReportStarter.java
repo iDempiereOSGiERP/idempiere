@@ -13,6 +13,7 @@
  *****************************************************************************/
 package org.compiere.report;
 
+import java.awt.print.PrinterJob;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -45,17 +46,24 @@ import java.util.logging.Level;
 
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
+import javax.print.attribute.HashPrintRequestAttributeSet;
+import javax.print.attribute.PrintRequestAttributeSet;
+import javax.print.attribute.standard.Copies;
+import javax.print.attribute.standard.JobName;
 
 import net.sf.jasperreports.engine.JRException;
+import net.sf.jasperreports.engine.JRExporterParameter;
 import net.sf.jasperreports.engine.JRParameter;
 import net.sf.jasperreports.engine.JasperCompileManager;
 import net.sf.jasperreports.engine.JasperExportManager;
 import net.sf.jasperreports.engine.JasperFillManager;
 import net.sf.jasperreports.engine.JasperPrint;
-import net.sf.jasperreports.engine.JasperPrintManager;
 import net.sf.jasperreports.engine.JasperReport;
+import net.sf.jasperreports.engine.export.JRPrintServiceExporter;
+import net.sf.jasperreports.engine.export.JRPrintServiceExporterParameter;
 import net.sf.jasperreports.engine.util.JRLoader;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.exceptions.DBException;
 import org.compiere.db.CConnection;
 import org.compiere.interfaces.MD5;
@@ -63,7 +71,12 @@ import org.compiere.model.MAttachment;
 import org.compiere.model.MAttachmentEntry;
 import org.compiere.model.MBPartner;
 import org.compiere.model.MProcess;
+import org.compiere.model.PrintInfo;
 import org.compiere.model.X_AD_PInstance_Para;
+import org.compiere.print.MPrintFormat;
+import org.compiere.print.PrintUtil;
+import org.compiere.print.ReportCtl;
+import org.compiere.print.ServerReportCtl;
 import org.compiere.process.ClientProcess;
 import org.compiere.process.ProcessCall;
 import org.compiere.process.ProcessInfo;
@@ -79,7 +92,7 @@ import org.compiere.utils.DigestOfFile;
 
 /**
  * @author rlemeill
- * originaly coming from an application note from compiere.co.uk
+ * Originally coming from an application note from compiere.co.uk
  * ---
  * Modifications: Allow Jasper Reports to be able to be run on VPN profile (i.e: no direct connection to DB).
  *                Implemented ClientProcess for it to run on client.
@@ -475,16 +488,37 @@ public class ReportStarter implements ProcessCall, ClientProcess
             params.put("AD_PINSTANCE_ID", new Integer( AD_PInstance_ID));
 
         	Language currLang = Env.getLanguage(Env.getCtx());
+        	String printerName = null;
+        	MPrintFormat printFormat = null;
+        	PrintInfo printInfo = null;
         	ProcessInfoParameter[] pip = pi.getParameter();
-        	// Check for language parameter
+        	// Get print format and print info parameters
         	if (pip!=null) {
         		for (int i=0; i<pip.length; i++) {
-        			if ("CURRENT_LANG".equalsIgnoreCase(pip[i].getParameterName())) {
-        				currLang = (Language)pip[i].getParameter();
+        			if (ServerReportCtl.PARAM_PRINT_FORMAT.equalsIgnoreCase(pip[i].getParameterName())) {
+        				printFormat = (MPrintFormat)pip[i].getParameter();
+        			}
+        			if (ServerReportCtl.PARAM_PRINT_INFO.equalsIgnoreCase(pip[i].getParameterName())) {
+        				printInfo = (PrintInfo)pip[i].getParameter();
+        			}
+        			if (ServerReportCtl.PARAM_PRINTER_NAME.equalsIgnoreCase(pip[i].getParameterName())) {
+        				printerName = (String)pip[i].getParameter();
         			}
         		}
         	}
-            
+        	if (printFormat!=null) {
+        		if (printInfo!=null) {
+        			// Set the language of the print format if we're printing a document
+	        		if (printInfo.isDocument()) {
+	        			currLang = printFormat.getLanguage();
+	        		}
+        		}
+        		// Set printer name unless already set.
+        		if (printerName==null) {
+        			printerName = printFormat.getPrinterName();
+        		}
+        	}
+        	
            	params.put("CURRENT_LANG", currLang.getAD_Language());
            	params.put(JRParameter.REPORT_LOCALE, currLang.getLocale());
            	
@@ -520,12 +554,40 @@ public class ReportStarter implements ProcessCall, ClientProcess
             try {
             	conn = getConnection();
                 jasperPrint = JasperFillManager.fillReport( jasperReport, params, conn);
-                if (reportData.isDirectPrint())
+                if (reportData.isDirectPrint() || !processInfo.isPrintPreview())
                 {
                     log.info( "ReportStarter.startProcess print report -" + jasperPrint.getName());
                     //RF 1906632
                     if (!processInfo.isBatch()) {
-                    	JasperPrintManager.printReport( jasperPrint, false);
+                    	
+                    	// Get printer job
+                    	PrinterJob printerJob = org.compiere.print.CPrinter.getPrinterJob(printerName);
+                    	// Set print request attributes
+                    	
+                		//	Paper Attributes:
+                		PrintRequestAttributeSet prats = new HashPrintRequestAttributeSet();
+ 
+                		//	add:				copies, job-name, priority
+                		if (printInfo.isDocumentCopy() || printInfo.getCopies() < 1)
+                			prats.add (new Copies(1));
+                		else
+                			prats.add (new Copies(printInfo.getCopies()));
+                		Locale locale = Language.getLoginLanguage().getLocale();
+                		prats.add(new JobName(printFormat.getName() + "_" + pi.getRecord_ID(), locale));
+                		prats.add(PrintUtil.getJobPriority(jasperPrint.getPages().size() , printInfo.getCopies(), true));
+
+                		// Create print service exporter
+                    	JRPrintServiceExporter exporter = new JRPrintServiceExporter();;
+                    	// Set parameters
+                    	exporter.setParameter(JRExporterParameter.JASPER_PRINT, jasperPrint);
+                    	exporter.setParameter(JRPrintServiceExporterParameter.PRINT_SERVICE, printerJob.getPrintService());
+                    	exporter.setParameter(JRPrintServiceExporterParameter.PRINT_SERVICE_ATTRIBUTE_SET, printerJob.getPrintService().getAttributes());
+                    	exporter.setParameter(JRPrintServiceExporterParameter.PRINT_REQUEST_ATTRIBUTE_SET, prats);
+                    	exporter.setParameter(JRPrintServiceExporterParameter.DISPLAY_PAGE_DIALOG, Boolean.FALSE);
+                    	exporter.setParameter(JRPrintServiceExporterParameter.DISPLAY_PRINT_DIALOG, Boolean.FALSE);
+                    	// Print report / document
+                    	exporter.exportReport();
+                    	
                     }
                     else
                     {
@@ -807,8 +869,12 @@ public class ReportStarter implements ProcessCall, ClientProcess
 				log.info(" report on server is different that local one, download and replace");
 				File downloadedFile = new File(downloadedLocalFile);
 				entry.getFile(downloadedFile);
-				reportFile.delete();
-				downloadedFile.renameTo(reportFile);
+				if (! reportFile.delete()) {
+					throw new AdempiereException("Cannot delete temporary file " + reportFile.toString());
+				}
+				if (! downloadedFile.renameTo(reportFile)) {
+					throw new AdempiereException("Cannot rename temporary file " + downloadedFile.toString() + " to " + reportFile.toString());
+				}
 			}
 		} else {
 			entry.getFile(reportFile);

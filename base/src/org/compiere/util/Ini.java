@@ -41,6 +41,8 @@ import javax.jnlp.FileContents;
 import javax.jnlp.PersistenceService;
 import javax.jnlp.ServiceManager;
 import javax.jnlp.UnavailableServiceException;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 
 import org.adempiere.plaf.AdempiereLookAndFeel;
 import org.adempiere.plaf.AdempiereThemeInnova;
@@ -232,7 +234,7 @@ public final class Ini implements Serializable
 	private static String s_propertyFileName = null;
 	
 	/**	Logger						*/
-	private static Logger			log = Logger.getLogger(Ini.class.getName());
+	private static Logger			log = null;
 
 	/**
 	 *	Save INI parameters to disk
@@ -709,7 +711,11 @@ public final class Ini implements Serializable
 	 */
 	public static void setClient (boolean client)
 	{
+		if (log != null) //already initialized
+			return;
 		s_client = client;
+		CLogMgt.initialize(client);
+		log = Logger.getLogger(Ini.class.getName());
 	}   //  setClient
 	
 	/**
@@ -748,7 +754,18 @@ public final class Ini implements Serializable
 		String env = System.getProperty (ENV_PREFIX + ADEMPIERE_HOME);
 		if (env == null)
 			env = System.getProperty (ADEMPIERE_HOME);
-		if (env == null)	//	Fallback
+		if (env == null && ! isClient()) {
+			InitialContext context;
+			try {
+				context = new InitialContext();
+				env = (String) context.lookup("java:comp/env/"+ADEMPIERE_HOME);
+			} catch (NamingException e) {
+				// teo_sarca: if you uncomment the line below you will get an NPE when generating models
+				//log.fine( "Not found 'java:comp/env/"+ADEMPIERE_HOME+"' in Initial Context. " +e.getMessage());
+			}
+			
+		}
+		if (env == null || "".equals(env) )	//	Fallback
 			env = File.separator + "Adempiere";
 		return env;
 	}   //  getAdempiereHome

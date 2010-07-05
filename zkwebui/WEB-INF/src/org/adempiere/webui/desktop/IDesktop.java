@@ -113,6 +113,7 @@ public interface IDesktop extends UIPart {
 	 *
 	 * @param window_ID
 	 * @param query
+	 * @deprecated
 	 */
 	public void showWindow(int window_ID, MQuery query);
 
@@ -143,6 +144,14 @@ public interface IDesktop extends UIPart {
 	 * @return ADWindow
 	 */
 	public ADWindow openWindow(int windowId);
+
+	/**
+	 *
+	 * @param windowId
+	 * @param query
+	 * @return ADWindow
+	 */
+	public ADWindow openWindow(int windowId, MQuery query);
 
 	/**
 	 * Open operating system task window

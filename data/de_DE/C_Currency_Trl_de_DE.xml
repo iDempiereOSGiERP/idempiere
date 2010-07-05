@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!--Adempiere(r) Release 3.4.0s_2008-03-26 -Smart Suite ERP,CRM and SCM- (c) 1999-2007 Adempiere (r); Implementation: ${env.ADEMPIERE_VERSION} 20080418-1115 - ${env.ADEMPIERE_VENDOR}-->
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!--<!DOCTYPE adempiereTrl PUBLIC "-//ComPiere, Inc.//DTD Adempiere Translation 1.0//EN" "http://www.adempiere.com/dtd/adempiereTrl.dtd">-->
 <adempiereTrl language="de_DE" table="C_Currency">
  <row id="100" trl="Y">
@@ -8,7 +7,7 @@
  </row>
  <row id="102" trl="Y">
   <value column="Description" original="Euro">Euro (100 Cent)</value>
-  <value column="CurSymbol" original="E">E</value>
+  <value column="CurSymbol" original="E">€</value>
  </row>
  <row id="103" trl="Y">
   <value column="Description" original="Deutsche Mark">Deutsche Mark (100 Pfennig)</value>
@@ -468,7 +467,7 @@
  </row>
  <row id="285" trl="Y">
   <value column="Description" original="Estonian Kroon">Krone (100 Senti)</value>
-  <value column="CurSymbol" original="Nfa">Nfa</value>
+  <value column="CurSymbol" original="KR">EEK</value>
  </row>
  <row id="286" trl="Y">
   <value column="Description" original="New Israeli Sheqel">Schekel (100 Agorot)</value>

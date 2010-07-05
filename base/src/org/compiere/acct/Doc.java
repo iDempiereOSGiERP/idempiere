@@ -470,6 +470,10 @@ public abstract class Doc
 	
 	/**	Actual Document Status  */
 	protected String			p_Status = null;
+	public String getPostStatus() {
+		return p_Status;
+	}
+
 	/** Error Message			*/
 	protected String			p_Error = null;
 	
@@ -581,6 +585,7 @@ public abstract class Doc
 		if (p_Error != null)
 			return p_Error;
 
+		Trx trx = Trx.get(getTrxName(), true);
 		//  Delete existing Accounting
 		if (repost)
 		{
@@ -588,6 +593,7 @@ public abstract class Doc
 			{
 				log.log(Level.SEVERE, toString() + " - Period Closed for already posed document");
 				unlock();
+				trx.commit(); trx.close();
 				return "PeriodClosed";
 			}
 			//	delete it
@@ -597,6 +603,7 @@ public abstract class Doc
 		{
 			log.log(Level.SEVERE, toString() + " - Document already posted");
 			unlock();
+			trx.commit(); trx.close();
 			return "AlreadyPosted";
 		}
 		
@@ -911,9 +918,9 @@ public abstract class Doc
 	/**************************************************************************
 	 *  Load Document Type and GL Info.
 	 * 	Set p_DocumentType and p_GL_Category_ID
-	 * 	@return document type
+	 * 	@return document type (i.e. C_DocType.DocBaseType)
 	 */
-	protected String getDocumentType()
+	public String getDocumentType()
 	{
 		if (m_DocumentType == null)
 			setDocumentType(null);
@@ -1045,6 +1052,12 @@ public abstract class Doc
 		{
 			log.fine("(none) - " + toString());
 			return true;
+		}
+		// Journal from a different acct schema
+		if (this instanceof Doc_GLJournal) {
+			int glj_as = ((Integer) p_po.get_Value("C_AcctSchema_ID")).intValue();
+			if (acctSchema.getC_AcctSchema_ID() != glj_as)
+				return true;
 		}
 		//  Get All Currencies
 		HashSet<Integer> set = new HashSet<Integer>();

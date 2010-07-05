@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_ClientInfo
  *  @author Adempiere (generated) 
- *  @version Release 3.5.4a
+ *  @version Release 3.6.0LTS
  */
 public interface I_AD_ClientInfo 
 {
@@ -66,12 +66,12 @@ public interface I_AD_ClientInfo
     public static final String COLUMNNAME_AD_Tree_Activity_ID = "AD_Tree_Activity_ID";
 
 	/** Set Activity Tree.
-	  * Tree to determine activity hierarchy
+	  * Trees are used for (financial) reporting
 	  */
 	public void setAD_Tree_Activity_ID (int AD_Tree_Activity_ID);
 
 	/** Get Activity Tree.
-	  * Tree to determine activity hierarchy
+	  * Trees are used for (financial) reporting
 	  */
 	public int getAD_Tree_Activity_ID();
 
@@ -81,12 +81,12 @@ public interface I_AD_ClientInfo
     public static final String COLUMNNAME_AD_Tree_BPartner_ID = "AD_Tree_BPartner_ID";
 
 	/** Set BPartner Tree.
-	  * Tree to determine business partner hierarchy
+	  * Trees are used for (financial) reporting
 	  */
 	public void setAD_Tree_BPartner_ID (int AD_Tree_BPartner_ID);
 
 	/** Get BPartner Tree.
-	  * Tree to determine business partner hierarchy
+	  * Trees are used for (financial) reporting
 	  */
 	public int getAD_Tree_BPartner_ID();
 
@@ -96,12 +96,12 @@ public interface I_AD_ClientInfo
     public static final String COLUMNNAME_AD_Tree_Campaign_ID = "AD_Tree_Campaign_ID";
 
 	/** Set Campaign Tree.
-	  * Tree to determine marketing campaign hierarchy
+	  * Trees are used for (financial) reporting
 	  */
 	public void setAD_Tree_Campaign_ID (int AD_Tree_Campaign_ID);
 
 	/** Get Campaign Tree.
-	  * Tree to determine marketing campaign hierarchy
+	  * Trees are used for (financial) reporting
 	  */
 	public int getAD_Tree_Campaign_ID();
 
@@ -126,12 +126,12 @@ public interface I_AD_ClientInfo
     public static final String COLUMNNAME_AD_Tree_Org_ID = "AD_Tree_Org_ID";
 
 	/** Set Organization Tree.
-	  * Tree to determine organizational hierarchy
+	  * Trees are used for (financial) reporting and security access (via role)
 	  */
 	public void setAD_Tree_Org_ID (int AD_Tree_Org_ID);
 
 	/** Get Organization Tree.
-	  * Tree to determine organizational hierarchy
+	  * Trees are used for (financial) reporting and security access (via role)
 	  */
 	public int getAD_Tree_Org_ID();
 
@@ -141,12 +141,12 @@ public interface I_AD_ClientInfo
     public static final String COLUMNNAME_AD_Tree_Product_ID = "AD_Tree_Product_ID";
 
 	/** Set Product Tree.
-	  * Tree to determine product hierarchy
+	  * Trees are used for (financial) reporting
 	  */
 	public void setAD_Tree_Product_ID (int AD_Tree_Product_ID);
 
 	/** Get Product Tree.
-	  * Tree to determine product hierarchy
+	  * Trees are used for (financial) reporting
 	  */
 	public int getAD_Tree_Product_ID();
 
@@ -156,12 +156,12 @@ public interface I_AD_ClientInfo
     public static final String COLUMNNAME_AD_Tree_Project_ID = "AD_Tree_Project_ID";
 
 	/** Set Project Tree.
-	  * Tree to determine project hierarchy
+	  * Trees are used for (financial) reporting
 	  */
 	public void setAD_Tree_Project_ID (int AD_Tree_Project_ID);
 
 	/** Get Project Tree.
-	  * Tree to determine project hierarchy
+	  * Trees are used for (financial) reporting
 	  */
 	public int getAD_Tree_Project_ID();
 
@@ -171,12 +171,12 @@ public interface I_AD_ClientInfo
     public static final String COLUMNNAME_AD_Tree_SalesRegion_ID = "AD_Tree_SalesRegion_ID";
 
 	/** Set Sales Region Tree.
-	  * Tree to determine sales regional hierarchy
+	  * Trees are used for (financial) reporting
 	  */
 	public void setAD_Tree_SalesRegion_ID (int AD_Tree_SalesRegion_ID);
 
 	/** Get Sales Region Tree.
-	  * Tree to determine sales regional hierarchy
+	  * Trees are used for (financial) reporting
 	  */
 	public int getAD_Tree_SalesRegion_ID();
 
@@ -273,6 +273,21 @@ public interface I_AD_ClientInfo
 
 	public I_C_UOM getC_UOM_Time() throws RuntimeException;
 
+    /** Column name C_UOM_Weight_ID */
+    public static final String COLUMNNAME_C_UOM_Weight_ID = "C_UOM_Weight_ID";
+
+	/** Set UOM for Weight.
+	  * Standard Unit of Measure for Weight
+	  */
+	public void setC_UOM_Weight_ID (int C_UOM_Weight_ID);
+
+	/** Get UOM for Weight.
+	  * Standard Unit of Measure for Weight
+	  */
+	public int getC_UOM_Weight_ID();
+
+	public I_C_UOM getC_UOM_Weight() throws RuntimeException;
+
     /** Column name C_UOM_Volume_ID */
     public static final String COLUMNNAME_C_UOM_Volume_ID = "C_UOM_Volume_ID";
 
@@ -288,20 +303,18 @@ public interface I_AD_ClientInfo
 
 	public I_C_UOM getC_UOM_Volume() throws RuntimeException;
 
-    /** Column name C_UOM_Weight_ID */
-    public static final String COLUMNNAME_C_UOM_Weight_ID = "C_UOM_Weight_ID";
+    /** Column name DeliveryPolicy */
+    public static final String COLUMNNAME_DeliveryPolicy = "DeliveryPolicy";
 
-	/** Set UOM for Weight.
-	  * Standard Unit of Measure for Weight
+	/** Set Delivery Policy.
+	  * Delivery Policy
 	  */
-	public void setC_UOM_Weight_ID (int C_UOM_Weight_ID);
+	public void setDeliveryPolicy (String DeliveryPolicy);
 
-	/** Get UOM for Weight.
-	  * Standard Unit of Measure for Weight
+	/** Get Delivery Policy.
+	  * Delivery Policy
 	  */
-	public int getC_UOM_Weight_ID();
-
-	public I_C_UOM getC_UOM_Weight() throws RuntimeException;
+	public String getDeliveryPolicy();
 
     /** Column name IsActive */
     public static final String COLUMNNAME_IsActive = "IsActive";

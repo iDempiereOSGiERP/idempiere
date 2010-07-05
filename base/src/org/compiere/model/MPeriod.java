@@ -543,7 +543,7 @@ public class MPeriod extends X_C_Period
 
 	/**
 	 * 	Standard Period
-	 *	@return true if standard calendar perios
+	 *	@return true if standard calendar periods
 	 */
 	public boolean isStandardPeriod()
 	{
@@ -651,7 +651,7 @@ public class MPeriod extends X_C_Period
 	}	//	toString
 	
 	/**
-	 * Conventient method for testing if a period is open
+	 * Convenient method for testing if a period is open
 	 * @param ctx
 	 * @param dateAcct
 	 * @param docBaseType
@@ -668,7 +668,7 @@ public class MPeriod extends X_C_Period
 	}
 	
 	/**
-	 * Conventient method for testing if a period is open
+	 * Convenient method for testing if a period is open
 	 * @param ctx
 	 * @param dateAcct
 	 * @param docBaseType
@@ -685,7 +685,7 @@ public class MPeriod extends X_C_Period
 	}
 	
 		/**
-	 * Conventient method for testing if a period is open
+	 * Convenient method for testing if a period is open
 	 * @param ctx
 	 * @param dateAcct
 	 * @param C_DocType_ID
@@ -701,7 +701,7 @@ public class MPeriod extends X_C_Period
 	}
 	
 	/**
-	 * Conventient method for testing if a period is open
+	 * Convenient method for testing if a period is open
 	 * @param ctx
 	 * @param dateAcct
 	 * @param C_DocType_ID
@@ -744,7 +744,7 @@ public class MPeriod extends X_C_Period
         int C_Calendar_ID = 0;
         if (AD_Org_ID != 0)
         {
-            MOrgInfo info = MOrgInfo.get(ctx, AD_Org_ID);
+            MOrgInfo info = MOrgInfo.get(ctx, AD_Org_ID, null);
             C_Calendar_ID = info.getC_Calendar_ID();
         }
         

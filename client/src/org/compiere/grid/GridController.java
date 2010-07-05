@@ -647,7 +647,7 @@ public class GridController extends CPanel
 				else if (keyColumnName.equals("CM_Media_ID"))
 					treeName = "AD_TreeCMM_ID";
 			}
-			int AD_Tree_ID = Env.getContextAsInt (Env.getCtx(), m_WindowNo, treeName);
+			int AD_Tree_ID = Env.getContextAsInt (Env.getCtx(), m_WindowNo, treeName, true);
 			log.config(keyColumnName + " -> " + treeName + " = " + AD_Tree_ID);
 			if (AD_Tree_ID == 0)
 				AD_Tree_ID = MTree.getDefaultAD_Tree_ID (
@@ -803,7 +803,7 @@ public class GridController extends CPanel
 
 		//  Process Callout
 		GridField mField = m_mTab.getField(col);
-		if (mField!=null) {
+		if (mField != null
 			List<IColumnCallout> callouts = Core.findCallout(m_mTab.getTableName(), mField.getColumnName());
 			if (mField.getCallout().length() > 0 || callouts.size()>0 || m_mTab.hasDependants(mField.getColumnName()))
 			{

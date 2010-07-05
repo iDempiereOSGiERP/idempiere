@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_OrgInfo
  *  @author Adempiere (generated) 
- *  @version Release 3.5.4a
+ *  @version Release 3.6.0LTS
  */
 public interface I_AD_OrgInfo 
 {
@@ -123,6 +123,19 @@ public interface I_AD_OrgInfo
 	  */
 	public int getCreatedBy();
 
+    /** Column name DeliveryPolicy */
+    public static final String COLUMNNAME_DeliveryPolicy = "DeliveryPolicy";
+
+	/** Set Delivery Policy.
+	  * Delivery Policy
+	  */
+	public void setDeliveryPolicy (String DeliveryPolicy);
+
+	/** Get Delivery Policy.
+	  * Delivery Policy
+	  */
+	public String getDeliveryPolicy();
+
     /** Column name DropShip_Warehouse_ID */
     public static final String COLUMNNAME_DropShip_Warehouse_ID = "DropShip_Warehouse_ID";
 
@@ -150,6 +163,32 @@ public interface I_AD_OrgInfo
 	  * Dun & Bradstreet Number
 	  */
 	public String getDUNS();
+
+    /** Column name EMail */
+    public static final String COLUMNNAME_EMail = "EMail";
+
+	/** Set EMail Address.
+	  * Electronic Mail Address
+	  */
+	public void setEMail (String EMail);
+
+	/** Get EMail Address.
+	  * Electronic Mail Address
+	  */
+	public String getEMail();
+
+    /** Column name Fax */
+    public static final String COLUMNNAME_Fax = "Fax";
+
+	/** Set Fax.
+	  * Facsimile number
+	  */
+	public void setFax (String Fax);
+
+	/** Get Fax.
+	  * Facsimile number
+	  */
+	public String getFax();
 
     /** Column name IsActive */
     public static final String COLUMNNAME_IsActive = "IsActive";
@@ -200,6 +239,32 @@ public interface I_AD_OrgInfo
 	  * Parent (superior) Organization 
 	  */
 	public int getParent_Org_ID();
+
+    /** Column name Phone */
+    public static final String COLUMNNAME_Phone = "Phone";
+
+	/** Set Phone.
+	  * Identifies a telephone number
+	  */
+	public void setPhone (String Phone);
+
+	/** Get Phone.
+	  * Identifies a telephone number
+	  */
+	public String getPhone();
+
+    /** Column name Phone2 */
+    public static final String COLUMNNAME_Phone2 = "Phone2";
+
+	/** Set 2nd Phone.
+	  * Identifies an alternate telephone number.
+	  */
+	public void setPhone2 (String Phone2);
+
+	/** Get 2nd Phone.
+	  * Identifies an alternate telephone number.
+	  */
+	public String getPhone2();
 
     /** Column name ReceiptFooterMsg */
     public static final String COLUMNNAME_ReceiptFooterMsg = "ReceiptFooterMsg";

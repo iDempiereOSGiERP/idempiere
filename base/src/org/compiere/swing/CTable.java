@@ -48,6 +48,7 @@ import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableModel;
 
+import org.adempiere.plaf.AdempierePLAF;
 import org.compiere.util.MSort;
 import org.jdesktop.swingx.icon.ColumnControlIcon;
 
@@ -65,7 +66,7 @@ public class CTable extends JTable
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 772619961990977001L;
+	private static final long serialVersionUID = 975975420639030844L;
 
 	/**
 	 *	Default Constructor
@@ -705,6 +706,21 @@ public class CTable extends JTable
         	
         	hiddenColumns.add(column);
 		}
+	}
+	
+	public Component prepareRenderer(TableCellRenderer renderer, int rowIndex,
+			int vColIndex) {
+		Component c = super.prepareRenderer(renderer, rowIndex, vColIndex);
+		if (c==null) return c;
+		if (!this.isCellEditable(rowIndex, vColIndex) || isCellSelected(rowIndex, vColIndex))
+			return c; 
+		if (rowIndex % 2 == 0) { 
+			c.setBackground(AdempierePLAF.getFieldBackground_Selected());
+		} else {
+			// If not shaded, match the table's background
+			c.setBackground(getBackground());
+		}
+		return c; 
 	}
 	
 	class ColumnAttributes {

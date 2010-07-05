@@ -87,6 +87,8 @@ import org.compiere.util.ValueNamePair;
  *  				https://sourceforge.net/tracker/?func=detail&aid=2874109&group_id=176962&atid=879332
  *  			<li>BF [ 2905287 ] GridTab query is not build correctly
  *  				https://sourceforge.net/tracker/?func=detail&aid=2905287&group_id=176962&atid=879332
+ *  			<li>BF [ 3007342 ] Included tab context conflict issue
+ *  				https://sourceforge.net/tracker/?func=detail&aid=3007342&group_id=176962&atid=879332
  *  @author Victor Perez , e-Evolution.SC
  *  		<li>FR [1877902] Implement JSR 223 Scripting APIs to Callout
  *  		<li>BF [ 2910358 ] Error in context when a field is found in different tabs.
@@ -105,7 +107,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = -8762357519103152929L;
+	private static final long serialVersionUID = -8055500064230704903L;
 
 	public static final String DEFAULT_STATUS_MESSAGE = "NavigateOrUpdate";
 
@@ -185,7 +187,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	/** List of Key Parents     */
 	private ArrayList<String>	m_parents = new ArrayList<String>(2);
 
-	/** Map of ColumnName of source field (key) and the dependant field (value) */
+	/** Map of ColumnName of source field (key) and the dependent field (value) */
 	private MultiMap<String,GridField>	m_depOnField = new MultiMap<String,GridField>();
 
 	/** Async Loader            */
@@ -344,7 +346,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 
 	/**
 	 *	Get Field data and add to MTable, if it's required or displayed.
-	 *  Reqiored fields are keys, parents, or standard Columns
+	 *  Required fields are keys, parents, or standard Columns
 	 *  @return true if fields loaded
 	 */
 	private boolean loadFields()
@@ -498,8 +500,8 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		if (m_vo.AD_Image_ID == 0)
 			return null;
 		//
-		/** @todo Load Image */
-		return null;
+		MImage mImage = MImage.get(m_vo.ctx, m_vo.AD_Image_ID);
+		return mImage.getIcon();
 	}   //  getIcon
 
 
@@ -605,7 +607,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	 *  </pre>
 	 *  @param onlyCurrentRows only current rows
 	 *  @param onlyCurrentDays if only current row, how many days back
-	 *  @param maxRows maximim rows or 0 for all
+	 *  @param maxRows maximum rows or 0 for all
 	 */
 	public void query (boolean onlyCurrentRows, int onlyCurrentDays, int maxRows)
 	{
@@ -877,10 +879,19 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	 */
 	public void dataRefreshAll ()
 	{
+		dataRefreshAll(true);
+	}
+
+	/**************************************************************************
+	 *  Refresh all data
+	 *  @param fireEvent
+	 */
+	public void dataRefreshAll (boolean fireEvent)
+	{
 		log.fine("#" + m_vo.TabNo);
 		/** @todo does not work with alpha key */
 		int keyNo = m_mTable.getKeyID(m_currentRow);
-		m_mTable.dataRefreshAll();
+		m_mTable.dataRefreshAll(fireEvent);
 		//  Should use RowID - not working for tables with multiple keys
 		if (keyNo != -1)
 		{
@@ -897,8 +908,9 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 				}
 			}
 		}
-		setCurrentRow(m_currentRow, true);
-		fireStateChangeEvent(new StateChangeEvent(this, StateChangeEvent.DATA_REFRESH_ALL));
+		setCurrentRow(m_currentRow, fireEvent);
+		if (fireEvent)
+			fireStateChangeEvent(new StateChangeEvent(this, StateChangeEvent.DATA_REFRESH_ALL));
 	}   //  dataRefreshAll
 
 	/**
@@ -906,7 +918,16 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	 */
 	public void dataRefresh ()
 	{
-		dataRefresh (m_currentRow);
+		dataRefresh(true);
+	}
+
+	/**
+	 *  Refresh current row data
+	 *  @param fireEvent
+	 */
+	public void dataRefresh (boolean fireEvent)
+	{
+		dataRefresh (m_currentRow, fireEvent);
 	}   //  dataRefresh
 
 	/**
@@ -915,10 +936,21 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	 */
 	public void dataRefresh (int row)
 	{
+		dataRefresh(row, true);
+	}
+
+	/**
+	 *  Refresh row data
+	 *  @param row index
+	 *  @param fireEvent
+	 */
+	public void dataRefresh (int row, boolean fireEvent)
+	{
 		log.fine("#" + m_vo.TabNo + " - row=" + row);
-		m_mTable.dataRefresh(row);
-		setCurrentRow(row, true);
-		fireStateChangeEvent(new StateChangeEvent(this, StateChangeEvent.DATA_REFRESH));
+		m_mTable.dataRefresh(row, fireEvent);
+		setCurrentRow(row, fireEvent);
+		if (fireEvent)
+			fireStateChangeEvent(new StateChangeEvent(this, StateChangeEvent.DATA_REFRESH));
 	}   //  dataRefresh
 
 
@@ -933,7 +965,11 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		try
 		{
 			if (hasChangedCurrentTabAndParents())
-				return false;
+			{
+				// Fail only if it's a true change - teo_sarca [ 3017560 ]
+				if (manualCmd || m_mTable.hasChanged(m_currentRow))
+					return false;
+			}
 
 			boolean retValue = (m_mTable.dataSave(manualCmd) == GridTable.SAVE_OK);
 			if (manualCmd)
@@ -1009,7 +1045,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 			for (int i = m_window.getTabIndex(this) - 1; i >= 0; i--) {
 				GridTab parentTab = m_window.getTab(i);
 				if (parentTab.m_vo.TabLevel == level-1) {
-					parentTab.dataRefresh();
+					parentTab.dataRefresh(false);
 					// search for the next parent
 					if (parentTab.isDetail()) {
 						level = parentTab.m_vo.TabLevel;
@@ -1019,7 +1055,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 				}
 			}
 			// refresh this tab
-			dataRefresh();
+			dataRefresh(false);
 		}
 	}
 
@@ -1087,7 +1123,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 			log.finest("Processed=" + processed);
 		}
 
-		//hengsin, dont create new when parent is empty
+		//hengsin, don't create new when parent is empty
 		if (isDetail() && m_parentNeedSave)
 			return false;
 
@@ -1300,7 +1336,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 
 
 	/**
-	 *  Is Tab Incluced in other Tab
+	 *  Is Tab Included in other Tab
 	 *  @return true if included
 	 */
 	public boolean isIncluded()
@@ -1309,7 +1345,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	}   //  isIncluded
 
 	/**
-	 *  Is Tab Incluced in other Tab
+	 *  Is Tab Included in other Tab
 	 *  @param isIncluded true if included
 	 */
 	public void setIncluded(boolean isIncluded)
@@ -1392,7 +1428,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 
 	/**
 	 *	Is High Volume?
-	 *  @return true if high volumen table
+	 *  @return true if high volume table
 	 */
 	public boolean isHighVolume()
 	{
@@ -1476,7 +1512,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	 */
 	public String get_ValueAsString (String variableName)
 	{
-		return Env.getContext (m_vo.ctx, m_vo.WindowNo, variableName, true);
+		return Env.getContext (m_vo.ctx, m_vo.WindowNo, m_vo.TabNo, variableName, false, true);
 	}	//	get_ValueAsString
 
 	/**
@@ -1664,7 +1700,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 			 *	{0} Line(s) {1,number,#,##0.00}  - Total: {2,number,#,##0.00}
 			 *
 			 *	{0} - Number of lines
-			 *	{1} - Toral
+			 *	{1} - Total
 			 *	{2} - Currency
 			 */
 			Object[] arguments = new Object[3];
@@ -1744,10 +1780,10 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 				return " ";
 			/**********************************************************************
 			 *	** Message: OrderSummary **
-			 *	{0} Line(s) - {1,number,#,##0.00} - Toral: {2,number,#,##0.00} {3} = {4,number,#,##0.00}
+			 *	{0} Line(s) - {1,number,#,##0.00} - Total: {2,number,#,##0.00} {3} = {4,number,#,##0.00}
 			 *
 			 *	{0} - Number of lines
-			 *	{1} - Line toral
+			 *	{1} - Line total
 			 *	{2} - Grand total (including tax, etc.)
 			 *	{3} - Currency
 			 *	(4) - Grand total converted to local currency
@@ -1818,7 +1854,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 			 *	{0} Line(s) - Total: {1,number,#,##0.00} {2}
 			 *
 			 *	{0} - Number of lines
-			 *	{1} - Toral
+			 *	{1} - Total
 			 *	{2} - Currency
 			 */
 			Object[] arguments = new Object[3];
@@ -1841,7 +1877,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 					//	{0} - Number of lines
 					Integer lines = new Integer(rs.getInt(1));
 					arguments[0] = lines;
-					//	{1} - Line toral
+					//	{1} - Line total
 					Double total = new Double(rs.getDouble(2));
 					arguments[1] = total;
 					//	{3} - Currency
@@ -1870,7 +1906,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	}	//	getTrxInfo
 
 	/**
-	 *  Load Dependant Information
+	 *  Load Dependent Information
 	 */
 	private void loadDependentInfo()
 	{
@@ -1992,7 +2028,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 
 	/**
 	 *	Returns true, if current row has an Attachment
-	 *  @return true if record has attchment
+	 *  @return true if record has attachment
 	 */
 	public boolean hasAttachment()
 	{
@@ -2573,7 +2609,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		int col = m_mTable.findColumn(field.getColumnName());
 		m_mTable.setValueAt(value, m_currentRow, col, false);
 		//
-		return processFieldChange (field);
+		return ""; // processFieldChange (field); // here we don't need to call processFieldChange, it was called on GridController.dataStatusChanged
 	}   //  setValue
 
 	/**
@@ -2973,7 +3009,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	/**
 	 * Feature Request [1707462]
 	 * Enable runtime change of VFormat
-	 * @param Identifier field ident
+	 * @param Identifier field indent
 	 * @param strNewFormat new mask
 	 * @author fer_luck
 	 */
@@ -3112,5 +3148,13 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 				currentLevel = Env.getContextAsInt(m_vo.ctx, m_vo.WindowNo, tabNo, GridTab.CTX_TabLevel);
 			}
 		return tabNo;
+	}
+	
+	public GridTab getParentTab()
+	{
+		int parentTabNo = getParentTabNo();
+		if (parentTabNo < 0 || parentTabNo == m_vo.TabNo)
+			return null;
+		return m_window.getTab(parentTabNo);
 	}
 }	//	GridTab

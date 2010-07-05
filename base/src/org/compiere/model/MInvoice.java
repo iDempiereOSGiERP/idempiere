@@ -61,8 +61,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 5406556271212363271L;
-
+	private static final long serialVersionUID = 816227083897031327L;
 
 	/**
 	 * 	Get Payments Of BPartner
@@ -571,10 +570,10 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	public void setC_DocTypeTarget_ID (String DocBaseType)
 	{
 		String sql = "SELECT C_DocType_ID FROM C_DocType "
-			+ "WHERE AD_Client_ID=? AND DocBaseType=?"
+			+ "WHERE AD_Client_ID=? AND AD_Org_ID in (0,?) AND DocBaseType=?"
 			+ " AND IsActive='Y' "
-			+ "ORDER BY IsDefault DESC";
-		int C_DocType_ID = DB.getSQLValueEx(null, sql, getAD_Client_ID(), DocBaseType);
+			+ "ORDER BY IsDefault DESC, AD_Org_ID DESC";
+		int C_DocType_ID = DB.getSQLValueEx(null, sql, getAD_Client_ID(), getAD_Org_ID(), DocBaseType);
 		if (C_DocType_ID <= 0)
 			log.log(Level.SEVERE, "Not found for AD_Client_ID="
 				+ getAD_Client_ID() + " - " + DocBaseType);
@@ -1600,9 +1599,16 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			approveIt();
 		log.info(toString());
 		StringBuffer info = new StringBuffer();
+		
+		// POS supports multiple payments
+		boolean fromPOS = false;
+		if ( getC_Order_ID() > 0 )
+		{
+			fromPOS = getC_Order().getC_POS_ID() > 0;
+		}
 
   		//	Create Cash
-		if (PAYMENTRULE_Cash.equals(getPaymentRule()))
+		if (PAYMENTRULE_Cash.equals(getPaymentRule()) && !fromPOS )
 		{
 			// Modifications for POSterita
             //
@@ -1676,17 +1682,17 @@ public class MInvoice extends X_C_Invoice implements DocAction
 					BigDecimal matchQty = line.getQtyInvoiced();
 					MMatchPO po = MMatchPO.create (line, null,
 						getDateInvoiced(), matchQty);
+					boolean isNewMatchPO = false;
+					if (po.get_ID() == 0)
+						isNewMatchPO = true;
 					if (!po.save(get_TrxName()))
 					{
 						m_processMsg = "Could not create PO Matching";
 						return DocAction.STATUS_Invalid;
 					}
-					else {
-						matchPO++;
-						if (MClient.isClientAccountingImmediate()) {
-							String ignoreError = DocumentEngine.postImmediate(po.getCtx(), po.getAD_Client_ID(), po.get_Table_ID(), po.get_ID(), true, po.get_TrxName());						
-						}
-					}
+					matchPO++;
+					if (isNewMatchPO)
+						addDocsPostProcess(po);
 				}
 			}
 
@@ -1719,17 +1725,17 @@ public class MInvoice extends X_C_Invoice implements DocAction
 					matchQty = receiptLine.getMovementQty();
 
 				MMatchInv inv = new MMatchInv(line, getDateInvoiced(), matchQty);
+				boolean isNewMatchInv = false;
+				if (inv.get_ID() == 0)
+					isNewMatchInv = true;
 				if (!inv.save(get_TrxName()))
 				{
 					m_processMsg = CLogger.retrieveErrorString("Could not create Invoice Matching");
 					return DocAction.STATUS_Invalid;
 				}
-				else {
-					matchInv++;
-					if (MClient.isClientAccountingImmediate()) {
-						String ignoreError = DocumentEngine.postImmediate(inv.getCtx(), inv.getAD_Client_ID(), inv.get_Table_ID(), inv.get_ID(), true, inv.get_TrxName());						
-					}
-				}
+				matchInv++;
+				if (isNewMatchInv)
+					addDocsPostProcess(inv);
 			}
 		}	//	for all lines
 		if (matchInv > 0)
@@ -1857,6 +1863,17 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		setDocAction(DOCACTION_Close);
 		return DocAction.STATUS_Completed;
 	}	//	completeIt
+
+	/* Save array of documents to process AFTER completing this one */
+	ArrayList<PO> docsPostProcess = new ArrayList<PO>();
+
+	private void addDocsPostProcess(PO doc) {
+		docsPostProcess.add(doc);
+	}
+
+	public ArrayList<PO> getDocsPostProcess() {
+		return docsPostProcess;
+	}
 
 	/**
 	 * 	Set the definite document number after completed
@@ -2039,13 +2056,13 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		if (m_processMsg != null)
 			return false;
 
+		setProcessed(true);
+		setDocAction(DOCACTION_None);
+
 		// After Close
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this,ModelValidator.TIMING_AFTER_CLOSE);
 		if (m_processMsg != null)
 			return false;
-
-		setProcessed(true);
-		setDocAction(DOCACTION_None);
 		return true;
 	}	//	closeIt
 
