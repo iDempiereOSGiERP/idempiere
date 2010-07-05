@@ -40,6 +40,11 @@ import org.compiere.util.Msg;
  * @author Teo Sarca, www.arhipac.ro
  * 			<li>BF [ 2800460 ] System generate Material Receipt with no lines
  * 				https://sourceforge.net/tracker/?func=detail&atid=879332&aid=2800460&group_id=176962
+ * @author Teo Sarca, teo.sarca@gmail.com
+ * 			<li>BF [ 2993853 ] Voiding/Reversing Receipt should void confirmations
+ * 				https://sourceforge.net/tracker/?func=detail&atid=879332&aid=2993853&group_id=176962
+ * 			<li>FR [ 2994115 ] Add C_DocType.IsPrepareSplitDoc flag
+ * 				https://sourceforge.net/tracker/?func=detail&aid=2994115&group_id=176962&atid=879335
  */
 public class MInOutConfirm extends X_M_InOutConfirm implements DocAction
 {
@@ -525,7 +530,13 @@ public class MInOutConfirm extends X_M_InOutConfirm implements DocAction
 
 		m_processMsg = "Split @M_InOut_ID@=" + split.getDocumentNo()
 			+ " - @M_InOutConfirm_ID@=";
-
+		
+		MDocType dt = MDocType.get(getCtx(), original.getC_DocType_ID());
+		if (!dt.isPrepareSplitDocument())
+		{
+			return ;
+		}
+		
 		//	Create Dispute Confirmation
 		if (!split.processIt(DocAction.ACTION_Prepare))
 			throw new AdempiereException(split.getProcessMsg());
@@ -645,12 +656,53 @@ public class MInOutConfirm extends X_M_InOutConfirm implements DocAction
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this,ModelValidator.TIMING_BEFORE_VOID);
 		if (m_processMsg != null)
 			return false;
+
+		if (DOCSTATUS_Closed.equals(getDocStatus())
+				|| DOCSTATUS_Reversed.equals(getDocStatus())
+				|| DOCSTATUS_Voided.equals(getDocStatus()))
+		{
+			m_processMsg = "Document Closed: " + getDocStatus();
+			return false;
+		}
+
+		//	Not Processed
+		if (DOCSTATUS_Drafted.equals(getDocStatus())
+				|| DOCSTATUS_Invalid.equals(getDocStatus())
+				|| DOCSTATUS_InProgress.equals(getDocStatus())
+				|| DOCSTATUS_Approved.equals(getDocStatus())
+				|| DOCSTATUS_NotApproved.equals(getDocStatus()) )
+		{
+			MInOut inout = (MInOut)getM_InOut();
+			if (!MInOut.DOCSTATUS_Voided.equals(inout.getDocStatus())
+					&& !MInOut.DOCSTATUS_Reversed.equals(inout.getDocStatus()) )
+			{
+				throw new AdempiereException("@M_InOut_ID@ @DocStatus@<>VO");
+			}
+			for (MInOutLineConfirm confirmLine : getLines(true))
+			{
+				confirmLine.setTargetQty(Env.ZERO);
+				confirmLine.setConfirmedQty(Env.ZERO);
+				confirmLine.setScrappedQty(Env.ZERO);
+				confirmLine.setDifferenceQty(Env.ZERO);
+				confirmLine.setProcessed(true);
+				confirmLine.saveEx();
+			}
+			setIsCancelled(true);
+		}
+		else
+		{
+			return reverseCorrectIt();
+		}
+
 		// After Void
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this,ModelValidator.TIMING_AFTER_VOID);
 		if (m_processMsg != null)
 			return false;
 		
-		return false;
+		setProcessed(true);
+		setDocAction(DOCACTION_None);
+		
+		return true;
 	}	//	voidIt
 	
 	/**
@@ -664,12 +716,13 @@ public class MInOutConfirm extends X_M_InOutConfirm implements DocAction
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this,ModelValidator.TIMING_BEFORE_CLOSE);
 		if (m_processMsg != null)
 			return false;
+		
+		setDocAction(DOCACTION_None);
+
 		// After Close
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this,ModelValidator.TIMING_AFTER_CLOSE);
 		if (m_processMsg != null)
 			return false;
-
-		setDocAction(DOCACTION_None);
 
 		return true;
 	}	//	closeIt

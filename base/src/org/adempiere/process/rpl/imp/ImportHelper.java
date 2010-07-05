@@ -85,6 +85,8 @@ public class ImportHelper {
 	
 	/** Custom Date Format			*/
 	private SimpleDateFormat	m_customDateFormat = null;
+	/** Set change PO			*/
+	boolean isChanged= false;
 	
 	/** Context						*/
 	private Properties ctx = null;
@@ -161,11 +163,18 @@ public class ImportHelper {
 			throw new Exception(Msg.getMsg(ctx, "EXPFormatNotFound"));
 		}
 		log.info("expFormat = " + expFormat.toString());
-		
+		isChanged = false;
 		PO po = importElement(ctx, result, rootElement, expFormat, ReplicationType, trxName);
+		if(!po.is_Changed() && !isChanged)
+		{
+		    log.info("Object not changed = " + po.toString());
+		    return;
+		}
 		
 		if(po != null)
 		{
+			 Env.setContext(po.getCtx(), "#AD_Client_ID", po.getAD_Client_ID());
+			 
 		    	if(MReplicationStrategy.REPLICATION_TABLE==ReplicationMode)
 		    	{    
         			// Here must invoke other method else we get cycle...
@@ -179,22 +188,20 @@ public class ImportHelper {
         			{
         				if(X_AD_ReplicationTable.REPLICATIONTYPE_Broadcast.equals(ReplicationType))
         				{
-        				    po.saveReplica(true);
-        					MReplicationStrategy rplStrategy = new MReplicationStrategy(client.getCtx(), client.getAD_ReplicationStrategy_ID(), null);
+        					MReplicationStrategy rplStrategy = new MReplicationStrategy(client.getCtx(), client.getAD_ReplicationStrategy_ID(), po.get_TrxName());
         					ExportHelper expHelper = new ExportHelper(client, rplStrategy);
         					expHelper.exportRecord(	po, 
         								MReplicationStrategy.REPLICATION_TABLE,
         								X_AD_ReplicationTable.REPLICATIONTYPE_Merge,
         								ModelValidator.TYPE_AFTER_CHANGE);
+        					po.saveReplica(true);
         					
         				}
         				else if(X_AD_ReplicationTable.REPLICATIONTYPE_Merge.equals(ReplicationType)
         					||  X_AD_ReplicationTable.REPLICATIONTYPE_Reference.equals(ReplicationType))
         				{
-        					if(po.is_Changed())
-        					{	
+
         						po.saveReplica(true);
-        					}	
         				}
         				/*else if (X_AD_ReplicationTable.REPLICATIONTYPE_Reference.equals(ReplicationType))
         				{
@@ -212,14 +219,38 @@ public class ImportHelper {
         			}	
 		    	}
 		    	else if(MReplicationStrategy.REPLICATION_DOCUMENT == ReplicationMode  
-		    		&& X_AD_ReplicationDocument.REPLICATIONTYPE_Merge.equals(ReplicationType)
-		    		&& po instanceof DocAction)
+		    	&& X_AD_ReplicationDocument.REPLICATIONTYPE_Merge.equals(ReplicationType)
+		    	&& po instanceof DocAction)
 		    	{
-		    		   Env.setContext(po.getCtx(), "#AD_Client_ID", po.getAD_Client_ID());
 				   DocAction document = (DocAction)po;
-				   document.processIt(document.getDocAction());		   
-				   po.saveEx();
-		    	}	
+				   String action = document.getDocAction();
+				   String status = document.getDocStatus();
+				   log.info("Document:"+document.toString() + " DocStauts:" + status + " DocAction:"+action);
+				   
+				   if(ModelValidator.TIMING_AFTER_REVERSECORRECT==ReplicationEvent)
+				   {   
+					   if(status.equals(DocAction.STATUS_Reversed) && action.equals(DocAction.ACTION_None))
+					   {
+						   po.saveEx();
+						   return;
+					   }
+				   }	 
+				   
+				   if( (action.equals(DocAction.ACTION_Complete) && status.equals(DocAction.STATUS_InProgress))
+				   ||  (action.equals(DocAction.ACTION_Close) && status.equals(DocAction.STATUS_Completed)))
+				   {	
+					   if(!document.processIt(action))
+					   {    
+					       log.info("PO.toString() = can not " + po.get_Value("DocAction"));
+					   }
+					   po.saveEx();
+				   }
+				   else
+				   {
+						 po.saveEx();
+						   return;
+				   }
+		    }	
 		}	
 		result.append("Save Successful ;");		
 	}
@@ -333,9 +364,15 @@ public class ImportHelper {
 		} 
 		else if (MEXPFormatLine.TYPE_EmbeddedEXPFormat.equals(line.getType())) 
 		{
+
 			if(po.is_Changed())
 			{	
+			   	isChanged = true;
 				po.saveReplica(true);
+			}
+			else
+			{
+				return value;
 			}
 			
 			// Embedded Export Format It is used for Parent-Son records like Order&OrderLine
@@ -354,7 +391,16 @@ public class ImportHelper {
 				log.info("=== BEGIN RECURSION CALL ===");
 				embeddedPo = importElement(ctx, result, referencedElement, referencedExpFormat,ReplicationType, po.get_TrxName());
 				log.info("embeddedPo = " + embeddedPo);
+				if(!embeddedPo.is_Changed())
+				{
+				    log.info("Object not changed = " + po.toString());
+				    continue;
+				}
+				else
+				{	
 				embeddedPo.saveReplica(true);
+				isChanged = true;
+				}	
 				result.append(" Embedded Save Successful ; ");
 				
 			}
@@ -599,7 +645,7 @@ public class ImportHelper {
 				log.info("referencedNode = " + referencedNode);
 				if (referencedNode == null) 
 				{					
-					throw new IllegalArgumentException("referencedNode can't be null!");
+					throw new IllegalArgumentException("referencedNode can't be found!");
 				}
 				record_ID = getID(ctx, referencedExpFormat, referencedNode, uniqueFormatLine.getValue(), trxName);
 
@@ -673,7 +719,7 @@ public class ImportHelper {
 		
 		if(values.size()<=0)//Means that is a new record
 		{
-			PO po = po = MTable.get(ctx, expFormat.getAD_Table_ID()).getPO(0,trxName);
+			PO po = MTable.get(ctx, expFormat.getAD_Table_ID()).getPO(0,trxName);
 			
 			if (replication_id > 0 )
 			{

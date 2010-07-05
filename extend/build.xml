@@ -88,7 +88,7 @@
     <!-- pathelement path="/root/RmiJdbc/dist/lib/RmiJdbc.jar" / -->
   </path>
 
-<target name="functionaltest" depends="dist">
+  <target name="functionaltest" depends="dist">
     <junit>
       <classpath refid="class.path.test" />
       <formatter type="brief" usefile="false" />
@@ -106,13 +106,20 @@
     </junit>
   </target>
 
-<target name="run" depends="dist">
+  <target name="performance.test" depends="dist">
+    <junit printsummary="no" fork="no" maxmemory="1024m" haltonfailure="yes">
+      <!--jvmarg value="-Djava.compiler=NONE"/-->
+      <classpath refid="class.path.test" />
+      <formatter type="brief" usefile="false" />
+      <test name="test.performance.MProductTest" />
+    </junit>
+  </target>
+	
+  <target name="run" depends="dist">
       <java fork="true" classname="test.functional.XMLImportStructureTest">
         <classpath refid="class.path.test" />
       </java>
   </target>
-
-
 
 
   <target name="clean">

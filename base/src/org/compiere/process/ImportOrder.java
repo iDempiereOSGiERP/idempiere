@@ -232,8 +232,8 @@ public class ImportOrder extends SvrProcess
 		// @Trifon - Import Order Source
 		sql = new StringBuffer ("UPDATE I_Order o "
 			  + "SET C_OrderSource_ID=(SELECT C_OrderSource_ID FROM C_OrderSource p"
-			  + " WHERE o.OrderSourceValue=p.Value AND o.AD_Client_ID=p.AD_Client_ID) "
-			  + "WHERE C_OrderSource_ID IS NULL AND OrderSourceValue IS NOT NULL AND I_IsImported<>'Y'").append (clientCheck);
+			  + " WHERE o.C_OrderSourceValue=p.Value AND o.AD_Client_ID=p.AD_Client_ID) "
+			  + "WHERE C_OrderSource_ID IS NULL AND C_OrderSourceValue IS NOT NULL AND I_IsImported<>'Y'").append (clientCheck);
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		log.fine("Set Order Source=" + no);
 		// Set proper error message
@@ -548,7 +548,7 @@ public class ImportOrder extends SvrProcess
 					//	Same Location Info
 					else if (imp.getC_Location_ID() == 0)
 					{
-						MLocation loc = bpl.getLocation(false);
+						MLocation loc = bpls[i].getLocation(false);
 						if (loc.equals(imp.getC_Country_ID(), imp.getC_Region_ID(), 
 								imp.getPostal(), "", imp.getCity(), 
 								imp.getAddress1(), imp.getAddress2()))
@@ -681,6 +681,9 @@ public class ImportOrder extends SvrProcess
 					order.setClientOrg (imp.getAD_Client_ID(), imp.getAD_Org_ID());
 					order.setC_DocTypeTarget_ID(imp.getC_DocType_ID());
 					order.setIsSOTrx(imp.isSOTrx());
+					if (imp.getDeliveryRule() != null ) {
+						order.setDeliveryRule(imp.getDeliveryRule());
+					}
 					if (imp.getDocumentNo() != null)
 						order.setDocumentNo(imp.getDocumentNo());
 					//	Ship Partner
@@ -718,6 +721,10 @@ public class ImportOrder extends SvrProcess
 						order.setDateOrdered(imp.getDateOrdered());
 					if (imp.getDateAcct() != null)
 						order.setDateAcct(imp.getDateAcct());
+					
+					// Set Order Source
+					if (imp.getC_OrderSource() != null)
+						order.setC_OrderSource_ID(imp.getC_OrderSource_ID());
 					//
 					order.save();
 					noInsert++;

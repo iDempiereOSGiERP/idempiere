@@ -2164,8 +2164,8 @@ public final class APanel extends CPanel
 				query.addRestriction(link, MQuery.EQUAL,
 					Env.getContext(m_ctx, m_curWindowNo, link));
 		}
-		new AZoomAcross (aZoomAcross.getButton(),
-			m_curTab.getTableName(), query);
+		new AZoomAcross(aZoomAcross.getButton(), m_curTab.getTableName(),
+				m_curTab.getAD_Window_ID(), query);
 	}	//	cmd_zoom
 
 	/**
@@ -2642,7 +2642,7 @@ public final class APanel extends CPanel
 				if (!cmd_save(true))
 					return;
 
-			FormFrame ff = new FormFrame();
+			FormFrame ff = new FormFrame(getGraphicsConfiguration());
 			String title = vButton.getDescription();
 			if (title == null || title.length() == 0)
 				title = vButton.getName();

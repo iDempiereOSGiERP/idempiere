@@ -29,6 +29,7 @@ import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.pdf.Document;
 import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.apps.WReport;
+import org.adempiere.webui.component.Checkbox;
 import org.adempiere.webui.component.ConfirmPanel;
 import org.adempiere.webui.component.Label;
 import org.adempiere.webui.component.ListItem;
@@ -55,6 +56,7 @@ import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
 import org.zkoss.util.media.AMedia;
+import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.Executions;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
@@ -93,7 +95,7 @@ import org.zkoss.zul.Vbox;
  */
 public class ZkReportViewer extends Window implements EventListener {
 	
-	private static final long serialVersionUID = 1492321933977608137L;
+	private static final long serialVersionUID = 4640088641140012438L;
 	/** Window No					*/
 	private int                 m_WindowNo;
 	/**	Print Context				*/
@@ -133,6 +135,7 @@ public class ZkReportViewer extends Window implements EventListener {
 	private Window winExportFile = null;
 	private ConfirmPanel confirmPanel = new ConfirmPanel(true);
 	private Listbox cboType = new Listbox();
+	private Checkbox summary = new Checkbox();
 	
 	/**
 	 * 	Static Layout
@@ -210,6 +213,9 @@ public class ZkReportViewer extends Window implements EventListener {
 		comboReport.setMold("select");
 		comboReport.setTooltiptext(Msg.translate(m_ctx, "AD_PrintFormat_ID"));
 		toolBar.appendChild(comboReport);
+		
+		summary.setText(Msg.getMsg(m_ctx, "Summary"));
+		toolBar.appendChild(summary);
 		
 		bCustomize.setImage("/images/Preference24.png");
 		bCustomize.setTooltiptext("Customize Report");
@@ -297,7 +303,7 @@ public class ZkReportViewer extends Window implements EventListener {
 						if (item != null && item.getValue() != null && item.toString().trim().length() > 0)
 						{
 							query.setTableName(item.getValue().toString());
-							executeDrill(query);
+							executeDrill(query, event.getTarget());
 						}
 					}
 				}
@@ -312,7 +318,7 @@ public class ZkReportViewer extends Window implements EventListener {
 					DrillEvent de = (DrillEvent) event;
 					if (de.getData() != null && de.getData() instanceof MQuery) {
 						MQuery query = (MQuery) de.getData();
-						executeDrill(query);
+						executeDrill(query, event.getTarget());
 					}
 				}
 				
@@ -376,6 +382,8 @@ public class ZkReportViewer extends Window implements EventListener {
 	 */
 	private void dynInit()
 	{
+		summary.addActionListener(this);
+		
 		fillComboReport(m_reportEngine.getPrintFormat().get_ID());
 
 		//	fill Drill Options (Name, TableName)
@@ -518,6 +526,11 @@ public class ZkReportViewer extends Window implements EventListener {
 			exportFile();
 		else if(event.getName().equals(Events.ON_CLICK) || event.getName().equals(Events.ON_SELECT)) 
 			actionPerformed(event);
+		else if (event.getTarget() == summary) 
+		{
+			m_reportEngine.setSummary(summary.isSelected());
+			cmd_report();
+		}
 	}
 
 	/**************************************************************************
@@ -562,8 +575,9 @@ public class ZkReportViewer extends Window implements EventListener {
 	/**
 	 * 	Execute Drill to Query
 	 * 	@param query query
+	 *  @param component
 	 */
-	private void executeDrill (MQuery query)
+	private void executeDrill (MQuery query, Component component)
 	{
 		int AD_Table_ID = AReport.getAD_Table_ID(query.getTableName());
 		if (!MRole.getDefault().isCanReport(AD_Table_ID))
@@ -572,7 +586,7 @@ public class ZkReportViewer extends Window implements EventListener {
 			return;
 		}
 		if (AD_Table_ID != 0)
-			new WReport (AD_Table_ID, query);
+			new WReport (AD_Table_ID, query, component, 0);
 		else
 			log.warning("No Table found for " + query.getWhereClause(true));
 	}	//	executeDrill

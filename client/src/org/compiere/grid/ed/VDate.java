@@ -476,17 +476,6 @@ public class VDate extends JComponent
 		//  ESC
 		if (e.getKeyCode() == KeyEvent.VK_ESCAPE)
 			m_text.setText(m_initialText);
-		m_setting = true;
-		try
-		{
-			Timestamp ts = getTimestamp();		//	getValue
-			if (ts == null)						//	format error - just indicate change
-				fireVetoableChange (m_columnName, m_oldText, null);
-			else
-				fireVetoableChange (m_columnName, m_oldText, ts);
-		}
-		catch (PropertyVetoException pve)	{}
-		m_setting = false;
 	}	//	keyReleased
 
 	/**
@@ -503,6 +492,18 @@ public class VDate extends JComponent
 	 */
 	public void focusLost (FocusEvent e)
 	{
+		m_setting = true;
+		try
+		{
+			Timestamp ts = getTimestamp();		//	getValue
+			if (ts == null)						//	format error - just indicate change
+				fireVetoableChange (m_columnName, m_oldText, null);
+			else
+				fireVetoableChange (m_columnName, m_oldText, ts);
+		}
+		catch (PropertyVetoException pve)	{}
+		m_setting = false;
+		
 		//  did not get Focus first
 		if (e.isTemporary())
 			return;
@@ -546,8 +547,10 @@ public class VDate extends JComponent
 		AEnv.showCenterWindow(frame, cal);
 		Timestamp result = cal.getTimestamp();
 		log.config( "Result=" + result);
-		if (result == null && !cal.isCancel()) // F3P: added check for 'isCancel',
+		if (result == null)
 			result = value;		//	original
+		else if (result.compareTo(new Timestamp(-1))==0)
+			result = null;
 		cal = null;
 		return result;
 	}	//	startCalendar
@@ -623,4 +626,10 @@ public class VDate extends JComponent
 		}
 	}	//	fireActionPerformed
 	/**/
+	
+	@Override
+	public void setBackground(Color bg)
+	{
+		m_text.setBackground(bg);
+	}
 }	//	VDate

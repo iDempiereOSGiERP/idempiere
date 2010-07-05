@@ -23,7 +23,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 
@@ -53,10 +53,13 @@ import org.compiere.util.Trx;
  */
 public class MCost extends X_M_Cost
 {
-	/**
-	 *
-	 */
-	private static final long serialVersionUID = -127982599769472918L;
+
+
+
+    	/**
+         * 
+         */
+        private static final long serialVersionUID = -127982599769472918L;
 
 
 	/**
@@ -326,7 +329,7 @@ public class MCost extends X_M_Cost
 			MCost cost = get(product, M_ASI_ID, as, Org_ID, ce.getM_CostElement_ID());
 			if (cost != null && cost.getCurrentCostPrice().signum() != 0)
 			{
-				s_log.fine(product.getName() + ", Standard - " + retValue);
+				s_log.fine(product.getName() + ", Standard - " + cost);
 				return cost.getCurrentCostPrice();
 			}
 		}
@@ -683,7 +686,7 @@ public class MCost extends X_M_Cost
 			s_log.config(product.getName());
 
 			//	Cost Elements
-			Collection <MCostElement> ces = MCostElement.getCostElementsWithCostingMethods(product);
+			List <MCostElement> ces = MCostElement.getCostElementsWithCostingMethods(product);
 
 			MAcctSchema[] mass = MAcctSchema.getClientAcctSchema(product.getCtx(),
 				product.getAD_Client_ID(), product.get_TrxName());
@@ -751,7 +754,7 @@ public class MCost extends X_M_Cost
 	{
 		s_log.config(product.getName());
 		//	Cost Elements
-		Collection <MCostElement> ces = MCostElement.getCostElementsWithCostingMethods(product);
+		List <MCostElement> ces = MCostElement.getCostElementsWithCostingMethods(product);
 
 			MAcctSchema[] mass = MAcctSchema.getClientAcctSchema(product.getCtx(),
 				product.getAD_Client_ID(), product.get_TrxName());
@@ -864,7 +867,7 @@ public class MCost extends X_M_Cost
 				BigDecimal averageCurrent = oldStockQty.multiply(oldAverageAmt);
 				BigDecimal averageIncrease = matchQty.multiply(cost);
 				BigDecimal newAmt = averageCurrent.add(averageIncrease);
-				newAmt = newAmt.setScale(as.getCostingPrecision());
+				newAmt = newAmt.setScale(as.getCostingPrecision(), BigDecimal.ROUND_HALF_UP);
 				newAverageAmt = newAmt.divide(newStockQty, as.getCostingPrecision(), BigDecimal.ROUND_HALF_UP);
 				s_log.finer("Movement=" + movementQty + ", StockQty=" + newStockQty
 					+ ", Match=" + matchQty + ", Cost=" + cost + ", NewAvg=" + newAverageAmt);
@@ -960,7 +963,7 @@ public class MCost extends X_M_Cost
 				BigDecimal averageCurrent = oldStockQty.multiply(oldAverageAmt);
 				BigDecimal averageIncrease = matchQty.multiply(cost);
 				BigDecimal newAmt = averageCurrent.add(averageIncrease);
-				newAmt = newAmt.setScale(as.getCostingPrecision());
+				newAmt = newAmt.setScale(as.getCostingPrecision(), BigDecimal.ROUND_HALF_UP);
 				newAverageAmt = newAmt.divide(newStockQty, as.getCostingPrecision(), BigDecimal.ROUND_HALF_UP);
 				s_log.finer("Movement=" + movementQty + ", StockQty=" + newStockQty
 					+ ", Match=" + matchQty + ", Cost=" + cost + ", NewAvg=" + newAverageAmt);

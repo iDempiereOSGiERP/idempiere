@@ -18,6 +18,7 @@
 package org.adempiere.webui.panel;
 
 import org.adempiere.webui.LayoutUtils;
+import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.component.Label;
 import org.adempiere.webui.component.Panel;
 import org.adempiere.webui.session.SessionManager;
@@ -50,10 +51,10 @@ import org.zkoss.zul.Vbox;
 public class StatusBarPanel extends Panel implements EventListener, IStatusBar
 {
 	/**
-	 *
+	 * 
 	 */
-	private static final long serialVersionUID = 8401520243224743864L;
-
+	private static final long serialVersionUID = -3262889055635240201L;
+	
 	private static final String POPUP_INFO_BACKGROUND_STYLE = "background-color: #262626; -moz-border-radius: 3px; -webkit-border-radius: 3px; border: 1px solid #262626; border-radius: 3px; ";
 	private static final String POPUP_ERROR_BACKGROUND_STYLE = "background-color: #8B0000; -moz-border-radius: 3px; -webkit-border-radius: 3px; border: 1px solid #8B0000; border-radius: 3px; ";
 	private static final String POPUP_POSITION_STYLE = "position: absolute; z-index: 99; display: block; visibility: visible;";
@@ -202,7 +203,7 @@ public class StatusBarPanel extends Panel implements EventListener, IStatusBar
     		statusLine.setStyle("color: black");
     	statusLine.setTooltiptext(text);
 
-    	if (!embedded && showPopup)
+    	if (showPopup && AEnv.isBrowserSupported())
     	{
 	    	Text t = new Text(text);
 	    	popupContent.getChildren().clear();
@@ -252,11 +253,13 @@ public class StatusBarPanel extends Panel implements EventListener, IStatusBar
 
 		String script = "var d = $e('" + popup.getUuid() + "');";
 		script += "d.style.display='block';d.style.visibility='hidden';";
-		script += "var hs = document.defaultView.getComputedStyle(d, null).getPropertyValue('height');";
-		script += "var h = parseInt(hs, 10);";
-		script += "h = h - 18;if (h < 0) h = 0;";
-		script += "var p = Position.cumulativeOffset($e('" + this.getUuid() + "'));";
-		script += "d.style.top=(p[1]-h)+'px';";
+		script += "var dhs = document.defaultView.getComputedStyle(d, null).getPropertyValue('height');";
+		script += "var dh = parseInt(dhs, 10);";
+		script += "var r = $e('" + getRoot().getUuid() + "');";
+		script += "var rhs = document.defaultView.getComputedStyle(r, null).getPropertyValue('height');";
+		script += "var rh = parseInt(rhs, 10);";
+		script += "var p = Position.cumulativeOffset(r);";
+		script += "d.style.top=(rh-dh-5)+'px';";
 		script += "d.style.left=(p[0]+1)+'px';";
 		script += "d.style.visibility='visible';";
 
@@ -316,5 +319,11 @@ public class StatusBarPanel extends Panel implements EventListener, IStatusBar
 			popup.detach();
 	}
 
+	/**
+	 * @param visible
+	 */
+	public void setEastVisibility(boolean visible) {
+		east.setVisible(visible);
+	}
 
 }

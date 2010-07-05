@@ -58,7 +58,10 @@ import org.zkoss.zhtml.Text;
 /**
  * Row renderer for GridTab grid.
  * @author hengsin
- *
+ * 
+ * @author Teo Sarca, teo.sarca@gmail.com
+ * 		<li>BF [ 2996608 ] GridPanel is not displaying time
+ * 			https://sourceforge.net/tracker/?func=detail&aid=2996608&group_id=176962&atid=955896
  */
 public class GridTabRowRenderer implements RowRenderer, RowRendererExt, RendererCtrl {
 
@@ -79,6 +82,7 @@ public class GridTabRowRenderer implements RowRenderer, RowRendererExt, Renderer
 	private Object[] currentValues;
 	private boolean editing = false;
 	private int currentRowIndex = -1;
+	private AbstractADWindowPanel m_windowPanel;
 
 	/**
 	 *
@@ -96,12 +100,19 @@ public class GridTabRowRenderer implements RowRenderer, RowRendererExt, Renderer
 		if (editor != null)  {
 			if (editor instanceof WButtonEditor)
             {
-				Object window = SessionManager.getAppDesktop().findWindow(windowNo);
-            	if (window != null && window instanceof ADWindow)
-            	{
-            		AbstractADWindowPanel windowPanel = ((ADWindow)window).getADWindowPanel();
-            		((WButtonEditor)editor).addActionListener(windowPanel);
-            	}
+				if (m_windowPanel != null)
+				{
+					((WButtonEditor)editor).addActionListener(m_windowPanel);	
+				}
+				else
+				{
+					Object window = SessionManager.getAppDesktop().findWindow(windowNo);
+	            	if (window != null && window instanceof ADWindow)
+	            	{
+	            		AbstractADWindowPanel windowPanel = ((ADWindow)window).getADWindowPanel();
+	            		((WButtonEditor)editor).addActionListener(windowPanel);
+	            	}
+				}
             }
 			else
 			{
@@ -150,8 +161,6 @@ public class GridTabRowRenderer implements RowRenderer, RowRendererExt, Renderer
 		}
 		else if (gridField.isLookup())
     	{
-			if (value == null) return "";
-
 			if (lookupCache != null)
 			{
 				Map<Object, String> cache = lookupCache.get(gridField.getColumnName());
@@ -185,7 +194,10 @@ public class GridTabRowRenderer implements RowRenderer, RowRendererExt, Renderer
     	}
     	else if (gridTab.getTableModel().getColumnClass(getColumnIndex(gridField)).equals(Timestamp.class))
     	{
-    		SimpleDateFormat dateFormat = DisplayType.getDateFormat(DisplayType.Date, AEnv.getLanguage(Env.getCtx()));
+    		int displayType = DisplayType.Date;
+    		if (gridField != null && gridField.getDisplayType() == DisplayType.DateTime)
+    			displayType = DisplayType.DateTime;
+    		SimpleDateFormat dateFormat = DisplayType.getDateFormat(displayType, AEnv.getLanguage(Env.getCtx()));
     		return dateFormat.format((Timestamp)value);
     	}
     	else if (DisplayType.isNumeric(gridField.getDisplayType()))
@@ -442,15 +454,11 @@ public class GridTabRowRenderer implements RowRenderer, RowRendererExt, Renderer
 					continue;
 				}
 				colIndex ++;
-
-				//check context
-				if (!gridField[i].isDisplayed(true)) {
-					continue;
-				}
+				
 				if (editors.get(gridField[i]) == null)
 					editors.put(gridField[i], WebEditorFactory.getEditor(gridField[i], true));
 				org.zkoss.zul.Column column = (org.zkoss.zul.Column) columns.getChildren().get(colIndex);
-				if (column.isVisible() && gridField[i].isEditable(true)) {
+				if (column.isVisible()) {
 					Div div = (Div) currentRow.getChildren().get(colIndex);
 					WEditor editor = getEditorCell(gridField[i], currentValues[i], i);
 					div.appendChild(editor.getComponent());
@@ -462,6 +470,12 @@ public class GridTabRowRenderer implements RowRenderer, RowRendererExt, Renderer
 		            	div.appendChild(popupMenu);
 		            }
 		            div.getFirstChild().setVisible(false);
+		            //check context
+					if (!gridField[i].isDisplayed(true)) 
+					{
+						editor.setVisible(false);
+					}
+					editor.setReadWrite(gridField[i].isEditable(true));
 				}
 			}
 			editing = true;
@@ -583,7 +597,17 @@ public class GridTabRowRenderer implements RowRenderer, RowRendererExt, Renderer
 		}
 	}
 
+	/**
+	 * @return boolean
+	 */
 	public boolean isEditing() {
 		return editing;
+	}
+
+	/**
+	 * @param windowPanel
+	 */
+	public void setADWindowPanel(AbstractADWindowPanel windowPanel) {
+		this.m_windowPanel = windowPanel;
 	}
 }

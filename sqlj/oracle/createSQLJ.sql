@@ -20,6 +20,11 @@ CREATE OR REPLACE FUNCTION adempiereProperty(p_key VARCHAR2)
  	AS LANGUAGE JAVA 
 	NAME 'org.compiere.sqlj.Adempiere.getProperty(java.lang.String) return java.lang.String';
 /
+CREATE OR REPLACE FUNCTION get_Sysconfig(Name VARCHAR2, defaultValue VARCHAR2, AD_Client_ID NUMBER, AD_Org_ID NUMBER)
+ 	RETURN VARCHAR2
+ 	AS LANGUAGE JAVA 
+	NAME 'org.compiere.sqlj.Adempiere.get_Sysconfig(java.lang.String,java.lang.String,int,int) return java.lang.String';
+/
 
 /** Product	**/
 CREATE OR REPLACE FUNCTION productAttribute (M_AttributeSetInstance_ID NUMBER)
@@ -152,7 +157,7 @@ CREATE OR REPLACE FUNCTION invoiceOpenToDate (p_C_Invoice_ID NUMBER, p_C_Invoice
 CREATE OR REPLACE FUNCTION invoicePaidToDate (p_C_Invoice_ID NUMBER, p_C_Currency_ID NUMBER, p_MultiplierAP NUMBER,p_AcctDate DATE)
  	RETURN NUMBER
  	AS LANGUAGE JAVA 
-	NAME 'org.compiere.sqlj.Invoice.paid(int,int,int,java.sql.Timestamp) return java.math.BigDecimal';
+	NAME 'org.compiere.sqlj.Invoice.paidToDate(int,int,int,java.sql.Timestamp) return java.math.BigDecimal';
 /
 CREATE OR REPLACE FUNCTION invoiceDiscount (p_C_Invoice_ID NUMBER, p_PayDate Date, 
         p_C_InvoicePaySchedule_ID NUMBER)

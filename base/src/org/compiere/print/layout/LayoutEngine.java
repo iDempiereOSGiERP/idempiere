@@ -487,7 +487,6 @@ public class LayoutEngine implements Pageable, Printable, Doc
 			String tableName = table.getTableName();
 			final String sql = "SELECT IsPrinted FROM "+tableName+" WHERE "+tableName+"_ID=?";
 			boolean isPrinted = "Y".equals(DB.getSQLValueStringEx(m_TrxName, sql, getPrintInfo().getRecord_ID()));
-			isPrinted =true;
 			if(isPrinted)
 			{
 				image = tf.getImageWaterMark();
@@ -889,7 +888,7 @@ public class LayoutEngine implements Pageable, Printable, Doc
 	 */
 	public boolean isXspaceFor (float width)
 	{
-		return (getXspace()-width) > 0f;
+		return (getXspace()-width) >= 0f;
 	}	//	isXspaceFor
 
 	/**
@@ -914,7 +913,7 @@ public class LayoutEngine implements Pageable, Printable, Doc
 	 */
 	public boolean isYspaceFor (float height)
 	{
-		return (getYspace()-height) > 0f;
+		return (getYspace()-height) >= 0f;
 	}	//	isYspaceFor
 	
 	/**************************************************************************
@@ -1729,10 +1728,14 @@ public class LayoutEngine implements Pageable, Printable, Doc
 							else
 								value = o.toString();
 							BarcodeElement element = new BarcodeElement (value, item);
-							
+
 							if (element.isValid())
 								data[row][col] = element;
 						}
+						
+						if (data[row][col] != null)
+							((BarcodeElement)data[row][col]).layout(item.getMaxWidth(), item.getMaxHeight(), false, item.getFieldAlignmentType());
+					
 					}
 					else if (item.isTypeText() )
 					{

@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for C_DocType
  *  @author Adempiere (generated) 
- *  @version Release 3.5.4a
+ *  @version Release 3.6.0LTS
  */
 public interface I_C_DocType 
 {
@@ -419,6 +419,19 @@ public interface I_C_DocType
 	  * Require Pick or QA Confirmation before processing
 	  */
 	public boolean isPickQAConfirm();
+
+    /** Column name IsPrepareSplitDocument */
+    public static final String COLUMNNAME_IsPrepareSplitDocument = "IsPrepareSplitDocument";
+
+	/** Set Prepare Split Document.
+	  * Prepare generated split shipment/receipt document
+	  */
+	public void setIsPrepareSplitDocument (boolean IsPrepareSplitDocument);
+
+	/** Get Prepare Split Document.
+	  * Prepare generated split shipment/receipt document
+	  */
+	public boolean isPrepareSplitDocument();
 
     /** Column name IsShipConfirm */
     public static final String COLUMNNAME_IsShipConfirm = "IsShipConfirm";

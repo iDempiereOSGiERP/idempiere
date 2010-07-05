@@ -49,7 +49,7 @@ public class MMovement extends X_M_Movement implements DocAction
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 3634169801280239573L;
+	private static final long serialVersionUID = -1628932946440487727L;
 
 	/**
 	 * 	Standard Constructor
@@ -88,6 +88,8 @@ public class MMovement extends X_M_Movement implements DocAction
 	private MMovementLine[]		m_lines = null;
 	/** Confirmations				*/
 	private MMovementConfirm[]	m_confirms = null;
+	/** Reversal Indicator			*/
+	public static String	REVERSE_INDICATOR = "^";
 	
 	/**
 	 * 	Get Lines
@@ -401,7 +403,7 @@ public class MMovement extends X_M_Movement implements DocAction
 								line.getM_Locator_ID(),
 								line.getM_Product_ID(), 
 								ma.getM_AttributeSetInstance_ID(), 0, 
-								ma.getMovementQty().negate(), Env.ZERO ,  Env.ZERO , get_TrxName()))
+								ma.getMovementQty().negate(), Env.ZERO ,  Env.ZERO , Env.ZERO, get_TrxName()))
 						{
 							m_processMsg = "Cannot correct Inventory (MA)";
 							return DocAction.STATUS_Invalid;
@@ -418,7 +420,7 @@ public class MMovement extends X_M_Movement implements DocAction
 								line.getM_LocatorTo_ID(),
 								line.getM_Product_ID(), 
 								M_AttributeSetInstanceTo_ID, 0, 
-								ma.getMovementQty(), Env.ZERO ,  Env.ZERO , get_TrxName()))
+								ma.getMovementQty(), Env.ZERO ,  Env.ZERO , Env.ZERO, get_TrxName()))
 						{
 							m_processMsg = "Cannot correct Inventory (MA)";
 							return DocAction.STATUS_Invalid;
@@ -457,7 +459,7 @@ public class MMovement extends X_M_Movement implements DocAction
 							line.getM_Locator_ID(),
 							line.getM_Product_ID(), 
 							line.getM_AttributeSetInstance_ID(), 0, 
-							line.getMovementQty().negate(), Env.ZERO ,  Env.ZERO , get_TrxName()))
+							line.getMovementQty().negate(), Env.ZERO ,  Env.ZERO , Env.ZERO, get_TrxName()))
 					{
 						m_processMsg = "Cannot correct Inventory (MA)";
 						return DocAction.STATUS_Invalid;
@@ -468,7 +470,7 @@ public class MMovement extends X_M_Movement implements DocAction
 							line.getM_LocatorTo_ID(),
 							line.getM_Product_ID(), 
 							line.getM_AttributeSetInstanceTo_ID(), 0, 
-							line.getMovementQty(), Env.ZERO ,  Env.ZERO , get_TrxName()))
+							line.getMovementQty(), Env.ZERO ,  Env.ZERO , Env.ZERO, get_TrxName()))
 					{
 						m_processMsg = "Cannot correct Inventory (MA)";
 						return DocAction.STATUS_Invalid;
@@ -662,13 +664,13 @@ public class MMovement extends X_M_Movement implements DocAction
 		if (m_processMsg != null)
 			return false;
 
+		//	Close Not delivered Qty
+		setDocAction(DOCACTION_None);
+
 		// After Close
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this,ModelValidator.TIMING_AFTER_CLOSE);
 		if (m_processMsg != null)
 			return false;
-
-		//	Close Not delivered Qty
-		setDocAction(DOCACTION_None);
 		return true;
 	}	//	closeIt
 	
@@ -700,6 +702,7 @@ public class MMovement extends X_M_Movement implements DocAction
 		reversal.setIsInTransit (false);
 		reversal.setPosted(false);
 		reversal.setProcessed(false);
+		reversal.setDocumentNo(getDocumentNo() + REVERSE_INDICATOR);	//	indicate reversals
 		reversal.addDescription("{->" + getDocumentNo() + ")");
 		//FR [ 1948157  ]
 		reversal.setReversal_ID(getM_Movement_ID());

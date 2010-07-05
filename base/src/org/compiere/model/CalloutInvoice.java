@@ -321,7 +321,24 @@ public class CalloutInvoice extends CalloutEngine
 		//
 		int M_PriceList_ID = Env.getContextAsInt(ctx, WindowNo, "M_PriceList_ID");
 		pp.setM_PriceList_ID(M_PriceList_ID);
+
+		Timestamp invoiceDate = Env.getContextAsDate(ctx, WindowNo, "DateInvoiced");
+		/** PLV is only accurate if PL selected in header */
 		int M_PriceList_Version_ID = Env.getContextAsInt(ctx, WindowNo, "M_PriceList_Version_ID");
+		if ( M_PriceList_Version_ID == 0 && M_PriceList_ID > 0)
+		{
+			String sql = "SELECT plv.M_PriceList_Version_ID "
+				+ "FROM M_PriceList_Version plv "
+				+ "WHERE plv.M_PriceList_ID=? "						//	1
+				+ " AND plv.ValidFrom <= ? "
+				+ "ORDER BY plv.ValidFrom DESC";
+			//	Use newest price list - may not be future
+			
+			M_PriceList_Version_ID = DB.getSQLValueEx(null, sql, M_PriceList_ID, invoiceDate);
+			if ( M_PriceList_Version_ID > 0 )
+				Env.setContext(ctx, WindowNo, "M_PriceList_Version_ID", M_PriceList_Version_ID );
+		}
+		
 		pp.setM_PriceList_Version_ID(M_PriceList_Version_ID);
 		Timestamp date = Env.getContextAsDate(ctx, WindowNo, "DateInvoiced");
 		pp.setPriceDate(date);
@@ -503,8 +520,22 @@ public class CalloutInvoice extends CalloutEngine
 		log.fine("PriceList=" + PriceList + ", Limit=" + PriceLimit + ", Precision=" + StdPrecision);
 		log.fine("PriceEntered=" + PriceEntered + ", Actual=" + PriceActual);// + ", Discount=" + Discount);
 
-		//	Qty changed - recalc price
-		if ((mField.getColumnName().equals("QtyInvoiced") 
+		//		No Product
+		if ( M_Product_ID == 0 )
+		{
+			// if price change sync price actual and entered
+			// else ignore
+			if (mField.getColumnName().equals("PriceActual"))
+			{
+				mTab.setValue("PriceEntered", value);
+			}
+			else if (mField.getColumnName().equals("PriceEntered"))
+			{
+				mTab.setValue("PriceActual", value);
+			}
+		}
+		//	Product Qty changed - recalc price
+		else if ((mField.getColumnName().equals("QtyInvoiced") 
 			|| mField.getColumnName().equals("QtyEntered")
 			|| mField.getColumnName().equals("M_Product_ID")) 
 			&& !"N".equals(Env.getContext(ctx, WindowNo, "DiscountSchema")))

@@ -21,6 +21,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 
@@ -44,15 +45,14 @@ import org.compiere.util.Msg;
  * 			<li>BF [ 1733602 ] Price List including Tax Error - when a user changes the orderline or
  * 				invoice line for a product on a price list that includes tax, the net amount is
  * 				incorrectly calculated.
+ * @author red1 FR: [ 2214883 ] Remove SQL code and Replace for Query
  */
 public class MInvoiceLine extends X_C_InvoiceLine
 {
-
 	/**
-	 *
+	 * 
 	 */
-	private static final long serialVersionUID = 4264055057724565805L;
-
+	private static final long serialVersionUID = -5113860437274708398L;
 
 	/**
 	 * 	Get Invoice Line referencing InOut Line
@@ -63,38 +63,18 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	{
 		if (sLine == null)
 			return null;
+		final String whereClause = I_M_InOutLine.COLUMNNAME_M_InOutLine_ID+"=?";
+		List<MInvoiceLine> list = new Query(sLine.getCtx(),I_C_InvoiceLine.Table_Name,whereClause,sLine.get_TrxName())
+		.setParameters(sLine.getM_InOutLine_ID())
+		.list();
+		
 		MInvoiceLine retValue = null;
-		String sql = "SELECT * FROM C_InvoiceLine WHERE M_InOutLine_ID=?";
-		PreparedStatement pstmt = null;
-		try
-		{
-			pstmt = DB.prepareStatement (sql, sLine.get_TrxName());
-			pstmt.setInt (1, sLine.getM_InOutLine_ID());
-			ResultSet rs = pstmt.executeQuery ();
-			if (rs.next ())
-			{
-				retValue = new MInvoiceLine (sLine.getCtx(), rs, sLine.get_TrxName());
-				if (rs.next())
-					s_log.warning("More than one C_InvoiceLine of " + sLine);
-			}
-			rs.close ();
-			pstmt.close ();
-			pstmt = null;
+		if (list.size() > 0) {
+			retValue = list.get(0);
+			if (list.size() > 1)
+				s_log.warning("More than one C_InvoiceLine of " + sLine);
 		}
-		catch (Exception e)
-		{
-			s_log.log(Level.SEVERE, sql, e);
-		}
-		try
-		{
-			if (pstmt != null)
-				pstmt.close ();
-			pstmt = null;
-		}
-		catch (Exception e)
-		{
-			pstmt = null;
-		}
+
 		return retValue;
 	}	//	getOfInOutLine
 
@@ -452,7 +432,7 @@ public class MInvoiceLine extends X_C_InvoiceLine
 			return;
 	//	setLineNetAmt();
 		MTax tax = MTax.get (getCtx(), getC_Tax_ID());
-		if (tax.isDocumentLevel() && m_IsSOTrx)		//	AR Inv Tax
+		if (tax.isDocumentLevel() && m_IsSOTrx || getTaxAmt().signum() > 0)//	AR Inv Tax
 			return;
 		//
 		TaxAmt = tax.calculateTax(getLineNetAmt(), isTaxIncluded(), getPrecision());
@@ -1024,7 +1004,7 @@ public class MInvoiceLine extends X_C_InvoiceLine
 		if (lcs.length == 1)
 		{
 			MLandedCost lc = lcs[0];
-			if (lc.getM_InOut_ID() != 0)
+			if (lc.getM_InOut_ID() != 0 && lc.getM_InOutLine_ID() == 0)
 			{
 				//	Create List
 				ArrayList<MInOutLine> list = new ArrayList<MInOutLine>();
@@ -1085,6 +1065,8 @@ public class MInvoiceLine extends X_C_InvoiceLine
 				MLandedCostAllocation lca = new MLandedCostAllocation (this, lc.getM_CostElement_ID());
 				lca.setM_Product_ID(iol.getM_Product_ID());
 				lca.setM_AttributeSetInstance_ID(iol.getM_AttributeSetInstance_ID());
+				BigDecimal base = iol.getBase(lc.getLandedCostDistribution()); 
+				lca.setBase(base);
 				lca.setAmt(getLineNetAmt());
 				// MZ Goodwill
 				// add set Qty from InOutLine

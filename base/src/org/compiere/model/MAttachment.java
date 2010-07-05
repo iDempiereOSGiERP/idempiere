@@ -59,6 +59,11 @@ import org.xml.sax.SAXException;
  *	One Attachment can have multiple entries
  *	
  *  @author Jorg Janke
+ *  
+  * @author Silvano Trinchero
+ *      <li>BF [ 2992291] MAttachment.addEntry not closing streams if an exception occur
+ *        http://sourceforge.net/tracker/?func=detail&aid=2992291&group_id=176962&atid=879332
+ *
  *  @version $Id: MAttachment.java,v 1.4 2006/07/30 00:58:37 jjanke Exp $
  */
 public class MAttachment extends X_AD_Attachment
@@ -111,10 +116,13 @@ public class MAttachment extends X_AD_Attachment
 	 */
 	public MAttachment(Properties ctx, int AD_Table_ID, int Record_ID, String trxName)
 	{
-		this (ctx, 0, trxName);
-		setAD_Table_ID (AD_Table_ID);
-		setRecord_ID (Record_ID);
-		initAttachmentStoreDetails(ctx, trxName);
+		this (ctx
+				, MAttachment.get(ctx, AD_Table_ID, Record_ID) == null ? 0 : MAttachment.get(ctx, AD_Table_ID, Record_ID).get_ID()
+				, trxName);
+		if (get_ID() == 0) {
+			setAD_Table_ID (AD_Table_ID);
+			setRecord_ID (Record_ID);
+		}
 	}	//	MAttachment
 
 	/**
@@ -241,7 +249,7 @@ public class MAttachment extends X_AD_Attachment
 			log.warning("No File");
 			return false;
 		}
-		if (!file.exists() || file.isDirectory())
+		if (!file.exists() || file.isDirectory() || !file.canRead())
 		{
 			log.warning("not added - " + file
 				+ ", Exists=" + file.exists() + ", Directory=" + file.isDirectory());
@@ -251,22 +259,40 @@ public class MAttachment extends X_AD_Attachment
 		//
 		String name = file.getName();
 		byte[] data = null;
+		
+		// F3P: BF [2992291] modified to be able to close streams in "finally" block 		
+		
+		FileInputStream fis = null;
+		ByteArrayOutputStream os = null;
+		
 		try
 		{
-			FileInputStream fis = new FileInputStream (file);
-			ByteArrayOutputStream os = new ByteArrayOutputStream();
+			fis = new FileInputStream (file);
+			os = new ByteArrayOutputStream();
 			byte[] buffer = new byte[1024*8];   //  8kB
 			int length = -1;
 			while ((length = fis.read(buffer)) != -1)
 				os.write(buffer, 0, length);
-			fis.close();
-			data = os.toByteArray();
-			os.close();
+			
+			data = os.toByteArray();			
 		}
 		catch (IOException ioe)
 		{
 			log.log(Level.SEVERE, "(file)", ioe);
 		}
+		finally
+		{
+			if(fis != null)
+			{
+				try { fis.close(); } catch (IOException ex) { log.log(Level.SEVERE, "(file)", ex); }; 
+			}
+							
+			if(os != null)
+			{
+				try { os.close(); } catch (IOException ex) { log.log(Level.SEVERE, "(file)", ex); };
+			}
+		}
+		
 		return addEntry (name, data);
 	}	//	addEntry
 
@@ -290,14 +316,24 @@ public class MAttachment extends X_AD_Attachment
 	 */
 	public boolean addEntry (MAttachmentEntry item)
 	{
+		boolean replaced = false;
+		boolean retValue = false;
 		if (item == null)
 			return false;
 		if (m_items == null)
 			loadLOBData();
-		boolean retValue = m_items.add(item);
+		for (int i = 0; i < m_items.size(); i++) {
+			if (m_items.get(i).getName().equals(item.getName()) ) {
+				m_items.set(i, item);
+				replaced = true;
+			}
+		}
+		if (!replaced) {
+			 retValue = m_items.add(item);
+		}
 		log.fine(item.toStringX());
-		addTextMsg(" ");	//	otherwise not saved
-		return retValue;
+		setBinaryData(new byte[0]); // ATTENTION! HEAVY HACK HERE... Else it will not save :(
+		return retValue || replaced;
 	}	//	addEntry
 
 	/**
@@ -802,23 +838,23 @@ public class MAttachment extends X_AD_Attachment
 	 */
 	protected boolean beforeDelete ()
 	{
-		if(isStoreAttachmentsOnFileSystem){
-		//delete all attachment files and folder
-		for(int i=0; i<m_items.size(); i++) {
-			final MAttachmentEntry entry = m_items.get(i);
-			final File file = entry.getFile();
-			if(file !=null && file.exists()){
-				if(!file.delete()){
-					log.warning("unable to delete " + file.getAbsolutePath());
+		if (isStoreAttachmentsOnFileSystem) {
+			//delete all attachment files and folder
+			for (int i=0; i<m_items.size(); i++) {
+				final MAttachmentEntry entry = m_items.get(i);
+				final File file = entry.getFile();
+				if(file !=null && file.exists()){
+					if(!file.delete()){
+						log.warning("unable to delete " + file.getAbsolutePath());
+					}
 				}
 			}
-		}
-		final File folder = new File(m_attachmentPathRoot + getAttachmentPathSnippet());
-		if(folder.exists()){
-			if(!folder.delete()){
-				log.warning("unable to delete " + folder.getAbsolutePath());
+			final File folder = new File(m_attachmentPathRoot + getAttachmentPathSnippet());
+			if(folder.exists()){
+				if(!folder.delete()){
+					log.warning("unable to delete " + folder.getAbsolutePath());
+				}
 			}
-		}
 		}
 		return true;
 	} 	//	beforeDelete
@@ -882,7 +918,7 @@ public class MAttachment extends X_AD_Attachment
 			log.warning("No File");
 			return false;
 		}
-		if (!file.exists() || file.isDirectory())
+		if (!file.exists() || file.isDirectory() || !file.canRead())
 		{
 			log.warning("not added - " + file
 				+ ", Exists=" + file.exists() + ", Directory=" + file.isDirectory());

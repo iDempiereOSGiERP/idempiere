@@ -77,6 +77,7 @@ import org.compiere.model.DataStatusListener;
 import org.compiere.model.GridField;
 import org.compiere.model.GridFieldVO;
 import org.compiere.model.GridTab;
+import org.compiere.model.MColumn;
 import org.compiere.model.MLookupFactory;
 import org.compiere.model.MProduct;
 import org.compiere.model.MQuery;
@@ -116,7 +117,7 @@ public final class Find extends CDialog
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 6414604433732835411L;
+	private static final long serialVersionUID = -5064336990363669996L;
 	private int m_AD_Tab_ID;
 
 	/**
@@ -209,6 +210,7 @@ public final class Find extends CDialog
 	public static final int		FIELDLENGTH = 20;
 	/** Reference ID for Yes/No	*/
 	public static final int		AD_REFERENCE_ID_YESNO = 319;
+	
 	
 	//
 	private CPanel southPanel = new CPanel();
@@ -488,6 +490,30 @@ public final class Find extends CDialog
 				mField = ynfield;
 			}
 
+			// Make Buttons searchable
+			if  ( mField.getVO().displayType == DisplayType.Button )
+			{
+				GridFieldVO vo = mField.getVO();
+				if ( vo.AD_Reference_Value_ID > 0 )
+				{
+					GridFieldVO postedvo = vo.clone(vo.ctx, vo.WindowNo, vo.TabNo, vo.AD_Window_ID, vo.AD_Tab_ID, vo.tabReadOnly);
+					postedvo.IsDisplayed = true;
+					postedvo.displayType = DisplayType.List;
+
+					postedvo.lookupInfo = MLookupFactory.getLookupInfo (postedvo.ctx, postedvo.WindowNo, postedvo.AD_Column_ID, postedvo.displayType,
+							Env.getLanguage(postedvo.ctx), postedvo.ColumnName, postedvo.AD_Reference_Value_ID,
+							postedvo.IsParent, postedvo.ValidationCode);
+					postedvo.lookupInfo.InfoFactoryClass = postedvo.InfoFactoryClass;
+
+					GridField postedfield = new GridField(postedvo);
+
+					// replace the original field by the Posted List field
+					m_findFields[i] = postedfield;
+					mField = postedfield;
+				}
+			}
+
+			/** metas: teo_sarca: Specify exactly which are the search fields - http://sourceforge.net/projects/adempiere/forums/forum/610548/topic/3736214
 			if (columnName.equals("Value"))
 				hasValue = true;
 			else if (columnName.equals("Name"))
@@ -496,10 +522,14 @@ public final class Find extends CDialog
 				hasDocNo = true;
 			else if (columnName.equals("Description"))
 				hasDescription = true;
-			else if (mField.isSelectionColumn())
+			else
+			/**/
+			if (mField.isSelectionColumn())
 				addSelectionColumn (mField);
+			/** metas: teo_sarca: Specify exactly which are the search fields - http://sourceforge.net/projects/adempiere/forums/forum/610548/topic/3736214
 			else if (columnName.indexOf("Name") != -1)
 				addSelectionColumn (mField);
+			/**/
 
 			//  TargetFields
 			m_targetFields.put (new Integer(mField.getAD_Column_ID()), mField);
@@ -1017,6 +1047,18 @@ public final class Find extends CDialog
 				GridField field = getTargetMField(ColumnName);
 				boolean isProductCategoryField = isProductCategoryField(field.getAD_Column_ID());
 				String ColumnSQL = field.getColumnSQL(false);
+                //
+                // Be more permissive for String columns
+                if (isSearchLike(field))
+                {
+                    String valueStr = value.toString().toUpperCase();
+                    if (!valueStr.endsWith("%"))
+                        valueStr += "%";
+                    //
+                    ColumnSQL = "UPPER("+ColumnSQL+")";
+                    value = valueStr;
+                }
+                //
 				if (value.toString().indexOf('%') != -1)
 					m_query.addRestriction(ColumnSQL, MQuery.LIKE, value, ColumnName, ved.getDisplay());
 				else if (isProductCategoryField && value instanceof Integer) 
@@ -1657,6 +1699,12 @@ public final class Find extends CDialog
 		}
 		return null;
 	}	//	getTargetMField
+	
+	private boolean isSearchLike(GridField field)
+	{
+		return DisplayType.isText(field.getDisplayType())
+		&& MColumn.isSuggestSelectionColumn(field.getColumnName(), true);
+	}
 	
 	private class ProxyRenderer implements TableCellRenderer
 	{

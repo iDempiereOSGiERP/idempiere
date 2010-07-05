@@ -18,6 +18,7 @@ package org.compiere.print;
 
 import java.lang.reflect.Method;
 import java.util.Properties;
+import java.util.Vector;
 import java.util.logging.Level;
 
 import org.adempiere.exceptions.AdempiereException;
@@ -48,12 +49,26 @@ import org.compiere.util.Trx;
 public class ReportCtl
 {
 	/**
+	 * @deprecated Please use {@link ServerReportCtl#PARAM_PRINTER_NAME}
+	 */
+	public static final String PARAM_PRINTER_NAME = ServerReportCtl.PARAM_PRINTER_NAME;
+	/**
+	 * @deprecated Please use {@link ServerReportCtl#PARAM_PRINT_FORMAT}
+	 */
+	public static final String PARAM_PRINT_FORMAT = ServerReportCtl.PARAM_PRINT_FORMAT;
+	/**
+	 * @deprecated Please use {@link ServerReportCtl#PARAM_PRINT_INFO}
+	 */
+	public static final String PARAM_PRINT_INFO = ServerReportCtl.PARAM_PRINT_INFO;
+	
+	/**
 	 *	Constructor - prevent instance
 	 */
 	private ReportCtl()
 	{
 	}	//	ReportCtrl
 
+	
 	/**	Static Logger	*/
 	private static CLogger	s_log	= CLogger.getCLogger (ReportCtl.class);
 	
@@ -183,7 +198,7 @@ public class ReportCtl
 			MQuery query = MQuery.get (ctx, pi.getAD_PInstance_ID(), TableName);
 			PrintInfo info = new PrintInfo(pi);
 			re = new ReportEngine(ctx, format, query, info);
-			createOutput(re, pi.isPrintPreview());
+			createOutput(re, pi.isPrintPreview(), null);
 			return true;
 		}
 		//
@@ -197,7 +212,7 @@ public class ReportCtl
 			}
 		}
 		
-		createOutput(re, pi.isPrintPreview());
+		createOutput(re, pi.isPrintPreview(), null);
 		return true;
 	}	//	startStandardReport
 
@@ -226,7 +241,7 @@ public class ReportCtl
 		PrintInfo info = new PrintInfo(pi);
 
 		ReportEngine re = new ReportEngine(Env.getCtx(), format, query, info);
-		createOutput(re, pi.isPrintPreview());
+		createOutput(re, pi.isPrintPreview(), null);
 		return true;
 	}	//	startFinReport
 	
@@ -244,6 +259,21 @@ public class ReportCtl
 	}
 	
 	/**
+	 * 	Start Document Print for Type with specified printer. Always direct print.
+	 * 	@param type document type in ReportEngine
+	 *  @param customPrintFormat	Custom print format. Can be null.
+	 * 	@param Record_ID id
+	 *  @param parent The window which invoked the printing
+	 *  @param WindowNo The windows number which invoked the printing
+	 * 	@param printerName 	Specified printer name
+	 * 	@return true if success
+	 */
+	public static boolean startDocumentPrint(int type, MPrintFormat customPrintFormat, int Record_ID, ASyncProcess parent, int WindowNo, String printerName) 
+	{
+		return(startDocumentPrint(type, customPrintFormat, Record_ID, parent, WindowNo, true, printerName));
+	}
+
+	/**
 	 * 	Start Document Print for Type.
 	 *  	Called also directly from ProcessDialog, VInOutGen, VInvoiceGen, VPayPrint
 	 * 	@param type document type in ReportEngine
@@ -253,8 +283,23 @@ public class ReportCtl
 	 * 	@param IsDirectPrint if true, prints directly - otherwise View
 	 * 	@return true if success
 	 */
-	public static boolean startDocumentPrint (int type, int Record_ID, ASyncProcess parent, int WindowNo, 
-			boolean IsDirectPrint)
+	public static boolean startDocumentPrint(int type, int Record_ID, ASyncProcess parent, int WindowNo,
+			boolean IsDirectPrint) 
+	{
+		return(startDocumentPrint(type, null, Record_ID, parent, WindowNo, IsDirectPrint, null ));
+	}
+
+	/**
+	 * 	Start Document Print for Type with specified printer.
+	 * 	@param type document type in ReportEngine
+	 * 	@param Record_ID id
+	 *  @param parent The window which invoked the printing
+	 *  @param WindowNo The windows number which invoked the printing
+	 * 	@param printerName 	Specified printer name
+	 * 	@return true if success
+	 */
+	public static boolean startDocumentPrint (int type, MPrintFormat customPrintFormat, int Record_ID, ASyncProcess parent, int WindowNo, 
+			boolean IsDirectPrint, String printerName)
 	{
 		ReportEngine re = ReportEngine.get (Env.getCtx(), type, Record_ID);
 		if (re == null)
@@ -280,46 +325,31 @@ public class ReportCtl
 			}
 			return false;
 		}
+		if (customPrintFormat!=null) {
+			// Use custom print format if available
+			re.setPrintFormat(customPrintFormat);
+		}
 		
-		if(re.getPrintFormat() != null)
+		if(re.getPrintFormat()!=null)
 		{
 			MPrintFormat format = re.getPrintFormat();
+			
+			// We have a Jasper Print Format
+			// ==============================
 			if(format.getJasperProcess_ID() > 0)	
-			{
-				PrintInfo info = re.getPrintInfo();
-				ProcessInfo pi = new ProcessInfo ("", format.getJasperProcess_ID());
-				pi.setPrintPreview( !IsDirectPrint );
-				pi.setRecord_ID ( Record_ID );
 				if (info.isDocument()) {
 					ProcessInfoParameter pip = new ProcessInfoParameter("CURRENT_LANG", format.getLanguage(), null, null, null);
 					pi.setParameter(new ProcessInfoParameter[]{pip});
 				}
 				
-				//	Execute Process
-				if (Ini.isClient())
-				{
-					ProcessCtl.process(parent, WindowNo, pi, null);
-				}
-				else
-				{
-					try 
-					{
-						ClassLoader loader = Thread.currentThread().getContextClassLoader();
-						if (loader == null)
-							loader = ReportCtl.class.getClassLoader();
-						Class<?> clazz = loader.loadClass("org.adempiere.webui.apps.WProcessCtl");
-						Method method = clazz.getDeclaredMethod("process", ASyncProcess.class, Integer.TYPE, ProcessInfo.class, Trx.class);
-						method.invoke(null, parent, WindowNo, pi, null);
-					}
-					catch (Exception e)
-					{
-						throw new AdempiereException(e);
-					}
-				}
+			{
+				ServerReportCtl.runJasperProcess(Record_ID, re, IsDirectPrint, printerName);
 			}
 			else
+			// Standard Print Format (Non-Jasper)
+			// ==================================
 			{
-				createOutput(re, !IsDirectPrint);
+				createOutput(re, !IsDirectPrint, printerName);
 				if (IsDirectPrint)
 				{
 					ReportEngine.printConfirm (type, Record_ID);
@@ -357,12 +387,16 @@ public class ReportCtl
 		return startDocumentPrint (ReportEngine.CHECK, C_PaySelectionCheck_ID, null, -1, IsDirectPrint);
 	}	//	startCheckPrint
 	
-	private static void createOutput(ReportEngine re, boolean printPreview)
+	private static void createOutput(ReportEngine re, boolean printPreview, String printerName)
 	{
 		if (printPreview)
 			preview(re);
-		else 
-			re.print();
+		else {
+				if (printerName!=null) {
+					re.getPrintInfo().setPrinterName(printerName);
+				}
+				re.print();
+		}
 	}
 	
 	/**

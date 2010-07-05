@@ -29,6 +29,7 @@ import java.awt.font.TextAttribute;
 import java.awt.font.TextLayout;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
+import java.awt.image.BufferedImage;
 import java.text.AttributedCharacterIterator;
 import java.text.AttributedString;
 import java.util.ArrayList;
@@ -38,6 +39,7 @@ import java.util.Properties;
 import java.util.logging.Level;
 import java.util.regex.Pattern;
 
+import net.sourceforge.barbecue.Barcode;
 import net.sourceforge.barbecue.output.OutputException;
 
 import org.compiere.model.MQuery;
@@ -549,6 +551,8 @@ public class TableElement extends PrintElement
 		m_headerHeight += (4*m_tFormat.getLineStroke().floatValue()) + (2*V_GAP);	//	Thick lines
 		p_height += m_headerHeight;
 
+		//	Last row Lines
+		p_height += m_tFormat.getLineStroke().floatValue();			//	last fat line
 
 		//	Page Layout	*******************************************************
 
@@ -573,6 +577,13 @@ public class TableElement extends PrintElement
 				float rowHeight = ((Float)m_rowHeights.get(dataRow)).floatValue();
 				//	Y page break before
 				boolean pageBreak = isPageBreak(dataRow);
+
+				//adjust for lastrow
+				if (dataRow + 1 == m_rowHeights.size())
+				{
+					availableHeight -= m_tFormat.getLineStroke().floatValue();
+				}
+
 				if (!pageBreak && availableHeight < rowHeight)
 				{
 					if (availableHeight > 40 && rowHeight > 40)
@@ -660,9 +671,6 @@ public class TableElement extends PrintElement
 				availableWidth -= columnWidth;
 			}	//	for acc columns
 		}	//	multiple - X pages
-
-		//	Last row Lines
-		p_height += m_tFormat.getLineStroke().floatValue();			//	last fat line
 
 		log.fine("Pages=" + getPageCount() 
 			+ " X=" + m_firstColumnOnPage.size() + "/Y=" + m_firstRowOnPage.size()
@@ -1413,7 +1421,31 @@ public class TableElement extends PrintElement
 					else if (printItems[index] instanceof BarcodeElement)
 					{
 						try {
-							((BarcodeElement)printItems[index]).getBarcode().draw(g2D, curX, (int)penY);
+							Barcode barcode = ((BarcodeElement)printItems[index]).getBarcode();
+							if ( barcode != null )
+							{
+								double scale = ((BarcodeElement)printItems[index]).getScaleFactor();
+								if ( scale != 1.0 )
+								{
+									int w = barcode.getWidth();
+									int h = barcode.getHeight();
+
+									// draw barcode to buffer
+									BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+									Graphics2D temp = (Graphics2D) image.getGraphics();
+									barcode.draw(temp, 0, 0);
+
+									// scale barcode and paint
+									AffineTransform transform = new AffineTransform();
+									transform.translate(curX,penY);
+									transform.scale(scale, scale);
+									g2D.drawImage(image, transform, this);
+								}
+								else
+								{
+									barcode.draw(g2D, curX, (int)penY);
+								}
+							}
 						} catch (OutputException e) {
 						}
 					}

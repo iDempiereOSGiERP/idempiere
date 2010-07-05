@@ -431,7 +431,7 @@ public class MInventory extends X_M_Inventory implements DocAction
 								line.getM_Locator_ID(),
 								line.getM_Product_ID(), 
 								ma.getM_AttributeSetInstance_ID(), 0, 
-								QtyMA.negate(), Env.ZERO, Env.ZERO, get_TrxName()))
+								QtyMA.negate(), Env.ZERO, Env.ZERO, Env.ZERO, get_TrxName()))
 						{
 							m_processMsg = "Cannot correct Inventory (MA)";
 							return DocAction.STATUS_Invalid;
@@ -469,7 +469,10 @@ public class MInventory extends X_M_Inventory implements DocAction
 							if(QtyMA.signum() != 0)
 							{	
 								String err = createCostDetail(line, ma.getM_AttributeSetInstance_ID() , QtyMA.negate());
-								if(err != null && err.length() > 0) return err;
+								if (err != null && err.length() > 0) {
+									m_processMsg = err;
+									return DocAction.STATUS_Invalid;
+								}
 							}
 							
 							qtyDiff = QtyNew;						
@@ -486,7 +489,7 @@ public class MInventory extends X_M_Inventory implements DocAction
 							line.getM_Locator_ID(),
 							line.getM_Product_ID(), 
 							line.getM_AttributeSetInstance_ID(), 0, 
-							qtyDiff, Env.ZERO, Env.ZERO, get_TrxName()))
+							qtyDiff, Env.ZERO, Env.ZERO, Env.ZERO, get_TrxName()))
 					{
 						m_processMsg = "Cannot correct Inventory (MA)";
 						return DocAction.STATUS_Invalid;
@@ -525,7 +528,10 @@ public class MInventory extends X_M_Inventory implements DocAction
 					if(qtyDiff.signum() != 0)
 					{	
 						String err = createCostDetail(line, line.getM_AttributeSetInstance_ID(), qtyDiff);
-						if(err != null && err.length() > 0) return err;
+						if (err != null && err.length() > 0) {
+							m_processMsg = err;
+							return DocAction.STATUS_Invalid;
+						}
 					}
 				}	//	Fallback
 			}	//	stock movement
@@ -722,12 +728,12 @@ public class MInventory extends X_M_Inventory implements DocAction
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this,ModelValidator.TIMING_BEFORE_CLOSE);
 		if (m_processMsg != null)
 			return false;
+
+		setDocAction(DOCACTION_None);
 		// After Close
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this,ModelValidator.TIMING_AFTER_CLOSE);
 		if (m_processMsg != null)
-			return false;		
-
-		setDocAction(DOCACTION_None);
+			return false;
 		return true;
 	}	//	closeIt
 	
@@ -964,9 +970,9 @@ public class MInventory extends X_M_Inventory implements DocAction
 				ProductCost pc = new ProductCost (getCtx(), 
 						line.getM_Product_ID(), M_AttributeSetInstance_ID, line.get_TrxName());
 				pc.setQty(qty);
-				costs = pc.getProductCosts(as, line.getAD_Org_ID(), as.getCostingMethod(), 0,false);							
+				costs = pc.getProductCosts(as, line.getAD_Org_ID(), as.getCostingMethod(), 0,true);							
 			}
-			if (costs == null || costs.signum() == 0)
+			if (costs == null)
 			{
 				return "No Costs for " + line.getProduct().getName();
 			}
