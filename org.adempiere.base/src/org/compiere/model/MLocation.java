@@ -49,9 +49,14 @@ public class MLocation extends X_C_Location implements Comparator
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -1326655776792201217L;
+	private static final long serialVersionUID = 8332515185354248079L;
 
-
+	// http://jira.idempiere.com/browse/IDEMPIERE-147
+	public static String LOCATION_MAPS_URL_PREFIX     = MSysConfig.getValue("LOCATION_MAPS_URL_PREFIX");
+	public static String LOCATION_MAPS_ROUTE_PREFIX   = MSysConfig.getValue("LOCATION_MAPS_ROUTE_PREFIX");
+	public static String LOCATION_MAPS_SOURCE_ADDRESS      = MSysConfig.getValue("LOCATION_MAPS_SOURCE_ADDRESS");
+	public static String LOCATION_MAPS_DESTINATION_ADDRESS = MSysConfig.getValue("LOCATION_MAPS_DESTINATION_ADDRESS");
+	
 	/**
 	 * 	Get Location from Cache
 	 *	@param ctx context
@@ -651,5 +656,23 @@ public class MLocation extends X_C_Location implements Comparator
 				+ " OR C_LocTo_ID=" + getC_Location_ID() + ")", get_TrxName());
 		return success;
 	}	//	afterSave
-	
+
+	/**
+	 * 	Get edited Value (MLocation) for GoogleMaps / IDEMPIERE-147
+	 *  @param MLocation location
+	 *	@return String address
+	 */
+	public String getMapsLocation() {
+
+		MRegion region = new MRegion(Env.getCtx(), getC_Region_ID(), get_TrxName());
+		String address = "";
+		address = address + (getAddress1() != null ? getAddress1() + ", " : "");
+		address = address + (getAddress2() != null ? getAddress2() + ", " : "");
+		address = address + (getCity() != null ? getCity() + ", " : "");
+		address = address + (region.getName() != null ? region.getName() + ", " : "");
+		address = address + (getCountryName() != null ? getCountryName() : "");
+
+		return address.replace(" ", "+");
+	}
+
 }	//	MLocation
