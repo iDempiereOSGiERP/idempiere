@@ -30,6 +30,7 @@ import java.util.StringTokenizer;
 import java.util.logging.Level;
 
 import javax.swing.Box;
+import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -40,6 +41,7 @@ import org.compiere.apps.AEnv;
 import org.compiere.apps.ConfirmPanel;
 import org.compiere.model.MCountry;
 import org.compiere.model.MLocation;
+import org.compiere.model.MOrgInfo;
 import org.compiere.model.MRegion;
 import org.compiere.swing.CButton;
 import org.compiere.swing.CComboBoxEditable;
@@ -66,6 +68,14 @@ import com.akunagroup.uk.postcode.Postcode;
  * 			<li>FR [ 1741222 ] - Webservice connector for address lookups
  * @author Cristina Ghita, www.arhipac.ro
  * 			<li>FR [ 2794312 ] Location AutoComplete
+ *
+ * http://jira.idempiere.com/browse/IDEMPIERE-147 - Show GoogleMap on Location Dialog
+ *  @author Fernando Lucktemberg (Faire, www.faire.com.br)
+ *      <li> seeded the Map button
+ *  @author Mario Grigioni (Kenos, www.kenos.com.br)
+ *      <li> expanded to add Route button
+ *  @author Alvaro Montenegro (Kenos, www.kenos.com.br)
+ *      <li> BF: Check URL before open the Browser
  */
 public class VLocationDialog extends CDialog 
 	implements ActionListener
@@ -73,7 +83,7 @@ public class VLocationDialog extends CDialog
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 6952838437136830975L;
+	private static final long serialVersionUID = -5915071456635949972L;
 
 	/** Lookup result header */
 	private Object[] header = null;
@@ -187,6 +197,15 @@ public class VLocationDialog extends CDialog
 
 	private boolean inCountryAction;
 	private boolean inOKAction;
+	
+	/** The "route" key  */
+	private static final String TO_ROUTE = Msg.getMsg(Env.getCtx(), "Route");
+	/** The "to link" key  */
+	private static final String TO_LINK = Msg.getMsg(Env.getCtx(), "Map");
+
+	private JButton toLink  	= new JButton();
+	private JButton toRoute 	= new JButton();
+	//END
 
 	/**
 	 *	Static component init
@@ -203,6 +222,23 @@ public class VLocationDialog extends CDialog
 		panel.add(mainPanel, BorderLayout.CENTER);
 		panel.add(southPanel, BorderLayout.SOUTH);
 		southPanel.add(confirmPanel, BorderLayout.NORTH);
+		
+		//BEGIN fernandinho/ricardo
+		toLink.setText(TO_LINK);
+		toLink.addActionListener(this);
+		toLink.setMargin(ConfirmPanel.s_insets);
+		confirmPanel.addComponent(toLink);
+		if (MLocation.LOCATION_MAPS_URL_PREFIX == null)
+			toLink.setVisible(false);
+
+		toRoute.setText(TO_ROUTE);
+		toRoute.addActionListener(this);
+		toRoute.setMargin(ConfirmPanel.s_insets);
+		confirmPanel.addComponent(toRoute);
+		if (MLocation.LOCATION_MAPS_ROUTE_PREFIX == null)
+			toRoute.setVisible(false);
+		//END
+		
 		//
 		confirmPanel.addActionListener(this);
 		//
@@ -448,6 +484,45 @@ public class VLocationDialog extends CDialog
 			initLocation();
 			fRegion.requestFocus();	//	allows to use Keyboard selection
 		}
+		//BEGIN fernandinho/ricardo
+		else if (e.getSource() == toLink)
+		{
+			String urlString = MLocation.LOCATION_MAPS_URL_PREFIX + m_location.getMapsLocation();
+			String message = null;
+
+			try
+			{
+				Env.startBrowser(urlString);
+			}
+			catch (Exception ex)
+			{
+				message = ex.getMessage();
+				ADialog.warn(0, this, "URLnotValid", message);
+			}
+		}
+		else if (e.getSource() == toRoute)
+		{
+			int AD_Org_ID = Env.getAD_Org_ID(Env.getCtx());
+			if (AD_Org_ID != 0){
+				MOrgInfo orgInfo = 	MOrgInfo.get(Env.getCtx(), AD_Org_ID,null);
+				MLocation orgLocation = new MLocation(Env.getCtx(),orgInfo.getC_Location_ID(),null);
+
+				String urlString = MLocation.LOCATION_MAPS_ROUTE_PREFIX +
+						         MLocation.LOCATION_MAPS_SOURCE_ADDRESS + orgLocation.getMapsLocation() + //org
+						         MLocation.LOCATION_MAPS_DESTINATION_ADDRESS + m_location.getMapsLocation(); //partner
+				String message = null;
+				try
+				{
+					Env.startBrowser(urlString);
+				}
+				catch (Exception ex)
+				{
+					message = ex.getMessage();
+					ADialog.warn(0, this, "URLnotValid", message);
+				}
+			}
+		}
+		//END
 		else if (e.getSource() == fOnline)
 		{
 			
