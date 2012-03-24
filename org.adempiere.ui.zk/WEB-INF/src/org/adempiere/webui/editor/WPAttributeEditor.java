@@ -73,7 +73,6 @@ public class WPAttributeEditor extends WEditor implements ContextMenuListener
 
 		//	Popup
 		popupMenu = new WEditorPopupMenu(true, false, false);
-		getComponent().getTextbox().setContext(popupMenu.getId());
 		addChangeLogMenu(popupMenu);
 		
 		getComponent().getTextbox().setReadonly(true);

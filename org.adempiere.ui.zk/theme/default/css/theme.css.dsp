@@ -109,7 +109,11 @@ html,body {
 	padding: 0px;
 }
 
-.toolbar-button img {
+.z-toolbarbutton-cnt {
+	padding: 0px;
+}
+
+.toolbar-button .z-toolbarbutton-body .z-toolbarbutton-cnt img {
 	width: 22px;
 	height: 22px;
 	padding: 0px 1px 0px 1px;
@@ -118,7 +122,7 @@ html,body {
 	border-color: transparent;
 }
 
-.embedded-toolbar-button img {
+.embedded-toolbar-button .z-toolbarbutton-body .z-toolbarbutton-cnt img {
 	width: 16px;
 	height: 16px;
 	padding: 0px 1px 0px 1px;
@@ -128,12 +132,9 @@ html,body {
 }
 
 .depressed img {
-	border-style: inset;
 	border-width: 1px;
 	border-color: #9CBDFF;
 	background-color: #C4DCFB;
-	-moz-border-radius: 5px;
-	-webkit-border-radius: 5px;
 	padding: 0px 1px 0px 1px;
 }
 
@@ -158,6 +159,11 @@ html,body {
 }
 
 .action-text-button {
+	height: 32px;
+	width: 80px;
+}
+
+.action-image-text-button {
 	height: 32px;
 	width: 80px;
 }
@@ -343,6 +349,11 @@ div.wc-modal, div.wc-modal-none, div.wc-highlighted, div.wc-highlighted-none {
 	border-right: 2px solid #9CBDFF;
 }
 
+.current-row-indicator {
+	background-color: #FA962F !important;
+	background-image: none !important; 
+}
+
 <%-- status bar --%>
 .status {
 	width: 100%;
@@ -453,4 +464,14 @@ div.z-vfiletree-body td.menu-tree-cell {
 .z-datebox-focus .z-datebox-inp,
 .z-timebox-focus .z-timebox-inp {
 	background: #FFFFCC;
+}
+
+%-- Editor --%>
+.editor-box {
+	display: inline-block;
+	border: none; padding: 0px; margin: 0px; background-color: transparent;
+}
+
+.number-box {
+	display: inline-block; white-space:nowrap;
 }
