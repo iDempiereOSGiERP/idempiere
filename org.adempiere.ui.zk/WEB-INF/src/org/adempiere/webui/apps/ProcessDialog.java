@@ -39,10 +39,10 @@ import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.util.Clients;
-import org.zkoss.zkex.zul.Borderlayout;
-import org.zkoss.zkex.zul.Center;
-import org.zkoss.zkex.zul.North;
-import org.zkoss.zkex.zul.South;
+import org.zkoss.zul.Borderlayout;
+import org.zkoss.zul.Center;
+import org.zkoss.zul.North;
+import org.zkoss.zul.South;
 import org.zkoss.zul.Div;
 import org.zkoss.zul.Hbox;
 import org.zkoss.zul.Html;
@@ -155,7 +155,7 @@ public class ProcessDialog extends Window implements EventListener, IProcessMoni
 		bOK.setImage("/images/Ok16.png");
 		bOK.setId("Ok");
 		bOK.addEventListener(Events.ON_CLICK, this);
-		bOK.setSclass("action-button");
+		bOK.setSclass("action-image-text-button");
 		hbox.appendChild(bOK);
 		
 		label = Msg.getMsg(Env.getCtx(), "Cancel");
@@ -163,7 +163,7 @@ public class ProcessDialog extends Window implements EventListener, IProcessMoni
 		btn.setImage("/images/Cancel16.png");
 		btn.setId("Cancel");
 		btn.addEventListener(Events.ON_CLICK, this);
-		btn.setSclass("action-button");
+		btn.setSclass("action-image-text-button");
 		hbox.appendChild(btn);		
 		div.appendChild(hbox);
 		div.setStyle("padding: 10px");

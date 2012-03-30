@@ -109,7 +109,11 @@ html,body {
 	padding: 0px;
 }
 
-.toolbar-button img {
+.z-toolbarbutton-cnt {
+	padding: 0px;
+}
+
+.toolbar-button .z-toolbarbutton-body .z-toolbarbutton-cnt img {
 	width: 22px;
 	height: 22px;
 	padding: 0px 1px 0px 1px;
@@ -118,7 +122,7 @@ html,body {
 	border-color: transparent;
 }
 
-.embedded-toolbar-button img {
+.embedded-toolbar-button .z-toolbarbutton-body .z-toolbarbutton-cnt img {
 	width: 16px;
 	height: 16px;
 	padding: 0px 1px 0px 1px;
@@ -128,12 +132,9 @@ html,body {
 }
 
 .depressed img {
-	border-style: inset;
 	border-width: 1px;
 	border-color: #9CBDFF;
 	background-color: #C4DCFB;
-	-moz-border-radius: 5px;
-	-webkit-border-radius: 5px;
 	padding: 0px 1px 0px 1px;
 }
 
@@ -158,6 +159,11 @@ html,body {
 }
 
 .action-text-button {
+	height: 32px;
+	width: 80px;
+}
+
+.action-image-text-button {
 	height: 32px;
 	width: 80px;
 }
@@ -343,6 +349,11 @@ div.wc-modal, div.wc-modal-none, div.wc-highlighted, div.wc-highlighted-none {
 	border-right: 2px solid #9CBDFF;
 }
 
+.current-row-indicator {
+	background-color: #FA962F !important;
+	background-image: none !important; 
+}
+
 <%-- status bar --%>
 .status {
 	width: 100%;
@@ -453,4 +464,66 @@ div.z-vfiletree-body td.menu-tree-cell {
 .z-datebox-focus .z-datebox-inp,
 .z-timebox-focus .z-timebox-inp {
 	background: #FFFFCC;
+}
+
+<%-- Editor --%>
+.editor-box {
+	display: inline-block;
+	border: none; padding: 0px; margin: 0px; background-color: transparent;
+}
+
+.number-box {
+	display: inline-block; white-space:nowrap;
+}
+
+<%-- Group --%>
+tr.z-group {
+	background: #E9F2FB repeat-x 0 0;
+	background-image: url(../images/group_bg.gif);
+}
+
+tr.z-group td.z-row-inner {
+	overflow: hidden;
+	border-top: 2px solid #81BAF5;
+	border-bottom: 1px solid #BCD2EF;
+	color: #2C559C;
+	font-weight: bold;
+}
+
+div.z-group-cnt {
+	display:table-cell;
+	vertical-align:middle;
+}
+
+div.z-group-cnt span.z-label {
+	display:inline-block; 
+	vertical-align:middle;
+	color: #2C559C;
+	padding: 5px;
+	width: auto;
+	height: 100%;
+	font-weight: bold;
+}
+
+img.z-group-img-open, img.z-group-img-close {
+	width: 18px;
+	min-height: 18px;
+	height: 100%;
+	vertical-align: top;
+	cursor: pointer;
+	border: 0;
+}
+
+img.z-group-img-open {
+	background-image: url(../images/group-open.png);
+	background-position: center center;
+	background-color: transparent;
+	background-repeat: no-repeat;
+}
+
+img.z-group-img-close {
+	background-image: url(../images/group-close.png);
+	background-position: center center;
+	background-color: transparent;
+	background-repeat: no-repeat;
 }

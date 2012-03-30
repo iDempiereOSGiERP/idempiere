@@ -25,8 +25,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Map.Entry;
+import java.util.Properties;
 import java.util.logging.Level;
 
 import org.adempiere.webui.LayoutUtils;
@@ -35,6 +35,7 @@ import org.adempiere.webui.component.Columns;
 import org.adempiere.webui.component.EditorBox;
 import org.adempiere.webui.component.Grid;
 import org.adempiere.webui.component.GridPanel;
+import org.adempiere.webui.component.Group;
 import org.adempiere.webui.component.Label;
 import org.adempiere.webui.component.NumberBox;
 import org.adempiere.webui.component.Row;
@@ -47,6 +48,7 @@ import org.adempiere.webui.editor.WEditorPopupMenu;
 import org.adempiere.webui.editor.WebEditorFactory;
 import org.adempiere.webui.event.ContextMenuListener;
 import org.adempiere.webui.util.GridTabDataBinder;
+import org.adempiere.webui.util.TreeUtils;
 import org.adempiere.webui.window.FDialog;
 import org.compiere.model.DataStatusEvent;
 import org.compiere.model.DataStatusListener;
@@ -68,16 +70,16 @@ import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.util.Clients;
-import org.zkoss.zkex.zul.Borderlayout;
-import org.zkoss.zkex.zul.Center;
-import org.zkoss.zkex.zul.West;
+import org.zkoss.zul.Borderlayout;
+import org.zkoss.zul.Center;
+import org.zkoss.zul.DefaultTreeNode;
 import org.zkoss.zul.Div;
-import org.zkoss.zul.Group;
 import org.zkoss.zul.Groupfoot;
 import org.zkoss.zul.Separator;
-import org.zkoss.zul.SimpleTreeNode;
 import org.zkoss.zul.Space;
 import org.zkoss.zul.Treeitem;
+import org.zkoss.zul.West;
+import org.zkoss.zul.impl.XulElement;
 
 /**
  *
@@ -92,7 +94,7 @@ import org.zkoss.zul.Treeitem;
  *
  * @author Low Heng Sin
  */
-public class ADTabpanel extends Div implements Evaluatee, EventListener,
+public class ADTabpanel extends Div implements Evaluatee, EventListener<Event>,
 DataStatusListener, IADTabpanel, VetoableChangeListener
 {
 	/**
@@ -119,8 +121,8 @@ DataStatusListener, IADTabpanel, VetoableChangeListener
     private Grid              grid;
 
     private ArrayList<WEditor> editors = new ArrayList<WEditor>();
-
-    private ArrayList<String> editorIds = new ArrayList<String>();
+    
+    private ArrayList<Component> editorComps = new ArrayList<Component>();
 
     private boolean			  uiCreated = false;
 
@@ -385,6 +387,7 @@ DataStatusListener, IADTabpanel, VetoableChangeListener
             			else
             			{
             				row = new Group(fieldGroup);
+            				row.setSpans("5");
             				if (X_AD_FieldGroup.FIELDGROUPTYPE_Tab.equals(field.getFieldGroupType()) || field.getIsCollapsedByDefault())
             				{
             					((Group)row).setOpen(false);
@@ -435,7 +438,7 @@ DataStatusListener, IADTabpanel, VetoableChangeListener
                     editor.setGridTab(this.getGridTab());
                 	field.addPropertyChangeListener(editor);
                     editors.add(editor);
-                    editorIds.add(editor.getComponent().getUuid());
+                    editorComps.add(editor.getComponent());
                     if (field.isFieldOnly())
                     {
                     	row.appendChild(createSpacer());
@@ -472,7 +475,7 @@ DataStatusListener, IADTabpanel, VetoableChangeListener
 
                     //streach component to fill grid cell
                     editor.fillHorizontal();
-
+                    
                     //setup editor context menu
                     WEditorPopupMenu popupMenu = editor.getPopupMenu();
                     if (popupMenu != null)
@@ -487,7 +490,11 @@ DataStatusListener, IADTabpanel, VetoableChangeListener
 	                        	label.addEventListener(Events.ON_CLICK, new ZoomListener((IZoomableEditor) editor));
 	                        }
 
-	                        label.setContext(popupMenu.getId());
+	                        popupMenu.addContextElement(label);
+	                        if (editor.getComponent() instanceof XulElement) 
+	                        {
+	                        	popupMenu.addContextElement((XulElement) editor.getComponent());
+	                        }
                         }
                     }
                 }
@@ -606,7 +613,7 @@ DataStatusListener, IADTabpanel, VetoableChangeListener
         	for (int j = 0; j < components.size(); j++)
         	{
         		Component component = (Component) components.get(j);
-        		if (editorIds.contains(component.getUuid()))
+        		if (editorComps.contains(component))
         		{
         			editorRow = true;
         			if (component.isVisible())
@@ -617,7 +624,10 @@ DataStatusListener, IADTabpanel, VetoableChangeListener
         		}
         	}
         	if (editorRow && (row.isVisible() != visible))
+        	{
+        		row.setAttribute(Group.GROUP_ROW_VISIBLE_KEY, visible ? "true" : "false");
         		row.setVisible(visible);
+        	}
         }
 
         //hide fieldgroup if all editor row within the fieldgroup is invisible
@@ -813,11 +823,11 @@ DataStatusListener, IADTabpanel, VetoableChangeListener
     	}
     	else if (event.getTarget() == treePanel.getTree()) {
     		Treeitem item =  treePanel.getTree().getSelectedItem();
-    		navigateTo((SimpleTreeNode)item.getValue());
+    		navigateTo((DefaultTreeNode)item.getValue());
     	}
     }
 
-    private void navigateTo(SimpleTreeNode value) {
+    private void navigateTo(DefaultTreeNode value) {
     	MTreeNode treeNode = (MTreeNode) value.getData();
     	//  We Have a TreeNode
 		int nodeID = treeNode.getNode_ID();
@@ -940,7 +950,7 @@ DataStatusListener, IADTabpanel, VetoableChangeListener
 		SimpleTreeModel model = (SimpleTreeModel) treePanel.getTree().getModel();
 
 		if (treePanel.getTree().getSelectedItem() != null) {
-			SimpleTreeNode treeNode = (SimpleTreeNode) treePanel.getTree().getSelectedItem().getValue();
+			DefaultTreeNode treeNode = (DefaultTreeNode) treePanel.getTree().getSelectedItem().getValue();
 			MTreeNode data = (MTreeNode) treeNode.getData();
 			if (data.getNode_ID() == recordId) {
 				model.removeNode(treeNode);
@@ -948,7 +958,7 @@ DataStatusListener, IADTabpanel, VetoableChangeListener
 			}
 		}
 
-		SimpleTreeNode treeNode = model.find(null, recordId);
+		DefaultTreeNode treeNode = model.find(null, recordId);
 		if (treeNode != null) {
 			model.removeNode(treeNode);
 		}
@@ -962,13 +972,13 @@ DataStatusListener, IADTabpanel, VetoableChangeListener
 			String imageIndicator = (String)gridTab.getValue("Action");  //  Menu - Action
 			//
 			SimpleTreeModel model = (SimpleTreeModel) treePanel.getTree().getModel();
-			SimpleTreeNode treeNode = model.getRoot();
+			DefaultTreeNode treeNode = model.getRoot();
 			MTreeNode root = (MTreeNode) treeNode.getData();
 			MTreeNode node = new MTreeNode (gridTab.getRecord_ID(), 0, name, description,
 					root.getNode_ID(), summary, imageIndicator, false, null);
-			SimpleTreeNode newNode = new SimpleTreeNode(node, new ArrayList<Object>());
+			DefaultTreeNode newNode = new DefaultTreeNode(node, new ArrayList<Object>());
 			model.addNode(newNode);
-			int[] path = model.getPath(model.getRoot(), newNode);
+			int[] path = model.getPath(newNode);
 			Treeitem ti = treePanel.getTree().renderItemByPath(path);
 			treePanel.getTree().setSelectedItem(ti);
     	}
@@ -976,19 +986,24 @@ DataStatusListener, IADTabpanel, VetoableChangeListener
 
 	private void setSelectedNode(int recordId) {
 		if (recordId <= 0) return;
+		
+		//force on init render
+		if (TreeUtils.isOnInitRenderPosted(treePanel.getTree())) {
+			treePanel.getTree().onInitRender();
+		}
 
 		if (treePanel.getTree().getSelectedItem() != null) {
-			SimpleTreeNode treeNode = (SimpleTreeNode) treePanel.getTree().getSelectedItem().getValue();
+			DefaultTreeNode treeNode = (DefaultTreeNode) treePanel.getTree().getSelectedItem().getValue();
 			MTreeNode data = (MTreeNode) treeNode.getData();
 			if (data.getNode_ID() == recordId) return;
 		}
 
 		SimpleTreeModel model = (SimpleTreeModel) treePanel.getTree().getModel();
-		SimpleTreeNode treeNode = model.find(null, recordId);
+		DefaultTreeNode treeNode = model.find(null, recordId);
 		if (treeNode != null) {
-			int[] path = model.getPath(model.getRoot(), treeNode);
+			int[] path = model.getPath(treeNode);
 			Treeitem ti = treePanel.getTree().renderItemByPath(path);
-			treePanel.getTree().setSelectedItem(ti);
+			treePanel.getTree().selectItem(ti);
 		} else {
 			addNewNode();
 		}
