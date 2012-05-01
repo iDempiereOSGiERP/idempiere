@@ -38,10 +38,10 @@ import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.util.Clients;
-import org.zkoss.zkex.zul.Borderlayout;
-import org.zkoss.zkex.zul.Center;
-import org.zkoss.zkex.zul.North;
-import org.zkoss.zkex.zul.South;
+import org.zkoss.zul.Borderlayout;
+import org.zkoss.zul.Center;
+import org.zkoss.zul.North;
+import org.zkoss.zul.South;
 import org.zkoss.zul.Div;
 import org.zkoss.zul.Hbox;
 import org.zkoss.zul.Html;
@@ -79,7 +79,7 @@ import com.lowagie.text.pdf.PdfWriter;
  *  @author     arboleda - globalqss
  *  - Implement ShowHelp option on processes and reports
  */
-public class ProcessDialog extends Window implements EventListener, IProcessMonitor, SystemIDs
+public class ProcessDialog extends Window implements EventListener<Event>, IProcessMonitor, SystemIDs
 {
 	/**
 	 * generate serial version ID
@@ -147,14 +147,14 @@ public class ProcessDialog extends Window implements EventListener, IProcessMoni
 		center.setStyle("border: none");
 		
 		Div div = new Div();
-		div.setAlign("center");
+		div.setStyle("text-align: center");
 		Hbox hbox = new Hbox();
 		String label = Msg.getMsg(Env.getCtx(), "Start");
 		bOK = new Button(label.replaceAll("&", ""));
 		bOK.setImage("/images/Ok16.png");
 		bOK.setId("Ok");
 		bOK.addEventListener(Events.ON_CLICK, this);
-		bOK.setSclass("action-button");
+		bOK.setSclass("action-image-text-button");
 		hbox.appendChild(bOK);
 		
 		label = Msg.getMsg(Env.getCtx(), "Cancel");
@@ -162,7 +162,7 @@ public class ProcessDialog extends Window implements EventListener, IProcessMoni
 		btn.setImage("/images/Cancel16.png");
 		btn.setId("Cancel");
 		btn.addEventListener(Events.ON_CLICK, this);
-		btn.setSclass("action-button");
+		btn.setSclass("action-image-text-button");
 		hbox.appendChild(btn);		
 		div.appendChild(hbox);
 		div.setStyle("padding: 10px");
@@ -199,9 +199,10 @@ public class ProcessDialog extends Window implements EventListener, IProcessMoni
 	private String initialMessage;
 	private BusyDialog progressWindow;
 	private Thread thread;
-	private String statusUpdate;
 	private ProcessDialogRunnable processDialogRunnable;
 
+	private static final String ON_STATUS_UPDATE = "onStatusUpdate";
+	private static final String ON_COMPLETE = "onComplete";
 	
 	/**
 	 * 	Set Visible 
@@ -334,32 +335,20 @@ public class ProcessDialog extends Window implements EventListener, IProcessMoni
 		
 		processDialogRunnable = new ProcessDialogRunnable(p);
 		thread = new Thread(processDialogRunnable);
-		thread.start();
-		
-		Clients.response(new AuEcho(this, "checkProgress", null));
+		thread.start();		
 	}
 	
-	public void checkProgress() {
-		try {
-			Thread.sleep(500);
-		} catch (InterruptedException e) {
-			Thread.interrupted();
-		}
-		if (thread.isAlive()) {
-			synchronized(this) {
-				if (statusUpdate != null) {
-					if (progressWindow != null)
-						progressWindow.statusUpdate(statusUpdate);
-					statusUpdate = null;
-				}
-			}
-			Clients.response(new AuEcho(this, "checkProgress", null));
-		} else {
-			Env.getCtx().putAll(processDialogRunnable.getProperties());
-			thread = null;			
-			processDialogRunnable = null;
-			unlockUI(m_pi);
-		}
+	private void onComplete() {
+		Env.getCtx().putAll(processDialogRunnable.getProperties());
+		thread = null;			
+		processDialogRunnable = null;
+		unlockUI(m_pi);
+	}
+	
+	private void onStatusUpdate(Event event) {
+		String message = (String) event.getData();
+		if (progressWindow != null)
+			progressWindow.statusUpdate(message);
 	}
 	
 	public void onEvent(Event event) {
@@ -377,6 +366,10 @@ public class ProcessDialog extends Window implements EventListener, IProcessMoni
 			} else if ("Cancel".equalsIgnoreCase(element.getId())) {
 				this.dispose();
 			}
+		} else if (event.getName().equals(ON_STATUS_UPDATE)) {
+			onStatusUpdate(event);
+		} else if (event.getName().equals(ON_COMPLETE)) {
+			onComplete();			
 		}
 		
 	}
@@ -657,6 +650,7 @@ public class ProcessDialog extends Window implements EventListener, IProcessMoni
 				WProcessCtl.process(ProcessDialog.this, m_WindowNo, parameterPanel, m_pi, null);
 			} finally {
 				ServerContext.dispose();
+				Executions.schedule(getDesktop(), ProcessDialog.this, new Event(ON_COMPLETE, ProcessDialog.this, null));
 			}
 		}
 		
@@ -667,6 +661,6 @@ public class ProcessDialog extends Window implements EventListener, IProcessMoni
 
 	@Override
 	public void statusUpdate(String message) {
-		statusUpdate = message;
+		Executions.schedule(getDesktop(), this, new Event(ON_STATUS_UPDATE, this, message));
 	}
 }	//	ProcessDialog

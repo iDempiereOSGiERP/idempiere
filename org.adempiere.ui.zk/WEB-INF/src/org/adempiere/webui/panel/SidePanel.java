@@ -18,6 +18,7 @@
 package org.adempiere.webui.panel;
 
 import org.adempiere.webui.component.Panel;
+import org.zkoss.zk.ui.Component;
 
 /**
  *
@@ -32,18 +33,20 @@ public class SidePanel extends Panel
 	 */
 	private static final long serialVersionUID = -3039805384016666481L;
 	private MenuPanel pnlMenu;
-    public SidePanel()
+	
+    public SidePanel(Component parent)
     {
+    	setParent(parent);
         init();
     }
     
     private void init()
     {
-        pnlMenu = new MenuPanel();
+        pnlMenu = new MenuPanel(this);
         
         this.setWidth("100%");
         this.setHeight("100%");
-        this.appendChild(pnlMenu);        
+        this.setStyle("position: relative");
     }
     
     public MenuPanel getMenuPanel()
