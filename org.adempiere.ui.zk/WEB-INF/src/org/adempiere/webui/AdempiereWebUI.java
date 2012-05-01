@@ -21,15 +21,16 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Properties;
 
+import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpSession;
 
+import org.adempiere.util.ServerContext;
 import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.component.DrillCommand;
 import org.adempiere.webui.component.TokenCommand;
 import org.adempiere.webui.component.ZoomCommand;
 import org.adempiere.webui.desktop.DefaultDesktop;
 import org.adempiere.webui.desktop.IDesktop;
-import org.adempiere.webui.event.TokenEvent;
 import org.adempiere.webui.session.SessionContextListener;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.theme.ThemeManager;
@@ -43,7 +44,7 @@ import org.compiere.model.MUser;
 import org.compiere.util.CLogger;
 import org.compiere.util.Env;
 import org.compiere.util.Language;
-import org.zkoss.zk.au.Command;
+import org.zkoss.web.servlet.Servlets;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.Executions;
 import org.zkoss.zk.ui.Page;
@@ -70,8 +71,10 @@ import org.zkoss.zul.Window;
  *
  * @author hengsin
  */
-public class AdempiereWebUI extends Window implements EventListener, IWebClient
+public class AdempiereWebUI extends Window implements EventListener<Event>, IWebClient
 {
+	public static final String APPLICATION_DESKTOP_KEY = "application.desktop";
+
 	/**
 	 * 
 	 */
@@ -85,7 +88,7 @@ public class AdempiereWebUI extends Window implements EventListener, IWebClient
 
     private IDesktop           appDesktop;
 
-    private ClientInfo		   clientInfo;
+    private ClientInfo		   clientInfo = new ClientInfo();
 
 	private String langSession;
 
@@ -96,6 +99,8 @@ public class AdempiereWebUI extends Window implements EventListener, IWebClient
 	public static final String EXECUTION_CARRYOVER_SESSION_KEY = "execution.carryover";
 
 	public static final String ZK_DESKTOP_SESSION_KEY = "zk.desktop";
+	
+	private static final String CLIENT_INFO = "client.info";
 
     public AdempiereWebUI()
     {
@@ -122,6 +127,12 @@ public class AdempiereWebUI extends Window implements EventListener, IWebClient
         {
             loginCompleted();
         }
+
+        Executions.getCurrent().getDesktop().enableServerPush(true);
+        
+        Executions.getCurrent().getDesktop().addListener(new DrillCommand());
+        Executions.getCurrent().getDesktop().addListener(new TokenCommand());
+        Executions.getCurrent().getDesktop().addListener(new ZoomCommand());
     }
 
     public void onOk()
@@ -193,7 +204,7 @@ public class AdempiereWebUI extends Window implements EventListener, IWebClient
 		String autoNew = userPreference.getProperty(UserPreference.P_AUTO_NEW);
 		Env.setAutoNew(ctx, "true".equalsIgnoreCase(autoNew) || "y".equalsIgnoreCase(autoNew));
 
-		IDesktop d = (IDesktop) currSess.getAttribute("application.desktop");
+		IDesktop d = (IDesktop) currSess.getAttribute(APPLICATION_DESKTOP_KEY);
 		if (d != null && d instanceof IDesktop)
 		{
 			ExecutionCarryOver eco = (ExecutionCarryOver) currSess.getAttribute(EXECUTION_CARRYOVER_SESSION_KEY);
@@ -250,6 +261,10 @@ public class AdempiereWebUI extends Window implements EventListener, IWebClient
 					
 					currSess.setAttribute(ZK_DESKTOP_SESSION_KEY, this.getPage().getDesktop());
 					ctx.put(ZK_DESKTOP_SESSION_KEY, this.getPage().getDesktop());
+					ClientInfo sessionClientInfo = (ClientInfo) currSess.getAttribute(CLIENT_INFO);
+					if (sessionClientInfo != null) {
+						clientInfo = sessionClientInfo;
+					}
 				} catch (Throwable t) {
 					//restore fail
 					appDesktop = null;
@@ -264,12 +279,15 @@ public class AdempiereWebUI extends Window implements EventListener, IWebClient
 			createDesktop();
 			appDesktop.setClientInfo(clientInfo);
 			appDesktop.createPart(this.getPage());
-			currSess.setAttribute("application.desktop", appDesktop);
+			currSess.setAttribute(APPLICATION_DESKTOP_KEY, appDesktop);
 			ExecutionCarryOver eco = new ExecutionCarryOver(this.getPage().getDesktop());
 			currSess.setAttribute(EXECUTION_CARRYOVER_SESSION_KEY, eco);
 			currSess.setAttribute(ZK_DESKTOP_SESSION_KEY, this.getPage().getDesktop());
 			ctx.put(ZK_DESKTOP_SESSION_KEY, this.getPage().getDesktop());
 		}
+		
+		//update session context
+		currSess.setAttribute(SessionContextListener.SESSION_CTX, ServerContext.getCurrentInstance());
 		
 		if ("Y".equalsIgnoreCase(Env.getContext(ctx, BrowserToken.REMEMBER_ME)) && MSystem.isZKRememberUserAllowed())
 		{
@@ -343,6 +361,19 @@ public class AdempiereWebUI extends Window implements EventListener, IWebClient
 			clientInfo.timeZone = c.getTimeZone();
 			if (appDesktop != null)
 				appDesktop.setClientInfo(clientInfo);
+			String ua = Servlets.getUserAgent((ServletRequest) Executions.getCurrent().getNativeRequest());
+			clientInfo.userAgent = ua;
+			if (Servlets.getBrowser(ua).equals("webkit")) {
+				ua = ua.toLowerCase();
+				if (ua.indexOf("ipad") >= 0) {
+					clientInfo.tablet = true;
+				} else if (ua.indexOf("android") >= 0 && ua.indexOf("chrome") >= 0 && ua.indexOf("mobile") < 0) {
+					clientInfo.tablet = true;
+				}
+			}
+			if (getDesktop() != null && getDesktop().getSession() != null) {
+				getDesktop().getSession().setAttribute(CLIENT_INFO, clientInfo);
+			}
 		}
 
 	}
@@ -361,13 +392,5 @@ public class AdempiereWebUI extends Window implements EventListener, IWebClient
 	 */
 	public UserPreference getUserPreference() {
 		return userPreference;
-	}
-	
-	//global command
-	static {
-		new ZoomCommand("onZoom", Command.IGNORE_OLD_EQUIV);
-		new DrillCommand("onDrillAcross", Command.IGNORE_OLD_EQUIV);
-		new DrillCommand("onDrillDown", Command.IGNORE_OLD_EQUIV);
-		new TokenCommand(TokenEvent.ON_USER_TOKEN, Command.IGNORE_OLD_EQUIV);
-	}
+	}	
 }

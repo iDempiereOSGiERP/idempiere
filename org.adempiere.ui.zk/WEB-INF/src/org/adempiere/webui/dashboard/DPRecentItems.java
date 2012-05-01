@@ -15,7 +15,9 @@ package org.adempiere.webui.dashboard;
 
 import java.util.List;
 
-import org.adempiere.webui.component.ToolBarButton;
+import org.adempiere.webui.apps.AEnv;
+import org.adempiere.webui.event.TouchEventHelper;
+import org.adempiere.webui.event.TouchEvents;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.util.ServerPushTemplate;
 import org.compiere.model.MQuery;
@@ -23,11 +25,14 @@ import org.compiere.model.MRecentItem;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.MTable;
 import org.compiere.util.Env;
+import org.compiere.util.Msg;
+import org.compiere.util.Util;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.event.DropEvent;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
+import org.zkoss.zul.A;
 import org.zkoss.zul.Box;
 import org.zkoss.zul.Image;
 import org.zkoss.zul.Panel;
@@ -40,7 +45,11 @@ import org.zkoss.zul.Vbox;
  * @author Carlos Ruiz / GlobalQSS
  * @date January 27, 2012
  */
-public class DPRecentItems extends DashboardPanel implements EventListener {
+public class DPRecentItems extends DashboardPanel implements EventListener<Event> {
+
+	private static final String ON_ADD_TAP_EVENT_LISTENER = "onAddTapEventListener";
+	
+	private static final String AD_RECENT_ITEM_ID_ATTR = "AD_RecentItem_ID";
 
 	/**
 	 * 
@@ -60,33 +69,33 @@ public class DPRecentItems extends DashboardPanel implements EventListener {
 
 		Panelchildren recentItemsContent = new Panelchildren();
 		panel.appendChild(recentItemsContent);
-		recentItemsContent.appendChild(createRecentItemsPanel());
-
+		bxRecentItems = new Vbox();
+		recentItemsContent.appendChild(bxRecentItems);
+		createRecentItemsPanel();
+		
 		Toolbar recentItemsToolbar = new Toolbar();
 		this.appendChild(recentItemsToolbar);
 
 		Image imgr = new Image("/images/Refresh24.png");
 		recentItemsToolbar.appendChild(imgr);
-		imgr.setAlign("left");
+		imgr.setStyle("text-align: right; cursor: pointer;");
+		imgr.setTooltiptext(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "Refresh")));
 		imgr.addEventListener(Events.ON_CLICK, this);
 		//
 
 		Image img = new Image("/images/Delete24.png");
 		recentItemsToolbar.appendChild(img);
-		img.setAlign("right");
+		img.setStyle("text-align: right;");
 		img.setDroppable(DELETE_RECENTITEMS_DROPPABLE);
+		img.setTooltiptext(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "Delete")));
 		img.addEventListener(Events.ON_DROP, this);
 		//
 
 	}
 
-	private Box createRecentItemsPanel()
+	private void createRecentItemsPanel()
 	{
-		bxRecentItems = new Vbox();
-
 		refresh();
-
-		return bxRecentItems;
 	}
 
     /**
@@ -105,32 +114,13 @@ public class DPRecentItems extends DashboardPanel implements EventListener {
         Component comp = event.getTarget();
         String eventName = event.getName();
 
-        if (eventName.equals(Events.ON_CLICK))
+        if (eventName.equals(TouchEvents.ON_TAP))
         {
-            if (comp instanceof ToolBarButton)
-            {
-            	ToolBarButton btn = (ToolBarButton) comp;
-
-            	int AD_RecentItem_ID = 0;
-            	try
-            	{
-            		AD_RecentItem_ID = Integer.valueOf(btn.getName());            		
-            	}
-            	catch (Exception e) {
-				}
-
-            	if (AD_RecentItem_ID > 0) {
-            		MRecentItem ri = MRecentItem.get(Env.getCtx(), AD_RecentItem_ID);
-            		String TableName = MTable.getTableName(Env.getCtx(), ri.getAD_Table_ID());
-        			MQuery query = MQuery.getEqualQuery(TableName + "_ID", ri.getRecord_ID());
-
-            		SessionManager.getAppDesktop().openWindow(ri.getAD_Window_ID(), query);
-            	}
-            }
-            if (comp instanceof Image) // Refresh button
-            {
-            	refresh();
-            }
+        	doOnClick(comp);
+        }
+        else if (eventName.equals(Events.ON_CLICK) && !TouchEventHelper.isIgnoreClick(comp))
+        {
+            doOnClick(comp);
         }
         else if(eventName.equals(Events.ON_DROP))
         {
@@ -139,24 +129,55 @@ public class DPRecentItems extends DashboardPanel implements EventListener {
 
         	if(comp instanceof Image)
         	{
-        		if(dragged instanceof ToolBarButton)
+        		if(dragged instanceof A)
         		{
-        			ToolBarButton btn = (ToolBarButton) dragged;
+        			A btn = (A) dragged;
         			removeLink(btn);
         		}
         	}
         }
+        else if (eventName.equals(ON_ADD_TAP_EVENT_LISTENER))
+        {
+        	TouchEventHelper.addOnTapEventListener(event.getTarget(), this);
+        }
 	}
 
-	private void refresh() {
+	private void doOnClick(Component comp) {
+		if (comp instanceof A)
+		{
+			A btn = (A) comp;
+
+			int AD_RecentItem_ID = 0;
+			try
+			{
+				AD_RecentItem_ID = Integer.valueOf((String)btn.getAttribute(AD_RECENT_ITEM_ID_ATTR));            		
+			}
+			catch (Exception e) {
+			}
+
+			if (AD_RecentItem_ID > 0) {
+				MRecentItem ri = MRecentItem.get(Env.getCtx(), AD_RecentItem_ID);
+				String TableName = MTable.getTableName(Env.getCtx(), ri.getAD_Table_ID());
+				MQuery query = MQuery.getEqualQuery(TableName + "_ID", ri.getRecord_ID());
+
+				SessionManager.getAppDesktop().openWindow(ri.getAD_Window_ID(), query);
+			}
+		}
+		if (comp instanceof Image) // Refresh button
+		{
+			refresh();
+		}
+	}
+
+	private synchronized void refresh() {
 		// Please review here - is throwing NPE in some cases when user push repeatedly the refresh button
 		List<?> childs = bxRecentItems.getChildren();
 		int childCount = childs.size();
 		for (int c = childCount - 1; c >=0; c--) {
 			Component comp = (Component) childs.get(c);
-			if (comp instanceof ToolBarButton) {
-				((ToolBarButton) comp).removeEventListener(Events.ON_CLICK, this);
-				((ToolBarButton) comp).removeEventListener(Events.ON_DROP, this);
+			if (comp instanceof A) {
+				comp.removeEventListener(Events.ON_CLICK, this);
+				comp.removeEventListener(Events.ON_DROP, this);
 			}
 			bxRecentItems.removeChild(comp);
 		}
@@ -172,13 +193,28 @@ public class DPRecentItems extends DashboardPanel implements EventListener {
 			String label = ri.getLabel();
 			if (label == null)
 				continue;
-			ToolBarButton btnrecentItem = new ToolBarButton(String.valueOf(ri.getAD_RecentItem_ID()));
+			A btnrecentItem = new A();
+			btnrecentItem.setAttribute(AD_RECENT_ITEM_ID_ATTR, String.valueOf(ri.getAD_RecentItem_ID()));
+			bxRecentItems.appendChild(btnrecentItem);
 			btnrecentItem.setLabel(label);
 			btnrecentItem.setImage(getIconFile());
 			btnrecentItem.setDraggable(DELETE_RECENTITEMS_DROPPABLE);
 			btnrecentItem.addEventListener(Events.ON_CLICK, this);
 			btnrecentItem.addEventListener(Events.ON_DROP, this);
-			bxRecentItems.appendChild(btnrecentItem);
+			btnrecentItem.setSclass("menu-href");
+			if (AEnv.isTablet())
+			{
+				if (getPage() != null)
+				{
+					TouchEventHelper.addOnTapEventListener(btnrecentItem, this);
+				}
+				else
+				{
+					btnrecentItem.addEventListener(ON_ADD_TAP_EVENT_LISTENER, this);
+					Events.echoEvent(new Event(ON_ADD_TAP_EVENT_LISTENER, btnrecentItem, null));
+				}
+			}
+			
 			riShown++;
 			if (riShown >= maxri)
 				break;
@@ -186,8 +222,8 @@ public class DPRecentItems extends DashboardPanel implements EventListener {
 
 	}
 
-	private void removeLink(ToolBarButton btn) {
-		String value = btn.getName();
+	private void removeLink(A btn) {
+		String value = (String) btn.getAttribute(AD_RECENT_ITEM_ID_ATTR);
 
 		if (value != null)
 		{
@@ -205,7 +241,7 @@ public class DPRecentItems extends DashboardPanel implements EventListener {
 	@Override
     public void refresh(ServerPushTemplate template)
 	{			
-    	template.execute(this);
+    	template.executeAsync(this);
 	}
 
 	@Override

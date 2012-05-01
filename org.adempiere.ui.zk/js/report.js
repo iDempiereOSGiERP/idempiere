@@ -1,13 +1,19 @@
 function zoom(cmpid, column, value){
-	zkau.send({uuid: cmpid, cmd: 'onZoom', data: [column, value], ctl: true});
+	var widget = zk.Widget.$(cmpid);
+	var event = new zk.Event(widget, 'onZoom', {data: [column, value]}, {toServer: true});
+	zAu.send(event);
 }
 
 function drillAcross(cmpid, column, value){
-	zkau.send({uuid: cmpid, cmd: 'onDrillAcross', data: [column, value], ctl: true});
+	var widget = zk.Widget.$(cmpid);
+	var event = new zk.Event(widget, 'onDrillAcross', {data: [column, value]}, {toServer: true});
+	zAu.send(event);
 }
 
 function drillDown(cmpid, column, value){
-	zkau.send({uuid: cmpid, cmd: 'onDrillDown', data: [column, value], ctl: true});
+	var widget = zk.Widget.$(cmpid);
+	var event = new zk.Event(widget, 'onDrillDown', {data: [column, value]}, {toServer: true});
+	zAu.send(event);
 }
 
 function showColumnMenu(e, columnName, row) {
@@ -33,3 +39,4 @@ function showColumnMenu(e, columnName, row) {
 	
 	setTimeout("document.getElementById('" + columnName + "_" + row + "_d" + "').style.display='none'", 3000);
 }
+
