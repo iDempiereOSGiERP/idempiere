@@ -45,9 +45,9 @@ import org.adempiere.webui.panel.IFormController;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.window.FDialog;
 import org.compiere.apps.form.PaySelect;
+import org.compiere.model.SystemIDs;
 import org.compiere.model.X_C_PaySelection;
 import org.compiere.process.ProcessInfo;
-import org.compiere.util.ASyncProcess;
 import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
@@ -56,10 +56,10 @@ import org.zkoss.zk.ui.SuspendNotAllowedException;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.util.Clients;
-import org.zkoss.zkex.zul.Borderlayout;
-import org.zkoss.zkex.zul.Center;
-import org.zkoss.zkex.zul.North;
-import org.zkoss.zkex.zul.South;
+import org.zkoss.zul.Borderlayout;
+import org.zkoss.zul.Center;
+import org.zkoss.zul.North;
+import org.zkoss.zul.South;
 import org.zkoss.zul.Separator;
 import org.zkoss.zul.Space;
 
@@ -73,7 +73,7 @@ import org.zkoss.zul.Space;
  *  @version $Id: VPaySelect.java,v 1.3 2006/07/30 00:51:28 jjanke Exp $
  */
 public class WPaySelect extends PaySelect
-	implements IFormController, EventListener, WTableModelListener, IProcessMonitor
+	implements IFormController, EventListener, WTableModelListener, IProcessMonitor, SystemIDs
 {
 	/** @todo withholding */
 	
@@ -375,7 +375,7 @@ public class WPaySelect extends PaySelect
 			return;
 		
 		//  Prepare Process 
-		int AD_Proces_ID = 155;	//	C_PaySelection_CreatePayment
+		int AD_Proces_ID = PROCESS_C_PAYSELECTION_CREATEPAYMENT;	//	C_PaySelection_CreatePayment
 
 		//	Execute Process
 		ProcessModalDialog dialog = new ProcessModalDialog(this, m_WindowNo, 
@@ -387,8 +387,6 @@ public class WPaySelect extends PaySelect
 				dialog.setPage(form.getPage());
 				dialog.doModal();
 			} catch (SuspendNotAllowedException e) {
-				log.log(Level.SEVERE, e.getLocalizedMessage(), e);
-			} catch (InterruptedException e) {
 				log.log(Level.SEVERE, e.getLocalizedMessage(), e);
 			}
 		}
@@ -402,7 +400,7 @@ public class WPaySelect extends PaySelect
 	{
 		if (m_isLock) return;
 		m_isLock = true;
-		Clients.showBusy(null, true);
+		Clients.showBusy(null);
 	}   //  lockUI
 
 	/**
@@ -414,7 +412,7 @@ public class WPaySelect extends PaySelect
 		if (!m_isLock) return;
 		m_isLock = false;
 		m_pi = pi;
-		Clients.showBusy(null, false);	
+		Clients.clearBusy();	
 		
 		//TODO: The response returned is always Cancel
 //		if (!FDialog.ask(0, form, "VPaySelectPrint?", "(" + m_pi.getSummary() + ")"))
@@ -426,7 +424,7 @@ public class WPaySelect extends PaySelect
 		this.dispose();
 		
 		//  Start PayPrint
-		int AD_Form_ID = 106;	//	Payment Print/Export
+		int AD_Form_ID = FORM_PAYMENT_PRINT_EXPORT;	//	Payment Print/Export
 		ADForm form = SessionManager.getAppDesktop().openForm(AD_Form_ID);
 		if (m_ps != null)
 		{

@@ -16,6 +16,8 @@
  *****************************************************************************/
 package org.compiere.print;
 
+import java.awt.Color;
+import java.awt.Font;
 import java.awt.print.PrinterJob;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -59,6 +61,7 @@ import org.apache.ecs.xhtml.td;
 import org.apache.ecs.xhtml.th;
 import org.apache.ecs.xhtml.tr;
 import org.compiere.model.MClient;
+import org.compiere.model.MColumn;
 import org.compiere.model.MDunningRunEntry;
 import org.compiere.model.MInOut;
 import org.compiere.model.MInvoice;
@@ -68,6 +71,7 @@ import org.compiere.model.MProject;
 import org.compiere.model.MQuery;
 import org.compiere.model.MRfQResponse;
 import org.compiere.model.PrintInfo;
+import org.compiere.model.SystemIDs;
 import org.compiere.print.layout.LayoutEngine;
 import org.compiere.process.ProcessInfo;
 import org.compiere.util.CLogger;
@@ -78,7 +82,7 @@ import org.compiere.util.Ini;
 import org.compiere.util.Language;
 import org.compiere.util.Util;
 import org.eevolution.model.MDDOrder;
-import org.eevolution.model.X_PP_Order;  // to be changed by MPPOrder
+import org.eevolution.model.X_PP_Order;
 
 /**
  *	Report Engine.
@@ -104,7 +108,7 @@ import org.eevolution.model.X_PP_Order;  // to be changed by MPPOrder
  * 
  *  FR 2872010 - Dunning Run for a complete Dunning (not just level) - Developer: Carlos Ruiz - globalqss - Sponsor: Metas
  */
-public class ReportEngine implements PrintServiceAttributeListener
+public class ReportEngine implements PrintServiceAttributeListener, SystemIDs
 {
 	/**
 	 *	Constructor
@@ -580,6 +584,17 @@ queued-job-count = 0  (class javax.print.attribute.standard.QueuedJobCount)
 							th th = new th();
 							tr.addElement(th);
 							th.addElement(Util.maskHTML(item.getPrintName(language)));
+							if (cssPrefix != null) 
+							{
+								MColumn column = MColumn.get(getCtx(), item.getAD_Column_ID());
+								if (column != null && column.getAD_Column_ID() > 0)
+								{
+									if (DisplayType.isNumeric(column.getAD_Reference_ID()))
+									{
+										th.setClass(cssPrefix + "-number");
+									}
+								}
+							}
 						}
 						else
 						{
@@ -617,7 +632,56 @@ queued-job-count = 0  (class javax.print.attribute.standard.QueuedJobCount)
 										td.setClass(cssPrefix + "-date");
 									else
 										td.setClass(cssPrefix + "-text");
-								}								
+								}			
+								
+								String style = "";
+								MPrintFont mPrintFont = null;
+								if (item.getAD_PrintFont_ID() > 0) 
+								{
+									mPrintFont = MPrintFont.get(item.getAD_PrintFont_ID());
+								}
+								else if (m_printFormat.getAD_PrintFont_ID() > 0)
+								{
+									mPrintFont = MPrintFont.get(m_printFormat.getAD_PrintFont_ID());
+								}
+								if (mPrintFont != null && mPrintFont.getAD_PrintFont_ID() > 0)
+								{
+									Font font = mPrintFont.getFont();
+									String fontFamily = font.getFamily();
+									fontFamily = getCSSFontFamily(fontFamily);
+									style = fontFamily != null ?"font-family:'"+fontFamily+"';" : "";
+									if (font.isBold())
+									{
+										style = style + "font-weight:bold;"; 
+									}
+									if (font.isItalic())
+									{
+										style = style + "font-style:italic;";
+									}									
+									int size = font.getSize();
+									style=style+"font-size:"+size+"pt;";
+								}
+								
+								MPrintColor mPrintColor = null;
+								if (item.getAD_PrintColor_ID() > 0) 
+								{
+									mPrintColor = MPrintColor.get(m_ctx, item.getAD_PrintColor_ID());
+								}
+								else if (m_printFormat.getAD_PrintColor_ID() > 0)
+								{
+									mPrintColor = MPrintColor.get(m_ctx, m_printFormat.getAD_PrintColor_ID());
+								}
+								if (mPrintColor != null && mPrintColor.getAD_PrintColor_ID() > 0)
+								{
+									Color color = mPrintColor.getColor();
+									if (color != null)
+									{
+										style = style+"color:rgb("+color.getRed()+","+color.getGreen()+","+color.getBlue()+");";
+									}
+								}
+								
+								if (style != null && style.trim().length() > 0)
+									td.setStyle(style);
 							}
 							else if (obj instanceof PrintData)
 							{
@@ -662,6 +726,20 @@ queued-job-count = 0  (class javax.print.attribute.standard.QueuedJobCount)
 		return false;
 	}	//	createHTML
 
+
+	private String getCSSFontFamily(String fontFamily) {
+		if ("Dialog".equals(fontFamily) || "DialogInput".equals(fontFamily) || 	"Monospaced".equals(fontFamily))
+		{
+			return "monospace";
+		} else if ("SansSerif".equals(fontFamily))
+		{
+			return "sans-serif";
+		} else if ("Serif".equals(fontFamily))
+		{
+			return "serif";
+		}
+		return null;
+	}
 
 	/**************************************************************************
 	 * 	Create CSV File
@@ -1567,7 +1645,7 @@ queued-job-count = 0  (class javax.print.attribute.standard.QueuedJobCount)
 	{
 		org.compiere.Adempiere.startupEnvironment(true);
 		//
-		int AD_Table_ID = 100;
+		int AD_Table_ID = TABLE_AD_TABLE;
 		MQuery q = new MQuery("AD_Table");
 		q.addRestriction("AD_Table_ID", "<", 108);
 		//

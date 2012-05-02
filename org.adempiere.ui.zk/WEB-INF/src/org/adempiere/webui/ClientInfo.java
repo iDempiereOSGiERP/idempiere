@@ -16,6 +16,7 @@
  *****************************************************************************/
 package org.adempiere.webui;
 
+import java.io.Serializable;
 import java.util.TimeZone;
 
 /**
@@ -23,7 +24,12 @@ import java.util.TimeZone;
  * @author Low Heng Sin
  *
  */
-public class ClientInfo {
+public class ClientInfo implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -713195891415378500L;
+	
 	public int colorDepth;
 	public int desktopWidth;
 	public int desktopHeight;
@@ -32,4 +38,6 @@ public class ClientInfo {
 	public int screenHeight;
 	public int screenWidth;
 	public TimeZone timeZone;
+	public String userAgent;
+	public boolean tablet;
 }

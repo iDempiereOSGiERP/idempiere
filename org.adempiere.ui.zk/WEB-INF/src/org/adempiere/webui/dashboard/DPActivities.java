@@ -41,7 +41,7 @@ import org.zkoss.zul.Vbox;
  * Contributors:
  * CarlosRuiz - globalqss - Add unprocessed button to iDempiere
  */
-public class DPActivities extends DashboardPanel implements EventListener {
+public class DPActivities extends DashboardPanel implements EventListener<Event> {
 
 	/**
 	 * 
@@ -219,7 +219,7 @@ public class DPActivities extends DashboardPanel implements EventListener {
     	noOfWorkflow = getWorkflowCount();
     	if (isShowUnprocessed) noOfUnprocessed = getUnprocessedCount();
 
-    	template.execute(this);
+    	template.executeAsync(this);
 	}
 
     @Override

@@ -40,6 +40,7 @@ import org.compiere.minigrid.ColumnInfo;
 import org.compiere.minigrid.IDColumn;
 import org.compiere.model.MLookupFactory;
 import org.compiere.model.MQuery;
+import org.compiere.model.SystemIDs;
 import org.compiere.util.DB;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
@@ -47,10 +48,10 @@ import org.compiere.util.Msg;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
-import org.zkoss.zkex.zul.Borderlayout;
-import org.zkoss.zkex.zul.Center;
-import org.zkoss.zkex.zul.North;
-import org.zkoss.zkex.zul.South;
+import org.zkoss.zul.Borderlayout;
+import org.zkoss.zul.Center;
+import org.zkoss.zul.North;
+import org.zkoss.zul.South;
 import org.zkoss.zul.Div;
 import org.zkoss.zul.Separator;
 import org.zkoss.zul.Vbox;
@@ -66,7 +67,7 @@ import org.zkoss.zul.Vbox;
 * @version	InfoAssignment.java Adempiere Swing UI 3.4.1
 */
 
-public class InfoAssignmentPanel extends InfoPanel implements EventListener, ValueChangeListener
+public class InfoAssignmentPanel extends InfoPanel implements EventListener, ValueChangeListener, SystemIDs
 {
 	/**
 	 * 
@@ -157,13 +158,13 @@ public class InfoAssignmentPanel extends InfoPanel implements EventListener, Val
 	{
 		try
 		{
-			int AD_Column_ID = 6851; //	S_Resource.S_ResourceType_ID
+			int AD_Column_ID = COLUMN_S_RESOURCE_S_RESOURCETYPE_ID; //	S_Resource.S_ResourceType_ID
 
 			fieldResourceType = new WSearchEditor (
 					MLookupFactory.get(Env.getCtx(), p_WindowNo, 0, AD_Column_ID, DisplayType.TableDir), 
 					Msg.translate(Env.getCtx(), "S_ResourceType_ID"), "", false, false, true);
 			
-			AD_Column_ID = 6826; //	S_ResourceAssignment.S_Resource_ID
+			AD_Column_ID = COLUMN_S_RESOURCEASSIGNMENT_S_RESOURCE_ID; //	S_ResourceAssignment.S_Resource_ID
 			
 			fieldResource = new WSearchEditor (
 					MLookupFactory.get (Env.getCtx(), p_WindowNo, 0, AD_Column_ID, DisplayType.TableDir), 
