@@ -38,8 +38,11 @@ import javax.servlet.ServletRequest;
 
 import org.adempiere.webui.AdempiereWebUI;
 import org.adempiere.webui.component.Window;
+import org.adempiere.webui.desktop.IDesktop;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.theme.ThemeManager;
+import org.adempiere.webui.util.IServerPushCallback;
+import org.adempiere.webui.util.ServerPushTemplate;
 import org.compiere.acct.Doc;
 import org.compiere.model.GridWindowVO;
 import org.compiere.model.Lookup;
@@ -743,33 +746,50 @@ public final class AEnv
 	}
 	
 	/**
-	 * Execute task that required access to the zk desktop
+	 * Execute synchronous task in UI thread.
 	 * @param runnable
 	 */
-	public static void executeDesktopTask(Runnable runnable) {
+	public static void executeDesktopTask(final Runnable runnable) {
+		Desktop desktop = getDesktop();
+		ServerPushTemplate template = new ServerPushTemplate(desktop);
+		template.execute(new IServerPushCallback() {			
+			@Override
+			public void updateUI() {
+				runnable.run();
+			}
+		});
+	}
+	
+	/**
+	 * Execute asynchronous task in UI thread.
+	 * @param runnable
+	 */
+	public static void executeAsyncDesktopTask(final Runnable runnable) {
+		Desktop desktop = getDesktop();
+		ServerPushTemplate template = new ServerPushTemplate(desktop);
+		template.executeAsync(new IServerPushCallback() {			
+			@Override
+			public void updateUI() {
+				runnable.run();
+			}
+		});
+	}
+	
+	/**
+	 * Get current desktop
+	 * @return Desktop
+	 */
+	public static Desktop getDesktop() {
 		boolean inUIThread = Executions.getCurrent() != null;
-		boolean desktopActivated = false;
-		
-		Desktop desktop = null;
-		try {
-	    	if (!inUIThread) {
-	    		desktop = (Desktop) Env.getCtx().get(AdempiereWebUI.ZK_DESKTOP_SESSION_KEY);
-	    		if (desktop == null)
-	    			return;
-	    		//1 second timeout
-	    		if (Executions.activate(desktop, 1000)) {
-	    			desktopActivated = true;
-	    		} else {
-	    			return;
-	    		}
-	    	}
-	    	runnable.run();
-    	} catch (Exception e) {
-    		throw new RuntimeException(e.getLocalizedMessage(), e);
-    	} finally {
-    		if (!inUIThread && desktopActivated) {
-    			Executions.deactivate(desktop);
-    		}
-    	}	
+		return inUIThread ? Executions.getCurrent().getDesktop() 
+					: (Desktop) Env.getCtx().get(AdempiereWebUI.ZK_DESKTOP_SESSION_KEY);
+	}
+	
+	/**
+	 * @return true if running on a tablet
+	 */
+	public static boolean isTablet() {
+		IDesktop appDesktop = SessionManager.getAppDesktop();
+		return appDesktop != null ? appDesktop.getClientInfo().tablet : false;
 	}
 }	//	AEnv

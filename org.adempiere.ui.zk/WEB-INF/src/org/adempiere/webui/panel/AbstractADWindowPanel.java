@@ -69,6 +69,7 @@ import org.compiere.model.MProcess;
 import org.compiere.model.MQuery;
 import org.compiere.model.MRecentItem;
 import org.compiere.model.MRole;
+import org.compiere.model.SystemIDs;
 import org.compiere.process.DocAction;
 import org.compiere.process.ProcessInfo;
 import org.compiere.process.ProcessInfoUtil;
@@ -118,7 +119,7 @@ import org.zkoss.zul.Menupopup;
  *  		https://sourceforge.net/tracker/?func=detail&aid=2985892&group_id=176962&atid=955896
  */
 public abstract class AbstractADWindowPanel extends AbstractUIPart implements ToolbarListener,
-        EventListener, DataStatusListener, ActionListener, IProcessMonitor
+        EventListener<Event>, DataStatusListener, ActionListener, IProcessMonitor, SystemIDs
 {
     private static final CLogger logger;
 
@@ -777,7 +778,7 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 
 			m_lock = new Menuitem(Msg.translate(Env.getCtx(), "Lock"));
 			m_popup.appendChild(m_lock);
-			m_lock.addEventListener(Events.ON_CLICK, new EventListener()
+			m_lock.addEventListener(Events.ON_CLICK, new EventListener<Event>()
 			{
 				public void onEvent(Event event) throws Exception
 				{
@@ -790,7 +791,7 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 
 			m_access = new Menuitem(Msg.translate(Env.getCtx(), "RecordAccessDialog"));
 			m_popup.appendChild(m_access);
-			m_access.addEventListener(Events.ON_CLICK, new EventListener()
+			m_access.addEventListener(Events.ON_CLICK, new EventListener<Event>()
 			{
 				public void onEvent(Event event) throws Exception
 				{
@@ -1506,7 +1507,7 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
     	else
     	{
 	        curTab.dataIgnore();
-	        curTab.dataRefresh(false);
+	        curTab.dataRefresh(true);	// update statusbar & toolbar
 	        curTabpanel.dynamicDisplay(0);
 	        toolbar.enableIgnore(false);
     	}
@@ -1760,7 +1761,7 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 		messagePanel.appendChild(listbox);
 
 		Div div = new Div();
-		div.setAlign("center");
+		div.setStyle("text-align: center");
 		messagePanel.appendChild(div);
 
 		Hbox hbox = new Hbox();
@@ -1769,9 +1770,8 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 		Button btnOk = new Button();
 		btnOk.setLabel(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "OK")));
 		btnOk.setImage("/images/Ok16.png");
-		btnOk.addEventListener(Events.ON_CLICK, new EventListener()
+		btnOk.addEventListener(Events.ON_CLICK, new EventListener<Event>()
 		{
-			@SuppressWarnings("unchecked")
 			public void onEvent(Event event) throws Exception
 			{
 				if (FDialog.ask(curWindowNo, messagePanel, "DeleteSelection"))
@@ -1812,7 +1812,7 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 		Button btnCancel = new Button();
 		btnCancel.setLabel(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "Cancel")));
 		btnCancel.setImage("/images/Cancel16.png");
-		btnCancel.addEventListener(Events.ON_CLICK, new EventListener()
+		btnCancel.addEventListener(Events.ON_CLICK, new EventListener<Event>()
 		{
 			public void onEvent(Event event) throws Exception
 			{
@@ -1852,12 +1852,8 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 				AD_Process_ID,table_ID, record_ID, true);
 		if (dialog.isValid()) {
 			dialog.setPosition("center");
-			try {
 				dialog.setPage(this.getComponent().getPage());
 				dialog.doModal();
-			}
-			catch (InterruptedException e) {
-			}
 		}
 	}
 
@@ -2061,7 +2057,7 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 		//	Record_ID - Change Log ID
 
 		if (record_ID == -1
-			&& (wButton.getProcess_ID() == 306 || wButton.getProcess_ID() == 307))
+			&& (wButton.getProcess_ID() == PROCESS_AD_CHANGELOG_UNDO || wButton.getProcess_ID() == PROCESS_AD_CHANGELOG_REDO))
 		{
 			Integer id = (Integer)curTab.getValue("AD_ChangeLog_ID");
 			record_ID = id.intValue();
@@ -2251,9 +2247,19 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 				dialog.setWidth("500px");
 				dialog.setVisible(true);
 				dialog.setPosition("center");
+				dialog.setAttribute(Window.MODE_KEY, Window.MODE_HIGHLIGHTED);
+				dialog.addEventListener(ProcessModalDialog.ON_MODAL_CLOSE, new EventListener<Event>() {
+					@Override
+					public void onEvent(Event event) throws Exception {
+						onRefresh(false);
+					}
+				});
 				AEnv.showWindow(dialog);
 			}
-			onRefresh(false);
+			else
+			{
+				onRefresh(false);
+			}			
 		}
 	} // actionButton
 
@@ -2327,14 +2333,14 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 		m_uiLocked = true;
 
 		if (Executions.getCurrent() != null)
-			Clients.showBusy(null, true);
+			Clients.showBusy(null);
 		else
 		{
 			try {
 				//acquire desktop, 2 second timeout
 				Executions.activate(getComponent().getDesktop(), 2000);
 				try {
-					Clients.showBusy(null, true);
+					Clients.showBusy(null);
                 } catch(Error ex){
                 	throw ex;
                 } finally{
@@ -2366,7 +2372,7 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 			{
 				updateUI(pi);
 			}
-			Clients.showBusy(null, false);
+			Clients.clearBusy(null);
 		}
 		else
 		{
@@ -2378,7 +2384,7 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
 					{
 						updateUI(pi);
 					}
-                	Clients.showBusy(null, false);
+                	Clients.clearBusy(null);
                 } catch(Error ex){
                 	throw ex;
                 } finally{

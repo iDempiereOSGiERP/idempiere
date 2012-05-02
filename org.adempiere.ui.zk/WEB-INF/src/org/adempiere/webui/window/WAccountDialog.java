@@ -48,6 +48,7 @@ import org.compiere.model.MAccountLookup;
 import org.compiere.model.MAcctSchema;
 import org.compiere.model.MAcctSchemaElement;
 import org.compiere.model.MQuery;
+import org.compiere.model.SystemIDs;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -56,10 +57,10 @@ import org.zkoss.zk.ui.Executions;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
-import org.zkoss.zkex.zul.Borderlayout;
-import org.zkoss.zkex.zul.Center;
-import org.zkoss.zkex.zul.North;
-import org.zkoss.zkex.zul.South;
+import org.zkoss.zul.Borderlayout;
+import org.zkoss.zul.Center;
+import org.zkoss.zul.North;
+import org.zkoss.zul.South;
 import org.zkoss.zul.Caption;
 import org.zkoss.zul.Div;
 import org.zkoss.zul.Groupbox;
@@ -72,7 +73,7 @@ import org.zkoss.zul.Vbox;
  * 	@author Low Heng Sin
  */
 public final class WAccountDialog extends Window
-	implements EventListener, DataStatusListener, ValueChangeListener
+	implements EventListener, DataStatusListener, ValueChangeListener, SystemIDs
 {
 
 	private static final long serialVersionUID = 7999516267209766287L;
@@ -89,7 +90,7 @@ public final class WAccountDialog extends Window
 		super ();
 		this.setTitle(title);
 		this.setHeight("500px");
-		this.setWidth("700px");
+		this.setWidth("750px");
 
 		log.config("C_AcctSchema_ID=" + C_AcctSchema_ID
 			+ ", C_ValidCombination_ID=" + mAccount.C_ValidCombination_ID);
@@ -183,6 +184,7 @@ public final class WAccountDialog extends Window
 		//
 		Caption caption = new Caption(Msg.getMsg(Env.getCtx(),"Parameter"));
 		parameterPanel.appendChild(caption);
+		parameterPanel.setHflex("1");
 		parameterPanel.setStyle("background-color: transparent;");
 		toolBar.setOrient("vertical");
 		toolBar.setStyle("border: none; margin: 5px");
@@ -211,19 +213,9 @@ public final class WAccountDialog extends Window
 
 		Borderlayout layout = new Borderlayout();
 		layout.setParent(this);
-		if (AEnv.isFirefox2())
-		{
-			layout.setHeight("93%");
-			layout.setWidth("98%");
-			layout.setStyle("background-color: transparent; position: absolute;");
-			this.setStyle("position: relative;");
-		}
-		else
-		{
-			layout.setHeight("100%");
-			layout.setWidth("100%");
-			layout.setStyle("background-color: transparent;");
-		}
+		layout.setHeight("100%");
+		layout.setWidth("100%");
+		layout.setStyle("background-color: transparent;");
 
 		North nRegion = new North();
 		nRegion.setParent(layout);
@@ -272,7 +264,7 @@ public final class WAccountDialog extends Window
 		Env.setContext(Env.getCtx(), m_WindowNo, "C_AcctSchema_ID", m_C_AcctSchema_ID);
 
 		//  Model
-		int AD_Window_ID = 153;		//	Maintain Account Combinations
+		int AD_Window_ID = WINDOW_ACCOUNTCOMBINATION;		//	Maintain Account Combinations
 		GridWindowVO wVO = AEnv.getMWindowVO (m_WindowNo, AD_Window_ID, 0);
 		if (wVO == null)
 			return false;
@@ -305,7 +297,7 @@ public final class WAccountDialog extends Window
 		parameterLayout.makeNoStrip();
 		parameterLayout.setOddRowSclass("even");
 		parameterLayout.setParent(parameterPanel);
-		parameterLayout.setStyle("background-color: transparent;");
+		parameterLayout.setStyle("background-color: transparent; margin:none; border:none; padding:none;");
 
 		m_rows = new Rows();
 		m_rows.setParent(parameterLayout);
@@ -496,7 +488,8 @@ public final class WAccountDialog extends Window
 		m_row.appendChild(div);
 
 		m_row.appendChild(editor.getComponent());
-		editor.dynamicDisplay();
+		editor.fillHorizontal();
+		editor.dynamicDisplay();		
 		//
 		m_newRow = !m_newRow;
 	}	//	addLine
