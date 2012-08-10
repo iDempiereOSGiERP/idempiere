@@ -981,14 +981,12 @@ public abstract class AbstractADWindowPanel extends AbstractUIPart implements To
      */
     public boolean onExit()
     {
-    	String message = Msg.getMsg(ctx, "SaveBeforeClose");
-
     	if (!boolChanges)
     	{
     		return true;
     	}
     	else
-    		FDialog.info(this.curWindowNo, null, message);
+    		FDialog.info(this.curWindowNo, null, "SaveBeforeClose");
 
     	return false;
     }
