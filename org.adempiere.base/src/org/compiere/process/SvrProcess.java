@@ -449,7 +449,7 @@ public abstract class SvrProcess implements ProcessCall
 	public void addLog (int id, Timestamp date, BigDecimal number, String msg)
 	{
 		if (m_pi != null)
-			m_pi.addLog(id, date, number, msg );
+			m_pi.addLog(id, date, number, msg);
 		log.info(id + " - " + date + " - " + number + " - " + msg);
 	}	//	addLog
 

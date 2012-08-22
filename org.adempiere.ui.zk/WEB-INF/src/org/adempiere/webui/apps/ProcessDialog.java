@@ -31,8 +31,6 @@ import org.adempiere.webui.window.FDialog;
 import org.adempiere.webui.window.MultiFileDownloadDialog;
 import org.adempiere.webui.window.SimplePDFViewer;
 import org.compiere.Adempiere;
-import org.compiere.model.MQuery;
-import org.compiere.model.MTable;
 import org.compiere.print.ReportEngine;
 import org.compiere.process.ProcessInfo;
 import org.compiere.process.ProcessInfoLog;
@@ -370,11 +368,9 @@ public class ProcessDialog extends Window implements EventListener<Event>, IProc
 	
 	public void onEvent(Event event) {
 		Component component = event.getTarget(); 
-		if(event.getName().equals((Events.ON_CLICK))){
-			doOnClick(component);
-		}
-	
-		if (component instanceof Button) {
+		if(component instanceof A && event.getName().equals((Events.ON_CLICK))){
+			doOnClick((A)component);
+		} else if (component instanceof Button) {
 			Button element = (Button)component;
 			if ("Ok".equalsIgnoreCase(element.getId())) {
 				if (isParameterPage) {
@@ -395,27 +391,21 @@ public class ProcessDialog extends Window implements EventListener<Event>, IProc
 		
 	}
 
-	private void doOnClick(Component comp) {
-		if (comp instanceof A)
+	private void doOnClick(A btn) {
+		int Record_ID = 0;
+		int AD_Table_ID =0;
+		try
 		{
-			A btn = (A) comp;
-			int Record_ID = 0;
-			int AD_Table_ID =0;
-			try
-			{
-				Record_ID = Integer.valueOf((String)btn.getAttribute("Record_ID"));            		
-				AD_Table_ID= Integer.valueOf((String)btn.getAttribute("AD_Table_ID"));            		
-			}
-			catch (Exception e) {
-			}
-
-			if (Record_ID > 0 && AD_Table_ID > 0) {
-				
-				AEnv.zoom(AD_Table_ID, Record_ID);
-			}
-			
+			Record_ID = Integer.valueOf((String)btn.getAttribute("Record_ID"));            		
+			AD_Table_ID= Integer.valueOf((String)btn.getAttribute("AD_Table_ID"));            		
 		}
-	
+		catch (Exception e) {
+		}
+
+		if (Record_ID > 0 && AD_Table_ID > 0) {
+			
+			AEnv.zoom(AD_Table_ID, Record_ID);
+		}		
 	}
 
 
@@ -475,8 +465,6 @@ public class ProcessDialog extends Window implements EventListener<Event>, IProc
 	}
 	
 	private void appendRecordLogInfo(ProcessInfoLog[] m_logs) {
-		// TODO Auto-generated method stub
-		System.out.println("********************************");
 		if (m_logs == null)
 			return ;
 		
@@ -516,29 +504,23 @@ public class ProcessDialog extends Window implements EventListener<Event>, IProc
 		    	tr.appendChild(td);				
 			}
 			
-			A btnrecentItem = null;
+			A recordLink = null;
 			if (log.getP_Msg() != null){
-					btnrecentItem = new A();
-					btnrecentItem.setLabel(log.getP_Msg());
+				recordLink = new A();
+				recordLink.setLabel(log.getP_Msg());
 
-					if (log.getAd_Table_Id() > 0 && log.getRecord_Id()> 0) {
-						btnrecentItem.setAttribute("Record_ID", String.valueOf(log.getRecord_Id()));
-						btnrecentItem.setAttribute("AD_Table_ID", String.valueOf(log.getAd_Table_Id()));
-						btnrecentItem.addEventListener(Events.ON_CLICK, this);
-						
-					}
-					Td td = new Td();
-					td.appendChild(btnrecentItem);
-					tr.appendChild(td);
-				
+				if (log.getAd_Table_Id() > 0 && log.getRecord_Id()> 0) {
+					recordLink.setAttribute("Record_ID", String.valueOf(log.getRecord_Id()));
+					recordLink.setAttribute("AD_Table_ID", String.valueOf(log.getAd_Table_Id()));
+					recordLink.addEventListener(Events.ON_CLICK, this);
+					
+				}
+				Td td = new Td();
+				td.appendChild(recordLink);
+				tr.appendChild(td);				
 			}
-
-    		
 		}
     	messageDiv.appendChild(logMessageTable);
-
-		
-
 	}
 
 	private void restart() {

@@ -126,9 +126,10 @@ public class ProcessInfoUtil
 			pstmt.setInt(1, pi.getAD_PInstance_ID());
 			ResultSet rs = pstmt.executeQuery();
 			while (rs.next()){
-				pi.addLog (rs.getInt(1), rs.getInt(2), rs.getTimestamp(3), rs.getBigDecimal(4), rs.getString(5),rs.getInt(6),rs.getInt(7));
+				// int Log_ID, int P_ID, Timestamp P_Date, BigDecimal P_Number, String P_Msg, AD_Table_ID, Record_ID
+				pi.addLog (rs.getInt(1), rs.getInt(2), rs.getTimestamp(3), rs.getBigDecimal(4), rs.getString(5), rs.getInt(6), rs.getInt(7));
 			}
-				rs.close();
+			rs.close();
 			pstmt.close();
 		}
 		catch (SQLException e)
