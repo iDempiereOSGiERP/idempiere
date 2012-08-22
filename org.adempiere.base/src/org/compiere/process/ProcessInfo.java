@@ -23,8 +23,6 @@ import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 
-import org.compiere.model.MQuery;
-import org.compiere.model.MTable;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Ini;
@@ -299,8 +297,6 @@ public class ProcessInfo implements Serializable
 			sb.append("</table>");
 		return sb.toString();
 	 }	//	getLogInfo
-
-	
 
 	/**
 	 * 	Get ASCII Log Info
