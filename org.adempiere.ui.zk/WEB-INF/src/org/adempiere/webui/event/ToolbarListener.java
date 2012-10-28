@@ -159,21 +159,16 @@ public interface ToolbarListener
      * Copy current record as a new record
      */
     public void onCopy();
-    
-    /**
-     * Export grid data
-     */
-    public void onExport();
-    
+
     /**
      * File import data
      */
     public void onFileImport();
-    
+
     /**
      * Customize grid view.
      */
     public void onCustomize();
-    
+
     public void onProcess();
 }

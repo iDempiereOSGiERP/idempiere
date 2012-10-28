@@ -22,22 +22,28 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Level;
 
 import org.adempiere.webui.AdempiereIdGenerator;
 import org.adempiere.webui.LayoutUtils;
+import org.adempiere.webui.action.Actions;
+import org.adempiere.webui.action.IAction;
 import org.adempiere.webui.component.FToolbar;
 import org.adempiere.webui.component.ToolBarButton;
 import org.adempiere.webui.event.ToolbarListener;
 import org.adempiere.webui.session.SessionManager;
 import org.compiere.model.MRole;
+import org.compiere.model.MToolBarButton;
 import org.compiere.model.MToolBarButtonRestrict;
 import org.compiere.model.X_AD_ToolBarButton;
 import org.compiere.util.CLogger;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.osgi.util.tracker.ServiceTracker;
+import org.zkoss.image.AImage;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
@@ -57,7 +63,7 @@ import org.zkoss.zul.Space;
 public class ADWindowToolbar extends FToolbar implements EventListener<Event>
 {
 	/**
-	 * 
+	 *
 	 */
 	private static final long serialVersionUID = 3390505814516682801L;
 
@@ -84,9 +90,9 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
     private ToolBarButton btnChat;
 
     private ToolBarButton btnCustomize;
-    
-    private ToolBarButton btnExport, btnFileImport;
-    
+
+    private ToolBarButton btnFileImport;
+
     private ToolBarButton btnProcess;
 
     private HashMap<String, ToolBarButton> buttons = new HashMap<String, ToolBarButton>();
@@ -100,6 +106,8 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
     private Map<Integer, ToolBarButton> keyMap = new HashMap<Integer, ToolBarButton>();
     private Map<Integer, ToolBarButton> altKeyMap = new HashMap<Integer, ToolBarButton>();
     private Map<Integer, ToolBarButton> ctrlKeyMap = new HashMap<Integer, ToolBarButton>();
+
+    private List<ToolbarCustomButton> toolbarCustomButtons = new ArrayList<ToolbarCustomButton>();
 
 	// Elaine 2008/12/04
 	/** Show Personal Lock								*/
@@ -115,8 +123,6 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
 	/**	Last Modifier of Action Event					*/
 //	public int 				lastModifiers;
 	//
-	
-	private static final String WINDOW = "org.idempiere.ui.window";
 
     public ADWindowToolbar()
     {
@@ -149,7 +155,7 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
         btnGridToggle = createButton("Toggle", "Multi", "Multi");
         addSeparator();
         btnParentRecord = createButton("ParentRecord", "Parent", "Parent");
-        btnDetailRecord = createButton("DetailRecord", "Detail", "Detail");        
+        btnDetailRecord = createButton("DetailRecord", "Detail", "Detail");
         addSeparator();
         btnReport = createButton("Report", "Report", "Report");
         btnArchive = createButton("Archive", "Archive", "Archive");
@@ -162,14 +168,14 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
         btnRequests = createButton("Requests", "Request", "Request");
         btnProductInfo = createButton("ProductInfo", "Product", "InfoProduct");
         btnProductInfo.setVisible(isAllowProductInfo);
-        
+
         addSeparator();
         btnCustomize= createButton("Customize", "Customize", "Customize");
         btnCustomize.setDisabled(false);
-        
+
         btnProcess= createButton("Process", "Process", "Process");
         btnProcess.setDisabled(false);
-        
+
 
         // Help and Exit should always be enabled
         btnHelp.setDisabled(false);
@@ -182,10 +188,6 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
         btnArchive.setDisabled(false); // Elaine 2008/07/28
         btnLock.setDisabled(!isPersonalLock); // Elaine 2008/12/04
 
-        if (MRole.getDefault().isCanExport())
-        {
-        	btnExport = createButton("Export", "Export", "Export");
-        }
         btnFileImport = createButton("FileImport", "FileImport", "FileImport");
 
         configureKeyMap();
@@ -202,10 +204,11 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
         	btn.setAttribute(AdempiereIdGenerator.ZK_COMPONENT_PREFIX_ATTRIBUTE, "unq" + btn.getName() + "_" + windowNo);
         else
         	btn.setAttribute(AdempiereIdGenerator.ZK_COMPONENT_PREFIX_ATTRIBUTE, btn.getName());
-        btn.setImage("/images/"+image + "24.png");
+        if (image != null)
+        	btn.setImage("/images/"+image + "24.png");
         btn.setTooltiptext(Msg.getMsg(Env.getCtx(),tooltip));
         btn.setSclass("toolbar-button");
-        
+
         buttons.put(name, btn);
         this.appendChild(btn);
         //make toolbar button last to receive focus
@@ -263,7 +266,7 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
 		keyMap.put(KeyEvent.F12, btnPrint);
 
 		altKeyMap.put(KeyEvent.LEFT, btnParentRecord);
-		altKeyMap.put(KeyEvent.RIGHT, btnDetailRecord);		
+		altKeyMap.put(KeyEvent.RIGHT, btnDetailRecord);
 		altKeyMap.put(VK_P, btnReport);
 		altKeyMap.put(VK_Z, btnIgnore);
 
@@ -363,7 +366,7 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
 		}
 		this.event = null;
 	}
-	
+
     public void enableTabNavigation(boolean enabled)
     {
         enableTabNavigation(enabled, enabled);
@@ -441,12 +444,12 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
     {
     	btnGridToggle.setDisabled(!enabled);
     }
-    
+
     public void enableCustomize(boolean enabled)
     {
     	btnCustomize.setDisabled(!enabled);
     }
-    
+
     public void lock(boolean locked)
     {
     	this.btnLock.setPressed(locked);
@@ -541,15 +544,6 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
 	}
 
 	/**
-	 * Enable/disable export button
-	 * @param b
-	 */
-	public void enableExport(boolean b) {
-		if (btnExport != null)
-			btnExport.setDisabled(!b);
-	}
-
-	/**
 	 * Enable/disable file import button
 	 * @param b
 	 */
@@ -559,15 +553,18 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
 	}
 
 	private boolean ToolBarMenuRestictionLoaded = false;
-	public void updateToolBarAndMenuWithRestriction(int AD_Window_ID) {
+	public void updateToolbarAccess(int AD_Window_ID) {
+		loadCustomButton(AD_Window_ID);
+
 		if (ToolBarMenuRestictionLoaded)
 			return;
 		Properties m_ctx = Env.getCtx();
 
 		int ToolBarButton_ID = 0;
 
-		int[] restrictionList = MToolBarButtonRestrict.getOf(m_ctx, MRole.getDefault().getAD_Role_ID(), "W", AD_Window_ID, WINDOW, null);
-		log.info("restrictionList="+restrictionList.toString());
+		int[] restrictionList = MToolBarButtonRestrict.getOfWindow(m_ctx, MRole.getDefault().getAD_Role_ID(), AD_Window_ID, false, null);
+		if (log.isLoggable(Level.INFO))
+			log.info("restrictionList="+restrictionList.toString());
 
 		for (int i = 0; i < restrictionList.length; i++)
 		{
@@ -575,7 +572,8 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
 
 			X_AD_ToolBarButton tbt = new X_AD_ToolBarButton(m_ctx, ToolBarButton_ID, null);
 			String restrictName = BTNPREFIX + tbt.getComponentName();
-			log.config("tbt="+tbt.getAD_ToolBarButton_ID() + " / " + restrictName);
+			if (log.isLoggable(Level.CONFIG))
+				log.config("tbt="+tbt.getAD_ToolBarButton_ID() + " / " + restrictName);
 
 			for (Component p = this.getFirstChild(); p != null; p = p.getNextSibling()) {
 				if (p instanceof ToolBarButton) {
@@ -588,7 +586,45 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
 
 		}	// All restrictions
 
+		dynamicDisplay();
 		ToolBarMenuRestictionLoaded = true;
+	}
+
+	private void loadCustomButton(int AD_Window_ID) {
+		MToolBarButton[] mToolbarButtons = MToolBarButton.getOfWindow(AD_Window_ID, null);
+		if (mToolbarButtons != null && mToolbarButtons.length > 0) {
+			for (MToolBarButton mToolBarButton : mToolbarButtons) {
+				String actionId = mToolBarButton.getActionClassName();
+				ServiceTracker<IAction, IAction> serviceTracker = Actions.getActionTracker(actionId);
+				if (serviceTracker != null && serviceTracker.size() > 0) {
+					String labelKey = actionId + ".label";
+					String tooltipKey = actionId + ".tooltip";
+					String label = Msg.getMsg(Env.getCtx(), labelKey);
+					String tooltiptext = Msg.getMsg(Env.getCtx(), tooltipKey);
+					if (labelKey.equals(label)) {
+						label = mToolBarButton.getName();
+					}
+					if (tooltipKey.equals(tooltiptext)) {
+						tooltiptext = null;
+					}
+					ToolBarButton btn = createButton(mToolBarButton.getComponentName(), null, tooltiptext);
+					btn.removeEventListener(Events.ON_CLICK, this);
+					btn.setDisabled(false);
+
+					AImage aImage = Actions.getActionImage(actionId);
+					if (aImage != null) {
+						btn.setImageContent(aImage);
+					} else {
+						btn.setLabel(label);
+					}
+
+					ToolbarCustomButton toolbarCustomBtn = new ToolbarCustomButton(mToolBarButton, btn, actionId, windowNo);
+					toolbarCustomButtons.add(toolbarCustomBtn);
+
+					appendChild(btn);
+				}
+			}
+		}
 	}
 
 	public void enableProcessButton(boolean b) {
@@ -597,4 +633,9 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
 		}
 	}
 
+	public void dynamicDisplay() {
+		for(ToolbarCustomButton toolbarCustomBtn : toolbarCustomButtons) {
+			toolbarCustomBtn.dynamicDisplay();
+		}
+	}
 }
