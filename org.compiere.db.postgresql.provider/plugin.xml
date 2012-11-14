@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         id="org.adempiere.db.postgresql.config.ConfigPostgreSQL"
+         name="PostgreSQL Database Configuration"
+         point="org.adempiere.install.IDatabaseConfig">
+      <database
+            class="org.adempiere.db.postgresql.config.ConfigPostgreSQL"
+            id="PostgreSQL">
+      </database>
+   </extension>
+
+</plugin>
