@@ -399,11 +399,11 @@ public class MMovement extends X_M_Movement implements DocAction
 						//
 						MLocator locator = new MLocator (getCtx(), line.getM_Locator_ID(), get_TrxName());
 						//Update Storage 
-						if (!MStorage.add(getCtx(),locator.getM_Warehouse_ID(),
+						if (!MStorageOnHand.add(getCtx(),locator.getM_Warehouse_ID(),
 								line.getM_Locator_ID(),
 								line.getM_Product_ID(), 
 								ma.getM_AttributeSetInstance_ID(), 0, 
-								ma.getMovementQty().negate(), Env.ZERO ,  Env.ZERO , get_TrxName()))
+								ma.getMovementQty().negate(), get_TrxName()))
 						{
 							m_processMsg = "Cannot correct Inventory (MA)";
 							return DocAction.STATUS_Invalid;
@@ -416,11 +416,11 @@ public class MMovement extends X_M_Movement implements DocAction
 							M_AttributeSetInstanceTo_ID = ma.getM_AttributeSetInstance_ID();
 						}
 						//Update Storage 
-						if (!MStorage.add(getCtx(),locator.getM_Warehouse_ID(),
+						if (!MStorageOnHand.add(getCtx(),locator.getM_Warehouse_ID(),
 								line.getM_LocatorTo_ID(),
 								line.getM_Product_ID(), 
 								M_AttributeSetInstanceTo_ID, 0, 
-								ma.getMovementQty(), Env.ZERO ,  Env.ZERO , get_TrxName()))
+								ma.getMovementQty(), get_TrxName()))
 						{
 							m_processMsg = "Cannot correct Inventory (MA)";
 							return DocAction.STATUS_Invalid;
@@ -455,22 +455,22 @@ public class MMovement extends X_M_Movement implements DocAction
 				{
 					MLocator locator = new MLocator (getCtx(), line.getM_Locator_ID(), get_TrxName());
 					//Update Storage 
-					if (!MStorage.add(getCtx(),locator.getM_Warehouse_ID(),
+					if (!MStorageOnHand.add(getCtx(),locator.getM_Warehouse_ID(),
 							line.getM_Locator_ID(),
 							line.getM_Product_ID(), 
 							line.getM_AttributeSetInstance_ID(), 0, 
-							line.getMovementQty().negate(), Env.ZERO ,  Env.ZERO , get_TrxName()))
+							line.getMovementQty().negate(), get_TrxName()))
 					{
 						m_processMsg = "Cannot correct Inventory (MA)";
 						return DocAction.STATUS_Invalid;
 					}
 
 					//Update Storage 
-					if (!MStorage.add(getCtx(),locator.getM_Warehouse_ID(),
+					if (!MStorageOnHand.add(getCtx(),locator.getM_Warehouse_ID(),
 							line.getM_LocatorTo_ID(),
 							line.getM_Product_ID(), 
 							line.getM_AttributeSetInstanceTo_ID(), 0, 
-							line.getMovementQty(), Env.ZERO ,  Env.ZERO , get_TrxName()))
+							line.getMovementQty(), get_TrxName()))
 					{
 						m_processMsg = "Cannot correct Inventory (MA)";
 						return DocAction.STATUS_Invalid;
@@ -550,12 +550,12 @@ public class MMovement extends X_M_Movement implements DocAction
 		{
 			MProduct product = MProduct.get(getCtx(), line.getM_Product_ID());
 			String MMPolicy = product.getMMPolicy();
-			MStorage[] storages = MStorage.getWarehouse(getCtx(), 0, line.getM_Product_ID(), 0, 
+			MStorageOnHand[] storages = MStorageOnHand.getWarehouse(getCtx(), 0, line.getM_Product_ID(), 0, 
 					null, MClient.MMPOLICY_FiFo.equals(MMPolicy), true, line.getM_Locator_ID(), get_TrxName());
 
 			BigDecimal qtyToDeliver = line.getMovementQty();
 
-			for (MStorage storage: storages)
+			for (MStorageOnHand storage: storages)
 			{
 				if (storage.getQtyOnHand().compareTo(qtyToDeliver) >= 0)
 				{
