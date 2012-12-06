@@ -19,7 +19,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.adempiere.webui.AdempiereIdGenerator;
 import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.component.Label;
 import org.adempiere.webui.component.Menupopup;
@@ -56,7 +55,7 @@ import org.zkoss.zul.Space;
  * @author hengsin
  *
  */
-public class BreadCrumb extends Div implements EventListener<Event>{
+public class BreadCrumb extends Div implements EventListener<Event> {
 
 	private static final String INFO_INDICATOR_IMAGE = "/images/InfoIndicator16.png";
 
@@ -75,6 +74,7 @@ public class BreadCrumb extends Div implements EventListener<Event>{
 	
 	private LinkedHashMap<String, String> links;
 
+	@SuppressWarnings("unused")
 	private int windowNo;
 	
 	private HashMap<String, ToolBarButton> buttons = new HashMap<String, ToolBarButton>();
@@ -99,6 +99,8 @@ public class BreadCrumb extends Div implements EventListener<Event>{
 	private Hbox messageContainer;
 
 	private Caption msgPopupCaption;
+
+	protected Menupopup linkPopup;
 
 	/**
 	 * 
@@ -138,6 +140,7 @@ public class BreadCrumb extends Div implements EventListener<Event>{
         messageContainer = new Hbox();
         messageContainer.setStyle("float: right; height: 30px;");
         messageContainer.setAlign("center");
+        messageContainer.setId("messages");
         appendChild(messageContainer);
         
         altKeyMap.put(KeyEvent.UP, btnPrevious);
@@ -158,6 +161,7 @@ public class BreadCrumb extends Div implements EventListener<Event>{
 		if (clickable) {
 			BreadCrumbLink a = new BreadCrumbLink();
 			a.setLabel(label);
+			a.setId("breadcrumb-"+label);
 			a.setPathId(id);
 			a.addEventListener(Events.ON_CLICK, this);
 			if (layout.getChildren().size() > 1) {
@@ -168,6 +172,7 @@ public class BreadCrumb extends Div implements EventListener<Event>{
 			layout.insertBefore(a, toolbarContainer);
 		} else {
 			Label pathLabel = new Label();
+			pathLabel.setId("breadcrumb-"+label);
 			pathLabel.setValue(label);
 			if (layout.getChildren().size() > 1) {
 				Label symbol = new Label();
@@ -192,21 +197,30 @@ public class BreadCrumb extends Div implements EventListener<Event>{
 		this.links = links;
 		final Label pathLabel = (Label) layout.getChildren().get(layout.getChildren().size()-2);
 		pathLabel.setStyle("cursor: pointer; font-weight: bold");
-		pathLabel.addEventListener(Events.ON_CLICK, new EventListener<Event>() {
+		EventListener<Event> listener = new EventListener<Event>() {
 			@Override
 			public void onEvent(Event event) throws Exception {
-				Menupopup popup = new Menupopup();
+				if (linkPopup != null  ) {
+					System.out.println(linkPopup.getPage());
+					if (linkPopup.getPage() != null && linkPopup.isVisible()) {
+						return;
+					}
+				}
+				
+				linkPopup = new Menupopup();
 				for(Map.Entry<String, String>entry : BreadCrumb.this.links.entrySet()) {
 					final Menuitem item = new Menuitem();
 					item.setLabel(entry.getValue());
 					item.setValue(entry.getKey());
 					item.addEventListener(Events.ON_CLICK, BreadCrumb.this);
-					popup.appendChild(item);
+					linkPopup.appendChild(item);
 				}
-				popup.setPage(pathLabel.getPage());
-				popup.open(pathLabel);
+				linkPopup.setPage(pathLabel.getPage());
+				linkPopup.open(pathLabel);
 			}
-		});
+		};
+		pathLabel.addEventListener(Events.ON_CLICK, listener);
+		pathLabel.addEventListener(Events.ON_MOUSE_OVER, listener);
 	}
 
 	@Override
@@ -260,10 +274,7 @@ public class BreadCrumb extends Div implements EventListener<Event>{
     {
     	ToolBarButton btn = new ToolBarButton("");
         btn.setName(BTNPREFIX+name);
-        if (windowNo > 0)
-        	btn.setAttribute(AdempiereIdGenerator.ZK_COMPONENT_PREFIX_ATTRIBUTE, "unq" + btn.getName() + "_" + windowNo);
-        else
-        	btn.setAttribute(AdempiereIdGenerator.ZK_COMPONENT_PREFIX_ATTRIBUTE, btn.getName());
+        btn.setId(name);
         btn.setImage("/images/"+image + "24.png");
         btn.setTooltiptext(Msg.getMsg(Env.getCtx(),tooltip));
         btn.setSclass("breadcrumb-toolbar-button");
@@ -443,6 +454,8 @@ public class BreadCrumb extends Div implements EventListener<Event>{
 		super.onPageDetached(page);
 		if (msgPopup != null)
 			msgPopup.detach();
+		if (linkPopup != null)
+			linkPopup.detach();
 	}
 
 	public void setNavigationToolbarVisibility(boolean visible) {
