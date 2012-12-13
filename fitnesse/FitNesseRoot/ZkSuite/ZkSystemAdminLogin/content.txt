@@ -1,0 +1,28 @@
+!|fitlibrary.zk.ZkFixture|
+
+|''start spider with''|firefox|
+|''shutdown browser automatically''|false|
+|''get url''|http://localhost:8080/webui/index.zul|
+
+'''Login'''
+|''with''|$loginPanel $txtUserId|''set text''|!-SuperUser-!|
+|''with''|$loginPanel $txtPassword|''set text''|!-System-!|
+|''combobox''|$loginPanel $lstLanguage|''select item''|English|
+|''with''|$loginPanel $chkSelectRole|''select''|true|
+|''click''|$loginPanel $Ok|
+
+|''wait response''|
+
+'''Select Role'''
+|''element''|$rolePanel $lstClient|''exists''|
+|''element visible''|$rolePanel $lstClient|
+|''combobox''|$rolePanel $lstClient|''select item''|!-System-!|
+|''combobox''|$rolePanel $lstRole|''select item''|!-System Administrator-!|
+|''combobox''|$rolePanel $lstOrganisation|''select item''|*|
+|''click''|$rolePanel $Ok|
+
+|''wait response''|
+
+'''Verify login user and role'''
+|element|$loginUserAndRole|exists|
+|''text of''|$loginUserAndRole|is|!-SuperUser@System.*/System Administrator-!|
