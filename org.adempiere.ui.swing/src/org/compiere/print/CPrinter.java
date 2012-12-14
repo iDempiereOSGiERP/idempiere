@@ -18,7 +18,6 @@ package org.compiere.print;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.print.PrinterJob;
 
 import javax.print.PrintService;
 import javax.print.PrintServiceLookup;
@@ -61,6 +60,7 @@ public class CPrinter extends CComboBox implements ActionListener
 
 	
 	/**	Logger	*/
+	@SuppressWarnings("unused")
 	private static CLogger log = CLogger.getCLogger (CPrinter.class);
 	
 	

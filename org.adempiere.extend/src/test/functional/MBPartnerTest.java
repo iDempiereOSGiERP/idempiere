@@ -1,25 +1,16 @@
 //MBPartnerTest.java
 package test.functional;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-
-import org.compiere.model.MBPGroup;
 import org.compiere.model.MBPartner;
-import org.compiere.model.MLocation;
-import org.compiere.model.MProductPrice;
-import org.compiere.util.DB;
-import org.compiere.util.Env;
 
 import test.AdempiereTestCase;
 
 public class MBPartnerTest extends AdempiereTestCase {
 	
 	// Variables needed for importing/migrating business partners
-	private MLocation location = null;
+	//private MLocation location = null;
 	
-	private MBPartner m_partner = null;  //business partner
+	//private MBPartner m_partner = null;  //business partner
 	/*
  	private MBPartnerLocation bpl = null; //business partner location
 	private MUser user = null; //business contact
