@@ -52,7 +52,7 @@ public class GridTab2PackExporter implements IGridTabExporter {
 		List<PackoutItem> packoutItems = new ArrayList<PackoutItem>();
 		if (packOut.getHandler(tableName) == null) {
 			properties.put(DataElementParameters.AD_TABLE_ID, gridTab.getAD_Table_ID());
-			StringBuffer sql = new StringBuffer("SELECT * FROM ");
+			StringBuilder sql = new StringBuilder("SELECT * FROM ");
 			sql.append(tableName);
 			if (currentRowOnly) {
 				sql.append(" WHERE ").append(gridTab.getTableModel().getWhereClause(gridTab.getCurrentRow()));
@@ -103,7 +103,7 @@ public class GridTab2PackExporter implements IGridTabExporter {
 			}
 		}
 		try {
-			packOut.export(getPackoutDirectory(), file.getAbsolutePath(), packoutDocument, packoutItems, null);
+			packOut.export(getPackoutDirectory(), file!=null ? file.getAbsolutePath() : null , packoutDocument, packoutItems, null);
 		} catch (Exception e) {
 			throw new AdempiereException(e);
 		}

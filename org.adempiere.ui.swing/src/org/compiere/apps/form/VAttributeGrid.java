@@ -50,7 +50,6 @@ import org.compiere.model.MAttributeValue;
 import org.compiere.model.MProduct;
 import org.compiere.model.MProductPrice;
 import org.compiere.model.MRole;
-import org.compiere.model.MStorageOnHand;
 import org.compiere.model.MStorageReservation;
 import org.compiere.swing.CComboBox;
 import org.compiere.swing.CLabel;
@@ -126,6 +125,7 @@ public class VAttributeGrid extends CPanel
 	}	//	init
 
 	/**	Window No			*/
+	@SuppressWarnings("unused")
 	private int         	m_WindowNo = 0;
 	/**	FormFrame			*/
 	private FormFrame 		m_frame;

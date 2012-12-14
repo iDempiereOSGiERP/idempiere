@@ -18,11 +18,11 @@ import org.compiere.util.KeyNamePair;
 import org.compiere.util.ValueNamePair;
 import org.compiere.util.WebSessionCtx;
 
-import pl.x3E.adInterface.DataField;
-import pl.x3E.adInterface.DataRow;
-import pl.x3E.adInterface.DataSet;
-import pl.x3E.adInterface.LookupValue;
-import pl.x3E.adInterface.LookupValues;
+import org.idempiere.adInterface.x10.DataField;
+import org.idempiere.adInterface.x10.DataRow;
+import org.idempiere.adInterface.x10.DataSet;
+import org.idempiere.adInterface.x10.LookupValue;
+import org.idempiere.adInterface.x10.LookupValues;
 
 /*
  * ADEMPIERE/COMPIERE
@@ -42,8 +42,11 @@ public class ADLookup {
 	static final int TYPE_BUISNESS_PARTNER = 002;
 	
 	private String m_columnName;
+	private int m_type;
 	private String m_tableName;
 	private String m_keyColumnName;
+	private Boolean IsQueryJoin;
+	private boolean m_isSOTRX;
 	
 	private final int MAX_PRODUCT_ROWS=500;
 	
@@ -69,7 +72,8 @@ public class ADLookup {
 	
 	
 	private String getWhereClause( String keyColumn, DataRow params ) {
-		String whereClause = "IsSummary='N'";	
+		String whereClause = "IsSummary='N'";
+		String lookupColumn = keyColumn;		
 		return whereClause;
 	}
 	
@@ -128,6 +132,8 @@ public class ADLookup {
 		String whereClause = getWhereClause(m_columnName, adr);
 		String finalSQL="";		
 		
+		IsQueryJoin = false;
+		
 		String mode = "normal"; 
 		for (int i=0; i< adr.sizeOfFieldArray(); i++) {
 			DataField f = adr.getFieldArray(i);
@@ -174,9 +180,9 @@ public class ADLookup {
 			 ile = ile+1;				
 			}*/
 			int ile = 0;
-			finalSQL = info.getSQLCount();
+			finalSQL = info!=null ? info.getSQLCount() : "";
 			PreparedStatement pstmt = DB.prepareStatement(finalSQL, null);
-			info.setParameters (pstmt, true);
+			if (info!=null) info.setParameters (pstmt, true);
 			ResultSet rs = pstmt.executeQuery();
 			if (rs.next())
 				ile = rs.getInt(1);
@@ -194,14 +200,16 @@ public class ADLookup {
 			//join�w
 			if ((ile==1))
 			{
-			 System.out.println("Znalaz�em 1 rekord wi�c szukam dla bez join. W kliencie zostanie automatycznie uzupe�niona warto�c");				 			 
+			 System.out.println("Znalazï¿½em 1 rekord wiï¿½c szukam dla bez join. W kliencie zostanie automatycznie uzupeï¿½niona wartoï¿½c");
+			 IsQueryJoin = false;				 			 
 			}
 			//Jesli wiecej niz jeden to uzywamy join�w
 			//Spowoduje to wyswietlenie rekord�w spe�niajacych kryterium
 			//w oknie LookUp'a
 			if (ile>1)
 			{
-			 System.out.println("Znalaz�em wi�cej ni� 1 rekord wi�c szukam dla whereClause i z joinami. W kliencie zostanie wy�wietlone LookUpWindow z przefiltrowanymi rekordami.");		 			 
+			 System.out.println("Znalazï¿½em wiï¿½cej niï¿½ 1 rekord wiï¿½c szukam dla whereClause i z joinami. W kliencie zostanie wyï¿½wietlone LookUpWindow z przefiltrowanymi rekordami.");
+			 IsQueryJoin = true;		 			 
 
 			}	
 			ds = getResult(info, ds, ile, mode);			
@@ -235,6 +243,7 @@ public class ADLookup {
 	 *  Example
 	 *	SELECT C_Payment_ID FROM C_Payment WHERE UPPER(DocumentNo) LIKE x OR ...
 	 */
+	@SuppressWarnings("unused")
 	private String getDirectAccessSQL (String text)
 	{
 		//Tutaj trzeba doda� dodatkowe pole dla odpowiednich typ�w wyszukiwania w selectach

@@ -238,7 +238,7 @@ public class FindWindow extends Window implements EventListener<Event>, ValueCha
         this.setSizable(true);  
         this.setMaximizable(true);
         
-        this.setId("findWindow");
+        this.setId("findWindow_"+targetWindowNo);
     }
     
     public boolean initialize() 
@@ -1954,7 +1954,7 @@ public class FindWindow extends Window implements EventListener<Event>, ValueCha
      * @author Karsten Thiemann, kthiemann@adempiere.org
      *
     **/
-    private class SimpleTreeNode {
+    private static class SimpleTreeNode {
 
         private int nodeId;
 
@@ -2123,6 +2123,6 @@ public class FindWindow extends Window implements EventListener<Event>, ValueCha
 	public boolean isValid()
 	{
 		return isvalid;
-	}
+	}	
 	
 }   //  FindPanel
