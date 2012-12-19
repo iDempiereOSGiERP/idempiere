@@ -255,7 +255,7 @@ public final class DB
 	 *  Set connection
 	 *  @param cc connection
 	 */
-	public static void setDBTarget (CConnection cc)
+	public synchronized static void setDBTarget (CConnection cc)
 	{
 		if (cc == null)
 			throw new IllegalArgumentException("Connection is NULL");
@@ -1880,6 +1880,7 @@ public final class DB
 	 * 	@param trxName optional Transaction Name
 	 *  @return next no
 	 */
+	@SuppressWarnings("deprecation")
 	public static int getNextID (int AD_Client_ID, String TableName, String trxName)
 	{
 		boolean SYSTEM_NATIVE_SEQUENCE = MSysConfig.getBooleanValue(MSysConfig.SYSTEM_NATIVE_SEQUENCE,false);

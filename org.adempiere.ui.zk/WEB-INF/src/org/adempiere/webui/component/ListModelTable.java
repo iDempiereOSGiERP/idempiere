@@ -40,7 +40,7 @@ import org.zkoss.zul.event.ListDataEvent;
  * @author Andrew Kimball
  *
  */
-public class ListModelTable extends ListModelList implements ListModelExt
+public class ListModelTable extends ListModelList<Object> implements ListModelExt<Object>
 {
 	/**
 	 * 
@@ -51,7 +51,7 @@ public class ListModelTable extends ListModelList implements ListModelExt
 	/** The number of columns in the table. */
 	private int m_noColumns;
 
-	private ListModelExt sorter = null;
+	private ListModelExt<Object> sorter = null;
 
 	/**
 	 * Default constructor.
@@ -117,7 +117,7 @@ public class ListModelTable extends ListModelList implements ListModelExt
 	 */
     private void ensureRowSize()
 	{
-		Iterator<List<Object>> rowIterator = (Iterator<List<Object>>)this.getInnerList().iterator();
+		Iterator<List<Object>> rowIterator = (Iterator<List<Object>>)(Object)this.getInnerList().iterator();
 
         while (rowIterator.hasNext())
 		{
@@ -324,7 +324,7 @@ public class ListModelTable extends ListModelList implements ListModelExt
      * (non-Javadoc)
      * @see org.zkoss.zul.ListModelList#sort(java.util.Comparator, boolean)
      */
-    public void sort(Comparator cmpr, boolean ascending)
+    public void sort(Comparator<Object> cmpr, boolean ascending)
     {
     	if (sorter != null)
     		sorter.sort(cmpr, ascending);
@@ -388,7 +388,7 @@ public class ListModelTable extends ListModelList implements ListModelExt
 		}
 	}
 
-	public void setSorter(ListModelExt lme)
+	public void setSorter(ListModelExt<Object> lme)
 	{
 		sorter = lme;
 	}
