@@ -33,8 +33,6 @@ import org.compiere.model.MShipperLabels;
  */
 public class DefaultPrintShippingLabel implements IPrintShippingLabel
 {
-	private Window labelWindow;
-
 	public String printToLabelPrinter(MAttachment attachment, MShipperLabels labelType) throws Exception
 	{
 		MAttachmentEntry[] entries = attachment.getEntries();
@@ -72,13 +70,13 @@ public class DefaultPrintShippingLabel implements IPrintShippingLabel
 			}
 			if (htmls.size() > 0) 
 			{
-				labelWindow = new UPSHtmlLabelWindow(htmls, images);
+				Window labelWindow = new UPSHtmlLabelWindow(htmls, images);
 				labelWindow.setAttribute(Window.MODE_KEY, Window.MODE_HIGHLIGHTED);
 				SessionManager.getAppDesktop().showWindow(labelWindow);
 			}
 			else if(images.size() > 0) 
 			{
-				labelWindow = new FedexLabelWindow(images);
+				Window labelWindow = new FedexLabelWindow(images);
 				labelWindow.setAttribute(Window.MODE_KEY, Window.MODE_HIGHLIGHTED);
 				SessionManager.getAppDesktop().showWindow(labelWindow);
 			}
