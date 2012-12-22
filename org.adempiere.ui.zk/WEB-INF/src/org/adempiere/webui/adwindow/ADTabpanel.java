@@ -76,6 +76,7 @@ import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zul.Button;
+import org.zkoss.zul.Cell;
 import org.zkoss.zul.Center;
 import org.zkoss.zul.DefaultTreeNode;
 import org.zkoss.zul.Div;
@@ -378,7 +379,6 @@ DataStatusListener, IADTabpanel, IdSpace
     	// set size in percentage per column leaving a MARGIN on right
     	Columns columns = new Columns();
     	form.appendChild(columns);
-		String numColsS=String.valueOf(numCols);
     	int equalWidth = 98 / numCols;
 
     	for (int h=0;h<numCols;h++){
@@ -454,7 +454,10 @@ DataStatusListener, IADTabpanel, IdSpace
         		else
         		{
         			Group rowg = new Group(fieldGroup);
-        			rowg.setSpans(numColsS);
+        			Cell cell = new Cell();
+        			cell.setColspan(numCols);
+        			rowg.appendChild(cell);
+        			
     				allCollapsibleGroups.add(rowg);
         			if (X_AD_FieldGroup.FIELDGROUPTYPE_Tab.equals(field.getFieldGroupType()) || field.getIsCollapsedByDefault())
         			{
@@ -502,7 +505,7 @@ DataStatusListener, IADTabpanel, IdSpace
         			editorComps.add(editor.getComponent());
         			if (paintLabel) {
         				Div div = new Div();
-        				div.setAlign("right");
+        				div.setStyle("text-align: right;");
         				Label label = editor.getLabel();
         				div.appendChild(label);
         				if (label.getDecorator() != null)
@@ -556,7 +559,7 @@ DataStatusListener, IADTabpanel, IdSpace
         		//display just a label if we are "heading only"
         		Label label = new Label(field.getHeader());
         		Div div = new Div();
-        		div.setAlign("center");
+        		div.setStyle("text-align: center;");
         		row.appendCellChild(createSpacer());
         		div.appendChild(label);
         		row.appendCellChild(div);
@@ -933,7 +936,8 @@ DataStatusListener, IADTabpanel, IdSpace
      * @param event
      * @see EventListener#onEvent(Event)
      */
-    public void onEvent(Event event)
+    @SuppressWarnings("unchecked")
+	public void onEvent(Event event)
     {
     	if (event.getTarget() == listPanel.getListbox())
     	{    		

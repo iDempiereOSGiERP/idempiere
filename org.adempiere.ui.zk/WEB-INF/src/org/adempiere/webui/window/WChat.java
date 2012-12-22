@@ -97,7 +97,7 @@ public class WChat extends Window implements EventListener<Event>, DialogEvents
 			log.log(Level.SEVERE, "", ex);
 		}
 		//	Create Model
-		if (CM_Chat_ID == 0)
+		if (CM_Chat_ID > 0)
 			m_chat = new MChat (Env.getCtx(), AD_Table_ID, Record_ID, Description, trxName);
 		else
 			m_chat = new MChat (Env.getCtx(), CM_Chat_ID, trxName);
@@ -137,8 +137,9 @@ public class WChat extends Window implements EventListener<Event>, DialogEvents
 		//
 		
 		Center center = new Center();
+		messageTree.setHflex("true");
+		messageTree.setVflex("true");
 		center.appendChild(messageTree);
-		center.setFlex(true);
 		center.setAutoscroll(true);
 		mainPanel.appendChild(center);
 		//

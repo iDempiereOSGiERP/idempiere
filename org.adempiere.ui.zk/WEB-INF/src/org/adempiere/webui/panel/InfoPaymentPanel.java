@@ -50,11 +50,11 @@ import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zul.Borderlayout;
 import org.zkoss.zul.Center;
-import org.zkoss.zul.North;
-import org.zkoss.zul.South;
 import org.zkoss.zul.Div;
 import org.zkoss.zul.Hbox;
+import org.zkoss.zul.North;
 import org.zkoss.zul.Separator;
+import org.zkoss.zul.South;
 import org.zkoss.zul.Vbox;
 
 /**
@@ -212,24 +212,22 @@ public class InfoPaymentPanel extends InfoPanel implements ValueChangeListener, 
 		row.appendChild(fIsReceipt);
 
 		row = new Row();
-		row.setSpans("3, 2");
-		rows.appendChild(row);
-		row.appendChild(lDateFrom.rightAlign());
+		row.appendCellChild(lDateFrom.rightAlign(), 3);
 		Hbox hbox = new Hbox();
 		hbox.appendChild(fDateFrom);
 		hbox.appendChild(lDateTo);
 		hbox.appendChild(fDateTo);
-		row.appendChild(hbox);
+		row.appendCellChild(hbox, 2);
+		rows.appendChild(row);
 
 		row = new Row();
-		row.setSpans("3, 2");
-		rows.appendChild(row);
-		row.appendChild(lAmtFrom.rightAlign());
+		row.appendCellChild(lAmtFrom.rightAlign(), 3);
 		hbox = new Hbox();
 		hbox.appendChild(fAmtFrom);
 		hbox.appendChild(lAmtTo);
 		hbox.appendChild(fAmtTo);
-		row.appendChild(hbox);
+		row.appendCellChild(hbox, 2);
+		rows.appendChild(row);
 
 		layout = new Borderlayout();
         layout.setWidth("100%");
@@ -312,17 +310,15 @@ public class InfoPaymentPanel extends InfoPanel implements ValueChangeListener, 
 
 		if (fDateFrom.getValue() != null || fDateTo.getValue() != null)
 		{
+			Date f = fDateFrom.getValue();
 			Timestamp from = null;
-			if (fDateFrom.getValue() != null) {
-				Date f = fDateFrom.getValue();
+			if (f != null)
 				from = new Timestamp(f.getTime());
-			}
 
+			Date t = fDateTo.getValue();
 			Timestamp to = null;
-			if (fDateTo.getValue() != null) {
-				Date t = fDateTo.getValue();
+			if (t != null)
 				to = new Timestamp(t.getTime());
-			}
 
 			if (from == null && to != null)
 				sql.append(" AND TRUNC(p.DateTrx) <= ?");
@@ -334,8 +330,25 @@ public class InfoPaymentPanel extends InfoPanel implements ValueChangeListener, 
 
 		if (!"".equals(fAmtFrom.getText()) || !"".equals(fAmtTo.getText()))
 		{
-			BigDecimal from = new BigDecimal(fAmtFrom.getValue());
-			BigDecimal to = new BigDecimal(fAmtTo.getValue());
+			String f = fAmtFrom.getValue();
+			BigDecimal from = null;
+			if (f != null) {
+				try {
+					from = new BigDecimal(fAmtFrom.getValue());
+				} catch (NumberFormatException e) {
+					fAmtFrom.setValue(null);
+				}
+			}
+
+			String t = fAmtTo.getValue();
+			BigDecimal to = null;
+			if (t != null) {
+				try {
+					to = new BigDecimal(fAmtTo.getValue());
+				} catch (NumberFormatException e) {
+					fAmtTo.setValue(null);
+				}
+			}
 
 			if (from == null && to != null)
 				sql.append(" AND p.PayAmt <= ?");
@@ -375,17 +388,15 @@ public class InfoPaymentPanel extends InfoPanel implements ValueChangeListener, 
 
 		if (fDateFrom.getValue() != null || fDateTo.getValue() != null)
 		{
+			Date f = fDateFrom.getValue();
 			Timestamp from = null;
-			if (fDateFrom.getValue() != null) {
-				Date f = fDateFrom.getValue();
+			if (f != null)
 				from = new Timestamp(f.getTime());
-			}
 
+			Date t = fDateTo.getValue();
 			Timestamp to = null;
-			if (fDateTo.getValue() != null) {
-				Date t = fDateTo.getValue();
+			if (t != null)
 				to = new Timestamp(t.getTime());
-			}
 
 			log.fine("Date From=" + from + ", To=" + to);
 
@@ -402,8 +413,26 @@ public class InfoPaymentPanel extends InfoPanel implements ValueChangeListener, 
 
 		if (!"".equals(fAmtFrom.getText()) || !"".equals(fAmtTo.getText()))
 		{
-			BigDecimal from = new BigDecimal(fAmtFrom.getValue());
-			BigDecimal to = new BigDecimal(fAmtTo.getValue());
+			String f = fAmtFrom.getValue();
+			BigDecimal from = null;
+			if (f != null) {
+				try {
+					from = new BigDecimal(fAmtFrom.getValue());
+				} catch (NumberFormatException e) {
+					fAmtFrom.setValue(null);
+				}
+			}
+
+			String t = fAmtTo.getValue();
+			BigDecimal to = null;
+			if (t != null) {
+				try {
+					to = new BigDecimal(fAmtTo.getValue());
+				} catch (NumberFormatException e) {
+					fAmtTo.setValue(null);
+				}
+			}
+
 			log.fine("Amt From=" + from + ", To=" + to);
 
 			if (from == null && to != null)

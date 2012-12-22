@@ -80,6 +80,7 @@ import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zul.Borderlayout;
+import org.zkoss.zul.Cell;
 import org.zkoss.zul.Center;
 import org.zkoss.zul.North;
 import org.zkoss.zul.South;
@@ -332,17 +333,17 @@ public class InfoProductPanel extends InfoPanel implements EventListener<Event>
 		row.appendChild(m_InfoPAttributeButton);
 
 		row = new Row();
-		row.setSpans("1, 1, 1, 1, 1, 1, 1, 2");
-		rows.appendChild(row);
-		row.appendChild(lblName.rightAlign());
-		row.appendChild(fieldName);
+		row.appendCellChild(lblName.rightAlign());
+		row.appendCellChild(fieldName);
 		fieldName.setHflex("1");
-		row.appendChild(lblSKU.rightAlign());
-		row.appendChild(fieldSKU);
+		row.appendCellChild(lblSKU.rightAlign());
+		row.appendCellChild(fieldSKU);
 		fieldSKU.setHflex("1");
-		row.appendChild(lblVendor.rightAlign());
-		row.appendChild(fieldVendor);
+		row.appendCellChild(lblVendor.rightAlign());
+		row.appendCellChild(fieldVendor);
+		rows.appendChild(row);
 		fieldVendor.setHflex("1");
+		
 		//
 
 		row = new Row();
@@ -357,7 +358,9 @@ public class InfoProductPanel extends InfoPanel implements EventListener<Event>
 		row = new Row();
 		rows.appendChild(row);
 		row.appendChild(statusBar);
-		row.setSpans("6");
+		Cell cell = new Cell();
+		cell.setColspan(6);
+		row.appendCellChild(cell);
 		statusBar.setEastVisibility(false);
 		statusBar.setWidth("100%");
 
@@ -383,7 +386,7 @@ public class InfoProductPanel extends InfoPanel implements EventListener<Event>
         /** Where Clause						*/
         String s_sqlWhere = "Value = ?";
         m_sqlWarehouse = warehouseTbl.prepareTable(s_layoutWarehouse, s_sqlFrom, s_sqlWhere, false, "M_PRODUCT_STOCK_V");
-		m_sqlWarehouse += " Group By Warehouse, documentnote ";
+		m_sqlWarehouse += " GROUP BY Warehouse";
 		warehouseTbl.setMultiSelection(false);
 		warehouseTbl.setShowTotals(true);
 		warehouseTbl.autoSize();
@@ -623,22 +626,26 @@ public class InfoProductPanel extends InfoPanel implements EventListener<Event>
 		log.finer(sqlCount);
 		m_count = -1;
 		
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;;
 		try
 		{
-			PreparedStatement pstmt = DB.prepareStatement(sqlCount, null);
+			pstmt = DB.prepareStatement(sqlCount, null);
 			setParameters (pstmt, false);
-			ResultSet rs = pstmt.executeQuery();
+			rs = pstmt.executeQuery();
 		
 			if (rs.next())
 				m_count = rs.getInt(1);
-			
-			rs.close();
-			pstmt.close();
 		}
 		catch (Exception e)
 		{
 			log.log(Level.SEVERE, sqlCount, e);
 			m_count = -2;
+		}
+		finally
+		{
+			DB.close(rs, pstmt);
+			rs = null; pstmt = null;
 		}
 
 		log.fine("#" + m_count + " - " + (System.currentTimeMillis()-start) + "ms");
@@ -660,8 +667,6 @@ public class InfoProductPanel extends InfoPanel implements EventListener<Event>
 	{
 		//int M_Product_ID = 0;
 		String sql = m_sqlWarehouse;
-		//Add description to the query
-		sql = sql.replace(" FROM", ", DocumentNote FROM");
 		log.finest(sql);
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
@@ -670,12 +675,7 @@ public class InfoProductPanel extends InfoPanel implements EventListener<Event>
 			pstmt = DB.prepareStatement(sql, null);
 			pstmt.setString(1, (String)obj);
 			rs = pstmt.executeQuery();
-			fieldDescription.setText("");
 			warehouseTbl.loadTable(rs);
-			rs = pstmt.executeQuery();
-			if(rs.next())
-				if(rs.getString("DocumentNote") != null)
-					fieldDescription.setText(rs.getString("DocumentNote"));
 		}
 		catch (Exception e)
 		{
@@ -688,6 +688,8 @@ public class InfoProductPanel extends InfoPanel implements EventListener<Event>
 		}
 
 		m_M_Product_ID = getSelectedRowKey();
+		sql = "SELECT DocumentNote FROM M_Product WHERE M_Product_ID=?";
+		fieldDescription.setText(DB.getSQLValueString(null, sql, m_M_Product_ID));
 
 		sql = m_sqlSubstitute;
 		log.finest(sql);
@@ -697,7 +699,6 @@ public class InfoProductPanel extends InfoPanel implements EventListener<Event>
 			pstmt.setInt(2, M_PriceList_Version_ID);
 			rs = pstmt.executeQuery();
 			substituteTbl.loadTable(rs);
-			rs.close();
 		} catch (Exception e) {
 			log.log(Level.WARNING, sql, e);
 		}
@@ -715,7 +716,6 @@ public class InfoProductPanel extends InfoPanel implements EventListener<Event>
 			pstmt.setInt(2, M_PriceList_Version_ID);
 			rs = pstmt.executeQuery();
 			relatedTbl.loadTable(rs);
-			rs.close();
 		} catch (Exception e) {
 			log.log(Level.WARNING, sql, e);
 		}
@@ -734,7 +734,6 @@ public class InfoProductPanel extends InfoPanel implements EventListener<Event>
 			pstmt.setInt(1, m_M_Product_ID);
 			rs = pstmt.executeQuery();
 			productpriceTbl.loadTable(rs);
-			rs.close();
 		} catch (Exception e) {
 			log.log(Level.WARNING, sql, e);
 		}
@@ -807,17 +806,19 @@ public class InfoProductPanel extends InfoPanel implements EventListener<Event>
 		//	Add Access & Order
 		SQL = MRole.getDefault().addAccessSQL (SQL, "M_PriceList_Version", true, false)	// fully qualidfied - RO
 			+ " ORDER BY M_PriceList_Version.Name";
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;
 		try
 		{
 			pickPriceList.appendItem("",new Integer(0));
-			PreparedStatement pstmt = DB.prepareStatement(SQL, null);
-			ResultSet rs = pstmt.executeQuery();
+			pstmt = DB.prepareStatement(SQL, null);
+			rs = pstmt.executeQuery();
 			while (rs.next())
 			{
 				pickPriceList.appendItem(rs.getString(2),new Integer(rs.getInt(1)));
 			}
-			rs.close();
-			pstmt.close();
+			DB.close(rs, pstmt);
+			rs = null; pstmt = null;
 
 			//	Warehouse
 			SQL = MRole.getDefault().addAccessSQL (
@@ -833,8 +834,8 @@ public class InfoProductPanel extends InfoPanel implements EventListener<Event>
 			{
 				pickWarehouse.appendItem(rs.getString("ValueName"), new Integer(rs.getInt("M_Warehouse_ID")));
 			}
-			rs.close();
-			pstmt.close();
+			DB.close(rs, pstmt);
+			rs = null; pstmt = null;
 
 			// Elaine 2008/11/21
 			//	Product Category
@@ -859,6 +860,11 @@ public class InfoProductPanel extends InfoPanel implements EventListener<Event>
 		{
 			log.log(Level.SEVERE, SQL, e);
 			setStatusLine(e.getLocalizedMessage(), true);
+		}
+		finally
+		{
+			DB.close(rs, pstmt);
+			rs = null; pstmt = null;
 		}
 	}	//	fillPicks
 
@@ -932,23 +938,28 @@ public class InfoProductPanel extends InfoPanel implements EventListener<Event>
 			+ " AND pl.M_PriceList_ID=? "					//	1
 			+ "ORDER BY plv.ValidFrom DESC";
 		//	find newest one
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;
 		try
 		{
-			PreparedStatement pstmt = DB.prepareStatement(sql, null);
+			pstmt = DB.prepareStatement(sql, null);
 			pstmt.setInt(1, M_PriceList_ID);
-			ResultSet rs = pstmt.executeQuery();
+			rs = pstmt.executeQuery();
 			while (rs.next() && retValue == 0)
 			{
 				Timestamp plDate = rs.getTimestamp(2);
 				if (!priceDate.before(plDate))
 					retValue = rs.getInt(1);
 			}
-			rs.close();
-			pstmt.close();
 		}
 		catch (SQLException e)
 		{
 			log.log(Level.SEVERE, sql, e);
+		}
+		finally
+		{
+			DB.close(rs, pstmt);
+			rs = null; pstmt = null;
 		}
 		Env.setContext(Env.getCtx(), p_WindowNo, "M_PriceList_Version_ID", retValue);
 		return retValue;
