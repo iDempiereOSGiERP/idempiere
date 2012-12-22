@@ -18,7 +18,6 @@ Import-Package: javax.servlet,
  org.slf4j.spi;version="1.6.1"
 DynamicImport-Package: action.images
 Bundle-ClassPath: WEB-INF/classes/,
- WEB-INF/lib/calendar.jar,
  WEB-INF/lib/atmosphere-compat-jbossweb-1.0.4.jar,
  WEB-INF/lib/atmosphere-compat-tomcat-1.0.4.jar,
  WEB-INF/lib/atmosphere-compat-tomcat7-1.0.4.jar,
@@ -59,4 +58,4 @@ Bundle-Activator: org.adempiere.webui.WebUIActivator
 Eclipse-ExtensibleAPI: true
 Eclipse-RegisterBuddy: org.zkoss.zk.library
 Web-ContextPath: webui
-Service-Component: OSGI-INF/reportviewerprovider.xml, OSGI-INF/defaultinfofactory.xml, OSGI-INF/defaulteditorfactory.xml, OSGI-INF/jrviewerprovider.xml, OSGI-INF/resourcefinder.xml, OSGI-INF/defaultpaymentformfactory.xml, OSGI-INF/processfactory.xml
+Service-Component: OSGI-INF/reportviewerprovider.xml, OSGI-INF/defaultinfofactory.xml, OSGI-INF/defaulteditorfactory.xml, OSGI-INF/jrviewerprovider.xml, OSGI-INF/resourcefinder.xml, OSGI-INF/defaultpaymentformfactory.xml, OSGI-INF/processfactory.xml, OSGI-INF/defaultprintshippinglabel.xml

@@ -16,12 +16,17 @@ package org.compiere.model;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Properties;
 import java.util.logging.Level;
 
 import org.compiere.util.CCache;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
+import org.compiere.util.DisplayType;
 
 /**
  *	System Configuration
@@ -37,7 +42,7 @@ public class MSysConfig extends X_AD_SysConfig
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 5434521728516112616L;
+	private static final long serialVersionUID = 2906768000936142606L;
 
 	public final static String PDF_FONT_DIR = "PDF_FONT_DIR";
 	public final static String TWOPACK_HANDLE_TRANSLATIONS = "2PACK_HANDLE_TRANSLATIONS";
@@ -106,6 +111,8 @@ public class MSysConfig extends X_AD_SysConfig
 	public static final String MAIL_SEND_BCC_TO_ADDRESS = "MAIL_SEND_BCC_TO_ADDRESS";
 	public static final String MAIL_SEND_BCC_TO_FROM = "MAIL_SEND_BCC_TO_FROM";
 	public static final String REAL_TIME_POS = "REAL_TIME_POS";
+	public static final String SHIPPING_DEFAULT_WEIGHT_PER_PACKAGE = "SHIPPING_DEFAULT_WEIGHT_PER_PACKAGE";
+	public static final String SHIPPING_SAVE_REQUEST_RESPONSE_LOG = "SHIPPING_SAVE_REQUEST_RESPONSE_LOG";
 
 	/**
 	 * 	Standard Constructor
@@ -463,6 +470,87 @@ public class MSysConfig extends X_AD_SysConfig
 			return Boolean.valueOf(s).booleanValue();
 	}
 
+	/**
+	 * Get system configuration property of type Timestamp
+	 * @param Name
+	 * @return Timestamp
+	 */
+	public static Timestamp getTimestampValue(String Name)
+	{
+		return getTimestampValue(Name, null);
+	}
+
+	/**
+	 * Get system configuration property of type Timestamp
+	 * @param Name
+	 * @param defaultValue
+	 * @return Timestamp
+	 */
+	public static Timestamp getTimestampValue(String Name, Timestamp defaultValue)
+	{
+		return getTimestampValue(Name, defaultValue, 0);
+	}
+
+	/**
+	 * Get system configuration property of type Timestamp
+	 * @param Name
+	 * @param defaultValue
+	 * @param Client ID
+	 * @return Timestamp
+	 */
+	public static Timestamp getTimestampValue(String Name, Timestamp defaultValue, int AD_Client_ID)
+	{
+		return getTimestampValue(Name, defaultValue, AD_Client_ID, 0);
+	}
+
+	/**
+	 * Get system configuration property of type Timestamp
+	 * @param Name
+	 * @param defaultValue
+	 * @param Client ID
+	 * @param Organization ID
+	 * @return Timestamp
+	 */
+	public static Timestamp getTimestampValue(String Name, Timestamp defaultValue, int AD_Client_ID, int AD_Org_ID)
+	{
+		String text = getValue(Name, null, AD_Client_ID, AD_Org_ID);
+		if (text !=null)
+			return convertStringToTimestamp(text);
+
+		return defaultValue;
+	}
+
+	private static int lendate = DisplayType.DEFAULT_DATE_FORMAT.length();
+	private static int lentime = DisplayType.DEFAULT_TIME_FORMAT.length();
+	private static int lentimestamp = DisplayType.DEFAULT_TIMESTAMP_FORMAT.length();
+
+	/** convert a string to a timestamp */
+	static Timestamp convertStringToTimestamp(String text)
+	{
+		SimpleDateFormat sdf = null;
+		int lentext = text.length();
+		if (lentext == lendate) {
+			sdf = DisplayType.getDateFormat_JDBC();
+		} else if (lentext == lentime) {
+			sdf = DisplayType.getTimeFormat_Default();
+		} else if (lentext == lentimestamp) {
+			sdf = DisplayType.getTimestampFormat_Default();
+		} else {
+			s_log.warning("Cannot convert to a valid timestamp (invalid length): " + text);
+		}
+
+		Timestamp dt = null;
+		if (sdf != null) {
+			try {
+				Date date = sdf.parse(text);
+				dt = new Timestamp(date.getTime());
+			} catch (ParseException e) {
+				s_log.warning("Cannot convert to a valid timestamp: " + text);
+			}
+		}
+		return dt;
+	}	
+	
 	/**************************************************************************
 	 * 	Before Save
 	 *	@param newRecord

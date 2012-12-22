@@ -226,29 +226,27 @@ public class InfoCashLinePanel extends InfoPanel implements ValueChangeListener,
 		row.appendChild(cbAbsolute);
 
 		row = new Row();
-		row.setSpans("1, 1, 1, 2");
-		rows.appendChild(row);
-		row.appendChild(fInvoice_ID.getLabel().rightAlign());
-		row.appendChild(fInvoice_ID.getComponent());
-		row.appendChild(lDateFrom.rightAlign());
+		row.appendCellChild(fInvoice_ID.getLabel().rightAlign(), 1);
+		row.appendCellChild(fInvoice_ID.getComponent(), 1);
+		row.appendCellChild(lDateFrom.rightAlign(), 1);
 		Hbox hbox = new Hbox();
 		hbox.appendChild(fDateFrom);
 		hbox.appendChild(lDateTo);
 		hbox.appendChild(fDateTo);
-		row.appendChild(hbox);
+		row.appendCellChild(hbox, 2);
+		rows.appendChild(row);
 
 		row = new Row();
-		row.setSpans("1, 1, 1, 2");
-		rows.appendChild(row);
-		row.appendChild(fBankAccount_ID.getLabel().rightAlign());
-		row.appendChild(fBankAccount_ID.getComponent());
-		row.appendChild(lAmtFrom.rightAlign());
+		row.appendCellChild(fBankAccount_ID.getLabel().rightAlign(), 1);
+		row.appendCellChild(fBankAccount_ID.getComponent(), 1);
+		row.appendCellChild(lAmtFrom.rightAlign(), 1);
 		hbox = new Hbox();
 		hbox.appendChild(fAmtFrom);
 		hbox.appendChild(lAmtTo);
 		hbox.appendChild(fAmtTo);
-		row.appendChild(hbox);
-
+		row.appendCellChild(hbox, 2);	
+		rows.appendChild(row);
+		
 		layout = new Borderlayout();
         layout.setWidth("100%");
         layout.setHeight("100%");
@@ -328,10 +326,14 @@ public class InfoCashLinePanel extends InfoPanel implements ValueChangeListener,
 		if (fDateFrom.getValue() != null || fDateTo.getValue() != null)
 		{
 			Date f = fDateFrom.getValue();
-			Timestamp from = new Timestamp(f.getTime());
+			Timestamp from = null;
+			if (f != null)
+				from = new Timestamp(f.getTime());
 
 			Date t = fDateTo.getValue();
-			Timestamp to = new Timestamp(t.getTime());
+			Timestamp to = null;
+			if (t != null)
+				to = new Timestamp(t.getTime());
 
 			if (from == null && to != null)
 				sql.append(" AND TRUNC(c.StatementDate) <= ?");
@@ -403,10 +405,14 @@ public class InfoCashLinePanel extends InfoPanel implements ValueChangeListener,
 		if (fDateFrom.getValue() != null || fDateTo.getValue() != null)
 		{
 			Date f = fDateFrom.getValue();
-			Timestamp from = new Timestamp(f.getTime());
+			Timestamp from = null;
+			if (f != null)
+				from = new Timestamp(f.getTime());
 
 			Date t = fDateTo.getValue();
-			Timestamp to = new Timestamp(t.getTime());
+			Timestamp to = null;
+			if (t != null)
+				to = new Timestamp(t.getTime());
 
 			log.fine("Date From=" + from + ", To=" + to);
 

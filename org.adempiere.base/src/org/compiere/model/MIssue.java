@@ -17,24 +17,13 @@
 package org.compiere.model;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.CharArrayWriter;
-import java.io.FileNotFoundException;
-import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
-import java.io.ObjectOutput;
-import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
-import java.net.ConnectException;
 import java.net.InetAddress;
-import java.net.URL;
-import java.net.URLConnection;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
 import java.sql.ResultSet;
 import java.util.HashMap;
 import java.util.Properties;
-import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 
@@ -416,9 +405,9 @@ public class MIssue extends X_AD_Issue
 	 */
 	public String report()
 	{
-		if (true)
-			return "-";
-		StringBuilder parameter = new StringBuilder("?");
+		//if (true)
+		return "-";
+		/*StringBuilder parameter = new StringBuilder("?");
 		if (getRecord_ID() == 0)	//	don't report
 			return "ID=0";
 		if (getRecord_ID() == 1)	//	new
@@ -479,7 +468,7 @@ public class MIssue extends X_AD_Issue
 			}
 			return msg.toString();
 		}
-		return readResponse(in);
+		return readResponse(in);*/
 	}	//	report
 	
 	/**
@@ -487,7 +476,7 @@ public class MIssue extends X_AD_Issue
 	 *	@param in input stream
 	 *	@return error message
 	 */
-	private String readResponse(InputStreamReader in)
+	/*private String readResponse(InputStreamReader in)
 	{
 		StringBuilder sb = new StringBuilder();
 		int Record_ID = 0;
@@ -539,7 +528,7 @@ public class MIssue extends X_AD_Issue
 		if (RequestDocumentNo != null)
 			setRequestDocumentNo(RequestDocumentNo);
 		return null;
-	}	//	readResponse
+	}	//	readResponse*/
 	
 	/**
 	 * 	String Representation
