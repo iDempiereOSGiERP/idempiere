@@ -21,8 +21,8 @@
 		<filter-name>equinoxBridgeFilter</filter-name>
 		<filter-class>org.eclipse.equinox.servletbridge.BridgeFilter</filter-class>
 		<init-param>
-			<param-name>bundleSymbolicName</param-name>
-			<param-value>org.adempiere.webstore</param-value>
+			<param-name>HttpContext.ClassName</param-name>
+			<param-value>org.adempiere.webstore.DefaultHttpContext</param-value>
 		</init-param>
 	</filter>
 	<filter-mapping>
