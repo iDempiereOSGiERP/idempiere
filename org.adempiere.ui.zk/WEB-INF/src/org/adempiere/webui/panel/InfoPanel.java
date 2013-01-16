@@ -25,8 +25,10 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Vector;
 import java.util.logging.Level;
 
@@ -38,6 +40,7 @@ import org.adempiere.webui.component.ListModelTable;
 import org.adempiere.webui.component.WListItemRenderer;
 import org.adempiere.webui.component.WListbox;
 import org.adempiere.webui.component.Window;
+import org.adempiere.webui.editor.WEditor;
 import org.adempiere.webui.event.ValueChangeEvent;
 import org.adempiere.webui.event.ValueChangeListener;
 import org.adempiere.webui.event.WTableModelEvent;
@@ -63,17 +66,18 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
+import org.compiere.util.ValueNamePair;
 import org.zkoss.zk.au.out.AuEcho;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.util.Clients;
-import org.zkoss.zul.ListModelExt;
 import org.zkoss.zul.Listhead;
 import org.zkoss.zul.Listheader;
 import org.zkoss.zul.Listitem;
 import org.zkoss.zul.Paging;
 import org.zkoss.zul.event.ZulEvents;
+import org.zkoss.zul.ext.Sortable;
 
 /**
  *	Search Information and return selection - Base Class.
@@ -85,7 +89,7 @@ import org.zkoss.zul.event.ZulEvents;
  * @author Elaine
  * @version	Info.java Adempiere Swing UI 3.4.1
  */
-public abstract class InfoPanel extends Window implements EventListener<Event>, WTableModelListener, ListModelExt<Object>
+public abstract class InfoPanel extends Window implements EventListener<Event>, WTableModelListener, Sortable<Object>
 {
 
 	/**
@@ -93,7 +97,9 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	 */
 	private static final long serialVersionUID = 325050327514511004L;
 	private final static int PAGE_SIZE = 100;
-
+	
+	protected Map<String, WEditor> editorMap = new HashMap<String, WEditor>();
+	
     public static InfoPanel create (int WindowNo,
             String tableName, String keyColumn, String value,
             boolean multiSelection, String whereClause)
@@ -243,17 +249,21 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	protected InfoPanel (int WindowNo,
 		String tableName, String keyColumn,boolean multipleSelection,
 		 String whereClause, boolean lookup)
-	{
-
-		log.info("WinNo=" + p_WindowNo + " " + whereClause);
-		p_WindowNo = WindowNo;
+	{		
+		if (WindowNo <= 0) {
+			p_WindowNo = SessionManager.getAppDesktop().registerWindow(this);
+		} else {
+			p_WindowNo = WindowNo;
+		}
+		if (log.isLoggable(Level.INFO))
+			log.info("WinNo=" + WindowNo + " " + whereClause);
 		p_tableName = tableName;
 		p_keyColumn = keyColumn;
         p_multipleSelection = multipleSelection;
         m_lookup = lookup;
 
 		if (whereClause == null || whereClause.indexOf('@') == -1)
-			p_whereClause = whereClause;
+			p_whereClause = whereClause == null ? "" : whereClause;
 		else
 		{
 			p_whereClause = Env.parseContext(Env.getCtx(), p_WindowNo, whereClause, false, false);
@@ -313,7 +323,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
         this.addEventListener(Events.ON_OK, this);
 
         contentPanel.setOddRowSclass(null);
-        contentPanel.setSizedByContent(true);
+//        contentPanel.setSizedByContent(true);
         contentPanel.setWidgetAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "infoListbox");
         
         this.setSclass("info-panel");
@@ -343,12 +353,12 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	/** Layout of Grid          */
 	protected ColumnInfo[]     p_layout;
 	/** Main SQL Statement      */
-	private String              m_sqlMain;
+	protected String              m_sqlMain;
 	/** Count SQL Statement		*/
 	private String              m_sqlCount;
 	/** Order By Clause         */
-	private String              m_sqlOrder;
-	private String              m_sqlUserOrder;
+	protected String              m_sqlOrder;
+	protected String              m_sqlUserOrder;
 	/**ValueChange listeners       */
     private ArrayList<ValueChangeListener> listeners = new ArrayList<ValueChangeListener>();
 	/** Loading success indicator       */
@@ -425,7 +435,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	protected void executeQuery()
 	{
 		line = new ArrayList<Object>();
-		cacheStart = -1;
+		setCacheStart(-1);
 		cacheEnd = -1;
 
 		testCount();
@@ -464,12 +474,42 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 			else if (c == Integer.class)
 		        value = new Integer(rs.getInt(colIndex));
 			else if (c == KeyNamePair.class)
+			{				
+				if (p_layout[col].isKeyPairCol())
+				{
+					String display = rs.getString(colIndex);
+					int key = rs.getInt(colIndex+1);
+	                value = new KeyNamePair(key, display);
+	
+					colOffset++;
+				}
+				else
+				{
+					int key = rs.getInt(colIndex);
+					WEditor editor = editorMap.get(p_layout[col].getColSQL());
+					if (editor != null)
+					{
+						editor.setValue(key);
+						value = new KeyNamePair(key, editor.getDisplayTextForGridView(key));
+					}					
+					else
+					{
+						value = new KeyNamePair(key, Integer.toString(key));
+					}
+				}
+			}
+			else if (c == ValueNamePair.class)
 			{
-				String display = rs.getString(colIndex);
-				int key = rs.getInt(colIndex+1);
-                value = new KeyNamePair(key, display);
-
-				colOffset++;
+				String key = rs.getString(colIndex);
+				WEditor editor = editorMap.get(p_layout[col].getColSQL());
+				if (editor != null)
+				{
+					value = new ValueNamePair(key, editor.getDisplayTextForGridView(key));
+				}					
+				else
+				{
+					value = new ValueNamePair(key, key);
+				}
 			}
 			else
 			{
@@ -544,13 +584,13 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 
     private List<Object> readLine(int start, int end) {
     	//cacheStart & cacheEnd - 1 based index, start & end - 0 based index
-    	if (cacheStart >= 1 && cacheEnd > cacheStart)
+    	if (getCacheStart() >= 1 && cacheEnd > getCacheStart())
     	{
     		if (m_useDatabasePaging)
     		{
-    			if (start+1 >= cacheStart && end+1 <= cacheEnd)
+    			if (start+1 >= getCacheStart() && end+1 <= cacheEnd)
     			{
-    				return end == -1 ? line : line.subList(start-cacheStart+1, end-cacheStart+2);
+    				return end == -1 ? line : line.subList(start-getCacheStart()+1, end-getCacheStart()+2);
     			}
     		}
     		else
@@ -563,9 +603,9 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
     		}
     	}
 
-    	cacheStart = start + 1 - (PAGE_SIZE * 4);
-    	if (cacheStart <= 0)
-    		cacheStart = 1;
+    	setCacheStart(start + 1 - (PAGE_SIZE * 4));
+    	if (getCacheStart() <= 0)
+    		setCacheStart(1);
 
     	if (end == -1)
     	{
@@ -582,45 +622,35 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 
     	PreparedStatement m_pstmt = null;
 		ResultSet m_rs = null;
-
+		String dataSql = null;
+		
 		long startTime = System.currentTimeMillis();
 			//
 
-        String dynWhere = getSQLWhere();
-        StringBuilder sql = new StringBuilder (m_sqlMain);
-        if (dynWhere.length() > 0)
-            sql.append(dynWhere);   //  includes first AND
-        if (m_sqlUserOrder != null && m_sqlUserOrder.trim().length() > 0)
-        	sql.append(m_sqlUserOrder);
-        else
-        	sql.append(m_sqlOrder);
-        String dataSql = Msg.parseTranslation(Env.getCtx(), sql.toString());    //  Variables
-        dataSql = MRole.getDefault().addAccessSQL(dataSql, getTableName(),
-            MRole.SQL_FULLYQUALIFIED, MRole.SQL_RO);
-        if (end > start && m_useDatabasePaging && DB.getDatabase().isPagingSupported())
-        {
-        	dataSql = DB.getDatabase().addPagingSQL(dataSql, cacheStart, cacheEnd);
-        }
-        log.finer(dataSql);
+        dataSql = buildDataSQL(start, end);
+        if (log.isLoggable(Level.FINER))
+        	log.finer(dataSql);
 		try
 		{
 			m_pstmt = DB.prepareStatement(dataSql, null);
 			setParameters (m_pstmt, false);	//	no count
-			log.fine("Start query - " + (System.currentTimeMillis()-startTime) + "ms");
+			if (log.isLoggable(Level.FINE))
+				log.fine("Start query - " + (System.currentTimeMillis()-startTime) + "ms");
 			m_pstmt.setFetchSize(100);
 			m_rs = m_pstmt.executeQuery();
-			log.fine("End query - " + (System.currentTimeMillis()-startTime) + "ms");
+			if (log.isLoggable(Level.FINE))
+				log.fine("End query - " + (System.currentTimeMillis()-startTime) + "ms");
 			//skips the row that we dont need if we can't use native db paging
 			if (end > start && m_useDatabasePaging && !DB.getDatabase().isPagingSupported())
 			{
-				for (int i = 0; i < cacheStart - 1; i++)
+				for (int i = 0; i < getCacheStart() - 1; i++)
 				{
 					if (!m_rs.next())
 						break;
 				}
 			}
 
-			int rowPointer = cacheStart-1;
+			int rowPointer = getCacheStart()-1;
 			while (m_rs.next())
 			{
 				rowPointer++;
@@ -648,6 +678,31 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 			end = cacheEnd-1;
 		}
 		return line.subList(start, end+1);
+	}
+
+	protected String buildDataSQL(int start, int end) {
+		String dataSql;
+		String dynWhere = getSQLWhere();
+        StringBuilder sql = new StringBuilder (m_sqlMain);
+        if (dynWhere.length() > 0)
+            sql.append(dynWhere);   //  includes first AND
+        
+        if (sql.toString().trim().endsWith("WHERE")) {
+        	int index = sql.lastIndexOf(" WHERE");
+        	sql.delete(index, sql.length());
+        }
+        if (m_sqlUserOrder != null && m_sqlUserOrder.trim().length() > 0)
+        	sql.append(m_sqlUserOrder);
+        else
+        	sql.append(m_sqlOrder);
+        dataSql = Msg.parseTranslation(Env.getCtx(), sql.toString());    //  Variables
+        dataSql = MRole.getDefault().addAccessSQL(dataSql, getTableName(),
+            MRole.SQL_FULLYQUALIFIED, MRole.SQL_RO);
+        if (end > start && m_useDatabasePaging && DB.getDatabase().isPagingSupported())
+        {
+        	dataSql = DB.getDatabase().addPagingSQL(dataSql, getCacheStart(), cacheEnd);
+        }
+		return dataSql;
 	}
 
     private void addDoubleClickListener() {
@@ -687,9 +742,14 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 			sql.append(dynWhere);   //  includes first AND
 
 		String countSql = Msg.parseTranslation(Env.getCtx(), sql.toString());	//	Variables
+		if (countSql.trim().endsWith("WHERE")) {
+			countSql = countSql.trim();
+			countSql = countSql.substring(0, countSql.length() - 5);
+		}
 		countSql = MRole.getDefault().addAccessSQL	(countSql, getTableName(),
 													MRole.SQL_FULLYQUALIFIED, MRole.SQL_RO);
-		log.finer(countSql);
+		if (log.isLoggable(Level.FINER))
+			log.finer(countSql);
 		m_count = -1;
 
 		try
@@ -710,7 +770,8 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 			m_count = -2;
 		}
 
-		log.fine("#" + m_count + " - " + (System.currentTimeMillis()-start) + "ms");
+		if (log.isLoggable(Level.FINE))
+			log.fine("#" + m_count + " - " + (System.currentTimeMillis()-start) + "ms");
 
 		return true;
 	}	//	testCount
@@ -725,7 +786,8 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		if (contentPanel == null)
 			return;
 
-		log.config( "OK=" + m_ok);
+		if (log.isLoggable(Level.CONFIG))
+			log.config( "OK=" + m_ok);
 
 		if (!m_ok)      //  did not press OK
 		{
@@ -747,7 +809,8 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 				m_results.add(data);
 		}
 
-		log.config(getSelectedSQL());
+		if (log.isLoggable(Level.CONFIG))
+			log.config(getSelectedSQL());
 
 		//	Save Settings of detail info screens
 		saveSelectionDetail();
@@ -856,8 +919,9 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		Object[] keys = getSelectedKeys();
 		if (keys == null || keys.length == 0)
 		{
-			log.config("No Results - OK="
-				+ m_ok + ", Cancel=" + m_cancel);
+			if (log.isLoggable(Level.CONFIG))
+				log.config("No Results - OK="
+						+ m_ok + ", Cancel=" + m_cancel);
 			return "";
 		}
 		//
@@ -1217,7 +1281,8 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
      */
     public void dispose(boolean ok)
     {
-        log.config("OK=" + ok);
+    	if (log.isLoggable(Level.CONFIG))
+    		log.config("OK=" + ok);
         m_ok = ok;
 
         //  End Worker
@@ -1312,4 +1377,38 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	public int getWindowNo() {
 		return p_WindowNo;
 	}
+	
+	public int getRowCount() {
+		return contentPanel.getRowCount();
+	}
+	
+	public Integer getFirstRowKey() {
+		return contentPanel.getFirstRowKey();
+	}
+
+	/**
+	 * @return the cacheStart
+	 */
+	protected int getCacheStart() {
+		return cacheStart;
+	}
+
+	/**
+	 * @param cacheStart the cacheStart to set
+	 */
+	private void setCacheStart(int cacheStart) {
+		this.cacheStart = cacheStart;
+	}
+	
+	/**
+	 * @return the cacheEnd
+	 */
+	protected int getCacheEnd() {
+		return cacheEnd;
+	}
+	
+	protected boolean isUseDatabasePaging() {
+		return m_useDatabasePaging;
+	}
 }	//	Info
+

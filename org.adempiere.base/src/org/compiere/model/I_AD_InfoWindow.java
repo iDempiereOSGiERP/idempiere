@@ -182,6 +182,45 @@ public interface I_AD_InfoWindow
 	  */
 	public boolean isActive();
 
+    /** Column name IsDefault */
+    public static final String COLUMNNAME_IsDefault = "IsDefault";
+
+	/** Set Default.
+	  * Default value
+	  */
+	public void setIsDefault (boolean IsDefault);
+
+	/** Get Default.
+	  * Default value
+	  */
+	public boolean isDefault();
+
+    /** Column name IsDistinct */
+    public static final String COLUMNNAME_IsDistinct = "IsDistinct";
+
+	/** Set Distinct.
+	  * Select Distinct
+	  */
+	public void setIsDistinct (boolean IsDistinct);
+
+	/** Get Distinct.
+	  * Select Distinct
+	  */
+	public boolean isDistinct();
+
+    /** Column name IsValid */
+    public static final String COLUMNNAME_IsValid = "IsValid";
+
+	/** Set Valid.
+	  * Element is valid
+	  */
+	public void setIsValid (boolean IsValid);
+
+	/** Get Valid.
+	  * Element is valid
+	  */
+	public boolean isValid();
+
     /** Column name Name */
     public static final String COLUMNNAME_Name = "Name";
 
@@ -194,6 +233,19 @@ public interface I_AD_InfoWindow
 	  * Alphanumeric identifier of the entity
 	  */
 	public String getName();
+
+    /** Column name OrderByClause */
+    public static final String COLUMNNAME_OrderByClause = "OrderByClause";
+
+	/** Set Sql ORDER BY.
+	  * Fully qualified ORDER BY clause
+	  */
+	public void setOrderByClause (String OrderByClause);
+
+	/** Get Sql ORDER BY.
+	  * Fully qualified ORDER BY clause
+	  */
+	public String getOrderByClause();
 
     /** Column name OtherClause */
     public static final String COLUMNNAME_OtherClause = "OtherClause";
@@ -232,4 +284,17 @@ public interface I_AD_InfoWindow
 	  * User who updated this records
 	  */
 	public int getUpdatedBy();
+
+    /** Column name WhereClause */
+    public static final String COLUMNNAME_WhereClause = "WhereClause";
+
+	/** Set Sql WHERE.
+	  * Fully qualified SQL WHERE clause
+	  */
+	public void setWhereClause (String WhereClause);
+
+	/** Get Sql WHERE.
+	  * Fully qualified SQL WHERE clause
+	  */
+	public String getWhereClause();
 }

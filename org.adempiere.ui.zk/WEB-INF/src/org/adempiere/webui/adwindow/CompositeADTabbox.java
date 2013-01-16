@@ -23,7 +23,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 
 import org.adempiere.util.Callback;
-import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.component.ADTabListModel;
 import org.adempiere.webui.component.ADTabListModel.ADTabLabel;
 import org.adempiere.webui.window.FDialog;
@@ -88,11 +87,12 @@ public class CompositeADTabbox extends AbstractADTabbox
 					final int row = detailPane.getSelectedADTabpanel() != null 
 							? detailPane.getSelectedADTabpanel().getGridTab().getCurrentRow()
 							: 0;
+					final boolean formView = event.getData() != null ? (Boolean)event.getData() : true;
 					adWindowPanel.saveAndNavigate(new Callback<Boolean>() {
 						@Override
 						public void onCallback(Boolean result) {
 							if (result)
-								onEditDetail(row);
+								onEditDetail(row, formView);
 						}
 					});					
 				}
@@ -106,7 +106,7 @@ public class CompositeADTabbox extends AbstractADTabbox
 						@Override
 						public void onCallback(Boolean result) {							
 							if (result) {
-								onEditDetail(row);
+								onEditDetail(row, true);
 								if (!adWindowPanel.getActiveGridTab().isNew())
 									adWindowPanel.onNew();
 							}
@@ -134,20 +134,10 @@ public class CompositeADTabbox extends AbstractADTabbox
 					}
 				}
 			}			
-		});
-    	
-    	detailPane.addEventListener(DetailPane.ON_POST_SELECT_TAB_EVENT, new EventListener<Event>() {
-			@Override
-			public void onEvent(Event event) throws Exception {
-				if ((!ADTabpanel.isUseSplitViewForForm() && !headerTab.isGridView())) {					
-					LayoutUtils.redraw(detailPane);
-					Clients.scrollIntoView(detailPane.getSelectedADTabpanel());
-				} 				
-			}
-		});
+		});    	
     }
 
-    protected void onEditDetail(int row) {
+    protected void onEditDetail(int row, boolean formView) {
 		int oldIndex = selectedIndex;
 		IADTabpanel selectedPanel = detailPane.getSelectedADTabpanel();
 		if (selectedPanel == null) return;
@@ -160,8 +150,8 @@ public class CompositeADTabbox extends AbstractADTabbox
 			throw new RuntimeException(e);
 		}
 
-		headerTab.setDetailPaneMode(false, true);
-		if (headerTab.isGridView()) {
+		headerTab.setDetailPaneMode(false);
+		if (formView && headerTab.isGridView()) {
 			headerTab.switchRowPresentation();
 		}
 		headerTab.getGridTab().setCurrentRow(row, true);
@@ -224,9 +214,6 @@ public class CompositeADTabbox extends AbstractADTabbox
 					if (b != null && b.booleanValue()) {
 						activateDetailADTabpanel();
 					}				
-					if (selectedIndex > 0 && tabPanel.isGridView()) {
-						tabPanel.switchRowPresentation();
-					}
 				} else {
 					onActivateDetail(tabPanel);
 				}
@@ -270,10 +257,9 @@ public class CompositeADTabbox extends AbstractADTabbox
 				if (tabPanel == headerTab) {
 					IADTabpanel detailPanel = getSelectedDetailADTabpanel();
 					if (detailPanel != null) {
-						detailPanel.setDetailPaneMode(true, isUseVflexForDetailPane());
+						detailPanel.setDetailPaneMode(true);
 					}
-					detailPane.setVflex(Boolean.toString(isUseVflexForDetailPane()));
-					layout.invalidate();
+					detailPane.setVflex("true");
 				}
 			}
 		});
@@ -286,7 +272,7 @@ public class CompositeADTabbox extends AbstractADTabbox
 				if (tabPanel == headerTab) {
 					adWindowPanel.onToggle();
 				} else {
-					detailPane.onEdit();
+					detailPane.onEdit(true);
 				}
 				
 			}
@@ -297,7 +283,7 @@ public class CompositeADTabbox extends AbstractADTabbox
 				@Override
 				public void onEvent(Event event) throws Exception {
 					GridView gridView = (GridView) event.getTarget();
-					if (gridView.getParent() == headerTab) {
+					if (!gridView.isDetailPaneMode()) {
 						adWindowPanel.onToggle();
 					}
 				}				
@@ -316,12 +302,12 @@ public class CompositeADTabbox extends AbstractADTabbox
     			tabPanel.setVisible(false);
     		detailPane.setHflex("1");
     		detailPane.addADTabpanel(tabPanel, tabLabel);
-    		tabPanel.setDetailPaneMode(true, isUseVflexForDetailPane());
-    		detailPane.setVflex(Boolean.toString(isUseVflexForDetailPane()));
+    		tabPanel.setDetailPaneMode(true);
+    		detailPane.setVflex("true");
     	} else {
     		detailPane.addADTabpanel(tabPanel, tabLabel, false);
-    		tabPanel.setDetailPaneMode(true, isUseVflexForDetailPane());
-    		detailPane.setVflex(Boolean.toString(isUseVflexForDetailPane()));
+    		tabPanel.setDetailPaneMode(true);
+    		detailPane.setVflex("true");
     	}
     	HtmlBasedComponent htmlComponent = (HtmlBasedComponent) tabPanel;
         htmlComponent.setVflex("1"); 
@@ -332,11 +318,13 @@ public class CompositeADTabbox extends AbstractADTabbox
 
 	private void activateDetailADTabpanel() {
     	if (detailPane != null && detailPane.getParent() != null) {
-	    	IADTabpanel tabPanel = detailPane.getSelectedADTabpanel();	    	
-	    	tabPanel.activate(true);
-	    	if (!tabPanel.isGridView()) {
-	    		tabPanel.switchRowPresentation();	
-	    	}	    		    	
+	    	IADTabpanel tabPanel = detailPane.getSelectedADTabpanel();	    
+	    	if (tabPanel != null) {
+		    	tabPanel.activate(true);
+		    	if (!tabPanel.isGridView()) {
+		    		tabPanel.switchRowPresentation();	
+		    	}	    		    	
+	    	}
     	}
 	}
 
@@ -413,10 +401,10 @@ public class CompositeADTabbox extends AbstractADTabbox
 	    		}
 				if (tabPanel.getParent() != null) tabPanel.detach();
 				detailPane.addADTabpanel(tabPanel, tabLabel);
-				tabPanel.setDetailPaneMode(true, isUseVflexForDetailPane());
+				tabPanel.setDetailPaneMode(true);
 			} else if (tabLevel > currentLevel ){
 	    		detailPane.addADTabpanel(tabPanel, tabLabel, false);
-	    		tabPanel.setDetailPaneMode(true, isUseVflexForDetailPane());
+	    		tabPanel.setDetailPaneMode(true);
 	    	} else {
 	    		break;
 	    	}
@@ -425,12 +413,12 @@ public class CompositeADTabbox extends AbstractADTabbox
 		if (detailPane.getTabcount() > 0 && !headerTab.getGridTab().isSortTab()) {
 			ADTabpanel adtabpanel = (ADTabpanel) headerTab;
 			adtabpanel.addDetails(detailPane);
-			detailPane.setVflex(Boolean.toString(isUseVflexForDetailPane()));
+			detailPane.setVflex("true");
 			detailPane.setSelectedIndex(0);
 			activateDetailADTabpanel();
 		}
 		
-		headerTab.setDetailPaneMode(false, true);
+		headerTab.setDetailPaneMode(false);
 		
         updateBreadCrumb();
 	}
@@ -530,31 +518,29 @@ public class CompositeADTabbox extends AbstractADTabbox
 	        	}
 	        	
 	        	IADTabpanel detailTab = detailPane.getSelectedADTabpanel();
-	        	
-	        	//check data action
-        		String uuid = (String) execution.getAttribute(CompositeADTabbox.class.getName()+".dataAction");
-        		if (uuid != null && uuid.equals(detailTab.getUuid())) {
-        			//refresh current row
-        			detailTab.getGridTab().dataRefresh(false);
-        			//keep focus
-        			Clients.scrollIntoView(detailTab);
-        			
-        			return;	        				
-        		}
-	        	
-        		GridTab tab = detailTab.getGridTab();
-        		GridField[] fields = tab.getFields();
-        		for (GridField field : fields)
-        		{
-        			if (!parentColumnNames.contains(field.getColumnName()))
-        				Env.setContext(Env.getCtx(), field.getWindowNo(), field.getColumnName(), "");
-        		}
-        		detailTab.activate(true);
-        		detailTab.setDetailPaneMode(true, isUseVflexForDetailPane());
-        		detailPane.setVflex(Boolean.toString(isUseVflexForDetailPane()));    
-        		if (!ADTabpanel.isUseSplitViewForForm() && !headerTab.isGridView()) {
-        			Events.postEvent(new Event(LayoutUtils.ON_REDRAW_EVENT, detailPane));
-        		}
+	        	if (detailTab != null) {
+		        	//check data action
+	        		String uuid = (String) execution.getAttribute(CompositeADTabbox.class.getName()+".dataAction");
+	        		if (uuid != null && uuid.equals(detailTab.getUuid())) {
+	        			//refresh current row
+	        			detailTab.getGridTab().dataRefresh(false);
+	        			//keep focus
+	        			Clients.scrollIntoView(detailTab);
+	        			
+	        			return;	        				
+	        		}
+		        	
+	        		GridTab tab = detailTab.getGridTab();
+	        		GridField[] fields = tab.getFields();
+	        		for (GridField field : fields)
+	        		{
+	        			if (!parentColumnNames.contains(field.getColumnName()))
+	        				Env.setContext(Env.getCtx(), field.getWindowNo(), field.getColumnName(), "");
+	        		}
+	        		detailTab.activate(true);
+	        		detailTab.setDetailPaneMode(true);	        		    
+	        	}
+	        	detailPane.setVflex("true");
 			}
 		}
 		
@@ -564,7 +550,7 @@ public class CompositeADTabbox extends AbstractADTabbox
 	public void onDetailRecord() {
 		if (detailPane != null && detailPane.getSelectedADTabpanel() != null) {
 			try {
-				detailPane.onEdit();
+				detailPane.onEdit(false);
 			} catch (Exception e) {}
 		}
 	}
@@ -649,8 +635,8 @@ public class CompositeADTabbox extends AbstractADTabbox
 		if (!tabPanel.isGridView()) {
 			tabPanel.switchRowPresentation();	
 		}
-		tabPanel.setDetailPaneMode(true, isUseVflexForDetailPane());
-		detailPane.setVflex(Boolean.toString(isUseVflexForDetailPane()));
+		tabPanel.setDetailPaneMode(true);
+		detailPane.setVflex("true");
 		if (tabPanel instanceof ADSortTab) {
 			detailPane.updateToolbar(false, true);
 		} else {
@@ -667,10 +653,6 @@ public class CompositeADTabbox extends AbstractADTabbox
 		//other error will be catch in the dataStatusChanged event
 	}
 
-	private boolean isUseVflexForDetailPane() {
-		return headerTab.isGridView() || ADTabpanel.isUseSplitViewForForm();
-	}
-	
 	@Override
 	public void updateDetailPaneToolbar(boolean changed, boolean readOnly) {
 		if (headerTab.getGridTab().isNew() || headerTab.getGridTab().getRowCount() == 0)

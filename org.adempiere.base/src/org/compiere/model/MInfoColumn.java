@@ -18,6 +18,12 @@ package org.compiere.model;
 
 import java.sql.ResultSet;
 import java.util.Properties;
+import java.util.logging.Level;
+
+import org.compiere.model.AccessSqlParser.TableInfo;
+import org.compiere.util.Env;
+import org.compiere.util.Evaluatee;
+import org.compiere.util.Evaluator;
 
 /**
  * 	Info Window Column Model
@@ -53,5 +59,79 @@ public class MInfoColumn extends X_AD_InfoColumn
 	{
 		super (ctx, rs, trxName);
 	}	//	MInfoColumn
+
+	/**
+	 * check column read access
+	 * @param tableInfos
+	 * @return false if current role don't have read access to the column, false otherwise
+	 */
+	public boolean isColumnAccess(TableInfo[] tableInfos)
+	{
+		int index = getSelectClause().indexOf(".");
+		if (index == getSelectClause().lastIndexOf("."))
+		{
+			String synonym = getSelectClause().substring(0, index);
+			String column = getSelectClause().substring(index+1);
+			for(TableInfo tableInfo : tableInfos)
+			{
+				if (tableInfo.getSynonym() != null && tableInfo.getSynonym().equals(synonym))
+				{
+					String tableName = tableInfo.getTableName();
+					MTable mTable = MTable.get(Env.getCtx(), tableName);
+					if (mTable != null)
+					{
+						MColumn mColumn = mTable.getColumn(column);
+						if (mColumn != null)
+						{
+							if (!MRole.getDefault().isColumnAccess(mTable.getAD_Table_ID(), mColumn.getAD_Column_ID(), true))
+							{
+								return false;
+							}
+						}
+					}
+				}
+			}			
+		}
+		return true;
+	}
+
+	/**
+	 * @param ctx
+	 * @param windowNo
+	 * @return boolean
+	 */
+	public boolean isDisplayed(final Properties ctx, final int windowNo) {
+		if (!isDisplayed())
+			return false;
+		
+		if (getDisplayLogic() == null || getDisplayLogic().trim().length() == 0)
+			return true;
+		
+		Evaluatee evaluatee = new Evaluatee() {
+			public String get_ValueAsString(String variableName) {
+				return Env.getContext (ctx, windowNo, variableName, true);
+			}
+		};
+		
+		boolean retValue = Evaluator.evaluateLogic(evaluatee, getDisplayLogic());
+		if (log.isLoggable(Level.FINEST)) {
+			log.finest(getName() 
+					+ " (" + getDisplayLogic() + ") => " + retValue);
+		}
+		return retValue;
+	}
+
+	@Override
+	protected boolean beforeSave(boolean newRecord) {
+		// Sync Terminology
+		if ((newRecord || is_ValueChanged ("AD_Element_ID")) 
+			&& getAD_Element_ID() != 0 && isCentrallyMaintained())
+		{
+			M_Element element = new M_Element (getCtx(), getAD_Element_ID (), get_TrxName());
+			setName (element.getName());
+		}
+		return true;
+	}
+	
 	
 }	//	MInfoColumn

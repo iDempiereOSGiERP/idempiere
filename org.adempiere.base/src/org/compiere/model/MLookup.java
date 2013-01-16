@@ -342,6 +342,14 @@ public final class MLookup extends Lookup implements Serializable
 	}   //  hasInactive
 
 	/**
+	 * @return AD_InfoWindow_ID
+	 */
+	public int getAD_InfoWindow_ID()
+	{
+		return m_info.InfoWindowId;
+	}
+	
+	/**
 	 *	Return info as ArrayList containing Value/KeyNamePair
 	 *  @param onlyValidated only validated
 	 * 	@param loadParent get Data even for parent lookups
@@ -639,13 +647,6 @@ public final class MLookup extends Lookup implements Serializable
 		return false;
 	}
 	
-	@Override
-	public String getInfoFactoryClass() {
-		return m_info.InfoFactoryClass != null ? m_info.InfoFactoryClass : "";
-	}
-
-
-
 	/**************************************************************************
 	 *	MLookup Loader
 	 */
@@ -720,9 +721,9 @@ public final class MLookup extends Lookup implements Serializable
 			}
 			//
 			if (CLogMgt.isLevelFiner())
-				Env.setContext(m_info.ctx, Env.WINDOW_MLOOKUP, m_info.Column_ID, m_info.KeyColumn, sql.toString());
+				log.finer(m_info.Column_ID + ", " + m_info.KeyColumn + ": " + sql.toString());
 			if (CLogMgt.isLevelFinest())
-				log.fine(m_info.KeyColumn + ": " + sql);
+				log.finest(m_info.KeyColumn + ": " + sql);
 			
 			//	Reset
 			m_lookup.clear();

@@ -13,6 +13,7 @@
  *****************************************************************************/
 package org.adempiere.webui.factory;
 
+import org.adempiere.webui.info.InfoWindow;
 import org.adempiere.webui.panel.InfoPanel;
 import org.compiere.model.GridField;
 import org.compiere.model.Lookup;
@@ -26,9 +27,11 @@ public interface IInfoFactory {
 
 	public InfoPanel create (int WindowNo,
             String tableName, String keyColumn, String value,
-            boolean multiSelection, String whereClause, boolean lookup);
+            boolean multiSelection, String whereClause, int AD_InfoWindow_ID, boolean lookup);
 
 	public InfoPanel create (Lookup lookup, GridField field,
             String tableName, String keyColumn, String value,
-            boolean multiSelection, String whereClause);
+            boolean multiSelection, String whereClause, int AD_InfoWindow_ID);
+	
+	public InfoWindow create (int AD_InfoWindow_ID); 
 }

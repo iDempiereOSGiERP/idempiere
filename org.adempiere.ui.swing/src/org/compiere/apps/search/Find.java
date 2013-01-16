@@ -151,8 +151,6 @@ public final class Find extends CDialog
 		m_query.addRestriction(Env.parseContext(Env.getCtx(), m_targetWindowNo, whereExtended, false));
 		//	Required for Column Validation
 		Env.setContext(Env.getCtx(), m_targetWindowNo, "Find_Table_ID", m_AD_Table_ID);
-		//  Context for Advanced Search Grid is WINDOW_FIND
-		Env.setContext(Env.getCtx(), Env.WINDOW_FIND, "Find_Table_ID", m_AD_Table_ID);
 		//
 		try
 		{
@@ -482,7 +480,6 @@ public final class Find extends CDialog
 				ynvo.lookupInfo = MLookupFactory.getLookupInfo (ynvo.ctx, ynvo.WindowNo, ynvo.AD_Column_ID, ynvo.displayType,
 						Env.getLanguage(ynvo.ctx), ynvo.ColumnName, ynvo.AD_Reference_Value_ID,
 						ynvo.IsParent, ynvo.ValidationCode);
-				ynvo.lookupInfo.InfoFactoryClass = ynvo.InfoFactoryClass;
 				
 				GridField ynfield = new GridField(ynvo);
 
@@ -504,7 +501,6 @@ public final class Find extends CDialog
 					postedvo.lookupInfo = MLookupFactory.getLookupInfo (postedvo.ctx, postedvo.WindowNo, postedvo.AD_Column_ID, postedvo.displayType,
 							Env.getLanguage(postedvo.ctx), postedvo.ColumnName, postedvo.AD_Reference_Value_ID,
 							postedvo.IsParent, postedvo.ValidationCode);
-					postedvo.lookupInfo.InfoFactoryClass = postedvo.InfoFactoryClass;
 
 					GridField postedfield = new GridField(postedvo);
 

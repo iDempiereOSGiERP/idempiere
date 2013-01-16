@@ -210,6 +210,12 @@ html,body {
 	width: 80px;
 }
 
+.action-button .z-button-cm img, 
+.action-image-text-button .z-button-cm img {
+	height: 22px;
+	width: 22px;
+}
+
 <%-- desktop --%>
 div.wc-modal, div.wc-modal-none, div.wc-highlighted, div.wc-highlighted-none {
 	background-color: white;
@@ -267,8 +273,15 @@ div.wc-modal, div.wc-modal-none, div.wc-highlighted, div.wc-highlighted-none {
 }
 
 .menu-search-panel .z-comboitem-img { 
-	vertical-align:top; 
 	padding-bottom:4px; 
+}
+
+.z-comboitem-img { 
+	vertical-align:top; 
+}
+
+.z-combobox input {
+	vertical-align:top;
 }
 
 .menu-panel .z-toolbar-panel {
@@ -477,16 +490,18 @@ div.wc-modal, div.wc-modal-none, div.wc-highlighted, div.wc-highlighted-none {
 }
 
 .adwindow-north {
+	height: 56px;
+	width: 100%;
+	padding: 0px;
+	margin: 0px;
 	border: none;
-	border-bottom: 1px solid #C5C5C5 !important;
 }
 
 .adwindow-south {
-	border-left: none;
-	border-right: none;
-}
-
-.adwindow-layout .z-south {
+	height: 20px;
+	width: 100%;
+	padding: 0px;
+	margin: 0px;
 	border-top: 1px solid #C5C5C5 !important;
 }
 
@@ -497,12 +512,15 @@ div.wc-modal, div.wc-modal-none, div.wc-highlighted, div.wc-highlighted-none {
 
 .adwindow-toolbar {
 	border: 0px;
+	height: 26px;
 }
 
 .adwindow-breadcrumb {
 	height: 30px;
 	background-color: #FFF;
+	padding: 0px;
 	padding-left: 5px;
+	border-bottom: 1px solid #C5C5C5 !important;
 }
 
 .adwindow-detailpane {
@@ -510,8 +528,12 @@ div.wc-modal, div.wc-modal-none, div.wc-highlighted, div.wc-highlighted-none {
 	overflow-y: visible;
 }
 
-.adwindow-detailpane-xsplit {
-	min-height: 200px;
+.adwindow-detailpane-tabbox .z-tab-seld span.z-tab-text {
+	cursor: pointer;
+}
+
+.adwindow-detailpane-tabbox .z-tab-seld span.z-tab-text:hover {
+	text-decoration: underline;
 }
 
 .adwindow-detailpane-tabpanel {
@@ -539,10 +561,6 @@ div.wc-modal, div.wc-modal-none, div.wc-highlighted, div.wc-highlighted-none {
 	width: 99%; 
 	margin: auto;
 	background-color: #E4E4E4;
-}
-
-.adwindow-detailpane-tabbox-xsplit .z-tabpanel {
-	min-height: 200px;
 }
 
 .adwindow-gridview-detail {
@@ -573,7 +591,6 @@ div.wc-modal, div.wc-modal-none, div.wc-highlighted, div.wc-highlighted-none {
 	border:none !important;
 	margin:0;
 	padding:0;
-	overflow-y: visible;
 }
 
 .adtab-grid {
@@ -583,6 +600,7 @@ div.wc-modal, div.wc-modal-none, div.wc-highlighted, div.wc-highlighted-none {
 
 .adtab-grid-south {
 	border: none;
+	height: 30px;
 }
 
 .adtab-grid-south .z-paging {
@@ -945,7 +963,11 @@ tbody.z-grid-empty-body td {
 <%-- notification message --%>
 .z-notification .z-notification-cl, 
 .z-notification .z-notification-cnt {
-    width: 300px;
+    width: 400px;
+}
+
+.z-notification {
+	padding: 3px !important;
 }
 
 <%-- toolbar popup dialog --%>
@@ -993,4 +1015,27 @@ tbody.z-grid-empty-body td {
 	border-left: 5px dashed #696969;
 	border-right: 5px dashed transparent;
 	border-bottom: 5px solid transparent;
+}
+
+.grid-combobox-editor {
+	width: 96% !important;
+}
+
+.grid-combobox-editor input {
+	width: 85% !important;
+}
+
+.z-group td.z-group-inner {
+	overflow: hidden !important;
+	border-bottom: 1px solid #CFCFCF !important;
+	border-top: 1px solid #CFCFCF !important;
+}
+
+.embedded-dialog {
+	background-color: #666;
+}
+
+.embedded-dialog .z-window-embedded-header {
+	color: #fff;
+	font-weight: bold;
 }
