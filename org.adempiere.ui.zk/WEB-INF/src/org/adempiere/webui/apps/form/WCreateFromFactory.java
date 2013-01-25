@@ -13,99 +13,25 @@
  *****************************************************************************/
 package org.adempiere.webui.apps.form;
 
-import java.util.HashMap;
-import java.util.logging.Level;
+import java.util.List;
 
+import org.adempiere.base.Service;
 import org.compiere.grid.ICreateFrom;
+import org.compiere.grid.ICreateFromFactory;
 import org.compiere.model.GridTab;
-import org.compiere.model.I_C_BankStatement;
-import org.compiere.model.I_C_Invoice;
-import org.compiere.model.I_M_InOut;
-import org.compiere.model.I_M_PackageMPS;
-import org.compiere.model.I_M_RMA;
-import org.compiere.util.CLogger;
-import org.compiere.util.Env;
 
 public class WCreateFromFactory
 {
-	/**	Static Logger	*/
-	private static CLogger 	s_log = CLogger.getCLogger (WCreateFromFactory.class);
-
-	/** Registered classes map (AD_Table_ID -> Class) */
-	private static HashMap<Integer, Class<? extends ICreateFrom>> s_registeredClasses = null;
-
-	/**
-	 * Register custom VCreateFrom* class
-	 * @param ad_table_id
-	 * @param cl custom class
-	 */
-	public static final void registerClass(int ad_table_id, Class<? extends ICreateFrom> cl)
-	{
-		s_registeredClasses.put(ad_table_id, cl);
-		s_log.info("Registered AD_Table_ID="+ad_table_id+", Class="+cl);
-	}
-	
-	static
-	{
-		// Register defaults:
-		s_registeredClasses = new HashMap<Integer, Class<? extends ICreateFrom>>();
-		s_registeredClasses.put(I_C_Invoice.Table_ID, WCreateFromInvoiceUI.class);
-		
-		s_registeredClasses.put(I_C_BankStatement.Table_ID, WCreateFromStatementUI.class);
-		s_registeredClasses.put(I_M_InOut.Table_ID, WCreateFromShipmentUI.class);
-		s_registeredClasses.put(I_M_RMA.Table_ID, WCreateFromRMAUI.class);
-		
-		s_registeredClasses.put(I_M_PackageMPS.Table_ID, WCreateFromPackageShipmentUI.class);
-	}
-	
-	/**
-	 *  Factory - called from APanel
-	 *  @param  mTab        Model Tab for the trx
-	 *  @return JDialog
-	 */
 	public static ICreateFrom create (GridTab mTab)
 	{
-		//	dynamic init preparation
-		int AD_Table_ID = Env.getContextAsInt(Env.getCtx(), mTab.getWindowNo(), mTab.getTabNo(), "_TabInfo_AD_Table_ID");
-
-		ICreateFrom retValue = null;
-		Class<? extends ICreateFrom> cl = s_registeredClasses.get(AD_Table_ID);
-		if (cl != null)
+		ICreateFrom createFrom = null;
+		List<ICreateFromFactory> factories = Service.locator().list(ICreateFromFactory.class).getServices();
+		for (ICreateFromFactory factory : factories) 
 		{
-			try
-			{
-				java.lang.reflect.Constructor<? extends ICreateFrom> ctor = cl.getConstructor(GridTab.class);
-				retValue = ctor.newInstance(mTab);
-			}
-			catch (Throwable e)
-			{
-				s_log.log(Level.SEVERE, e.getLocalizedMessage(), e);
-				return null;
-			}
+			createFrom = factory.create(mTab);
+			if (createFrom != null)
+				break;
 		}
-		if (retValue == null)
-		{
-			AD_Table_ID = Env.getContextAsInt(Env.getCtx(), mTab.getWindowNo(), "BaseTable_ID");
-
-			retValue = null;
-			cl = s_registeredClasses.get(AD_Table_ID);
-			if (cl != null)
-			{
-				try
-				{
-					java.lang.reflect.Constructor<? extends ICreateFrom> ctor = cl.getConstructor(GridTab.class);
-					retValue = ctor.newInstance(mTab);
-				}
-				catch (Throwable e)
-				{
-					s_log.log(Level.SEVERE, e.getLocalizedMessage(), e);
-					return null;
-				}
-			}
-			
-			s_log.info("Unsupported AD_Table_ID=" + AD_Table_ID);
-			return null;
-		}
-		return retValue;
-	}   //  create
+		return createFrom;
+	}
 }

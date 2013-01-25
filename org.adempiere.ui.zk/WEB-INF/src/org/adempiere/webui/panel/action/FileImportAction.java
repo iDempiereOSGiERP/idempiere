@@ -27,6 +27,7 @@ import java.util.Set;
 import org.adempiere.base.IGridTabImporter;
 import org.adempiere.base.Service;
 import org.adempiere.exceptions.AdempiereException;
+import org.adempiere.webui.AdempiereWebUI;
 import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.adwindow.AbstractADWindowContent;
 import org.adempiere.webui.adwindow.IADTabbox;
@@ -51,7 +52,6 @@ import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.event.UploadEvent;
-import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zul.Div;
 import org.zkoss.zul.Filedownload;
 import org.zkoss.zul.Hbox;
@@ -74,6 +74,7 @@ public class FileImportAction implements EventListener<Event>
 	private Listbox cboType = new Listbox();
 	private Button bFile = new Button();
 	private Listbox fCharset = new Listbox();
+	private Listbox fImportMode = new Listbox();
 	private InputStream m_file_istream = null;
 	
 	/**
@@ -108,6 +109,11 @@ public class FileImportAction implements EventListener<Event>
 		}
 		fCharset.addEventListener(Events.ON_SELECT, this);
 
+		fImportMode.appendItem("Insert","I");
+		fImportMode.appendItem("Update","U");
+		fImportMode.appendItem("Merge","M");
+		fImportMode.setSelectedIndex(0);
+		
 		importerMap = new HashMap<String, IGridTabImporter>();
 		extensionMap = new HashMap<String, String>();
 		List<IGridTabImporter> importerList = Service.locator().list(IGridTabImporter.class).getServices();
@@ -129,6 +135,7 @@ public class FileImportAction implements EventListener<Event>
 			winImportFile.setClosable(true);
 			winImportFile.setBorder("normal");
 			winImportFile.setStyle("position:absolute");
+			winImportFile.setWidgetAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "importAction");
 
 			cboType.setMold("select");
 
@@ -154,10 +161,27 @@ public class FileImportAction implements EventListener<Event>
 			vb.appendChild(hb);
 
 			hb = new Hbox();
+			Div div2 = new Div();
+			div2.setStyle("text-align: right;");
+			div2.appendChild(new Label(Msg.getMsg(Env.getCtx(), "Charset", false)));
+			hb.appendChild(div2);
 			fCharset.setMold("select");
 			fCharset.setRows(0);
 			fCharset.setTooltiptext(Msg.getMsg(Env.getCtx(), "Charset", false));
 			hb.appendChild(fCharset);
+			fCharset.setWidth("100%");
+			vb.appendChild(hb);
+			
+			hb = new Hbox();
+			Div div3 = new Div();
+			div3.setStyle("text-align: right;");
+			div3.appendChild(new Label(Msg.getMsg(Env.getCtx(), "import.mode", true)));
+			hb.appendChild(div3);
+			fImportMode.setMold("select");
+			fImportMode.setRows(0);
+			fImportMode.setTooltiptext(Msg.getMsg(Env.getCtx(), "import.mode", false));
+			hb.appendChild(fImportMode);
+			fImportMode.setWidth("100%");
 			vb.appendChild(hb);
 			
 			hb = new Hbox();
@@ -172,7 +196,7 @@ public class FileImportAction implements EventListener<Event>
 			confirmPanel.addActionListener(this);
 		}
 
-		Clients.showBusy(panel.getComponent().getParent(), " ");
+		panel.showBusyMask();
 		panel.getComponent().getParent().appendChild(winImportFile);
 		LayoutUtils.openOverlappedWindow(panel.getComponent(), winImportFile, "middle_center");
 		winImportFile.addEventListener(DialogEvents.ON_WINDOW_CLOSE, this);
@@ -202,7 +226,7 @@ public class FileImportAction implements EventListener<Event>
 				return;
 			importFile();
 		} else if (event.getName().equals(DialogEvents.ON_WINDOW_CLOSE)) {
-			Clients.clearBusy(panel.getComponent().getParent());
+			panel.hideBusyMask();
 			panel.getComponent().invalidate();
 		}
 	}
@@ -277,8 +301,13 @@ public class FileImportAction implements EventListener<Event>
 			if (listitem == null)
 				return;
 			charset = (Charset)listitem.getValue();
-
-			File outFile = importer.fileImport(panel.getActiveGridTab(), childs, m_file_istream, charset);
+			
+			ListItem importItem = fImportMode.getSelectedItem();
+			if (importItem == null)
+				return;
+			
+			String iMode = (String)importItem.getValue();
+			File outFile = importer.fileImport(panel.getActiveGridTab(), childs, m_file_istream, charset,iMode);
 			winImportFile.onClose();
 			winImportFile = null;
 

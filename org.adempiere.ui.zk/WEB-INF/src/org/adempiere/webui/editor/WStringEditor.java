@@ -19,10 +19,12 @@ package org.adempiere.webui.editor;
 
 import java.util.List;
 
+import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.ValuePreference;
+import org.adempiere.webui.adwindow.ADWindow;
+import org.adempiere.webui.adwindow.AbstractADWindowContent;
 import org.adempiere.webui.component.Combobox;
 import org.adempiere.webui.component.Textbox;
-import org.adempiere.webui.component.Window;
 import org.adempiere.webui.event.ContextMenuEvent;
 import org.adempiere.webui.event.ContextMenuListener;
 import org.adempiere.webui.event.DialogEvents;
@@ -32,6 +34,7 @@ import org.adempiere.webui.window.WFieldRecordInfo;
 import org.adempiere.webui.window.WTextEditorDialog;
 import org.compiere.model.GridField;
 import org.compiere.util.DisplayType;
+import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
@@ -49,6 +52,8 @@ public class WStringEditor extends WEditor implements ContextMenuListener
     private String oldValue;
 
 	private boolean tableEditor = false;
+
+	private AbstractADWindowContent adwindowContent;
 
     /**
      * to ease porting of swing form
@@ -217,17 +222,20 @@ public class WStringEditor extends WEditor implements ContextMenuListener
 		if (WEditorPopupMenu.PREFERENCE_EVENT.equals(evt.getContextEvent()))
 		{
 			if (isShowPreference())
-				ValuePreference.start (this.getGridField(), getValue());
+				ValuePreference.start (getComponent(), this.getGridField(), getValue());
 			return;
 		}
 		else if (WEditorPopupMenu.EDITOR_EVENT.equals(evt.getContextEvent()))
 		{
+			adwindowContent = findADWindowContent();
 			final WTextEditorDialog dialog = new WTextEditorDialog(this.getColumnName(), getDisplay(),
 					isReadWrite(), gridField.getFieldLength());
-			dialog.setAttribute(Window.MODE_KEY, Window.MODE_HIGHLIGHTED);
 			dialog.addEventListener(DialogEvents.ON_WINDOW_CLOSE, new EventListener<Event>() {
 				@Override
 				public void onEvent(Event event) throws Exception {
+					if (adwindowContent != null) {
+						adwindowContent.hideBusyMask();
+					}
 					if (!dialog.isCancelled()) {
 						getComponent().setText(dialog.getText());
 						String newText = getComponent().getValue();
@@ -237,8 +245,17 @@ public class WStringEditor extends WEditor implements ContextMenuListener
 					}
 				}
 			});
-			SessionManager.getAppDesktop().showWindow(dialog);
-			
+			if (adwindowContent != null) 
+			{
+				adwindowContent.getComponent().getParent().appendChild(dialog);
+				adwindowContent.showBusyMask();
+				LayoutUtils.openOverlappedWindow(adwindowContent.getComponent().getParent(), dialog, "middle_center");
+			}
+			else
+			{
+				SessionManager.getAppDesktop().showWindow(dialog);
+			}			
+			dialog.focus();
 		}
 		else if (WEditorPopupMenu.CHANGE_LOG_EVENT.equals(evt.getContextEvent()))
 		{
@@ -262,5 +279,16 @@ public class WStringEditor extends WEditor implements ContextMenuListener
         }
 	}
 
+	private AbstractADWindowContent findADWindowContent() {
+		Component parent = getComponent().getParent();
+		while(parent != null) {
+			if (parent.getAttribute(ADWindow.AD_WINDOW_ATTRIBUTE_KEY) != null) {
+				ADWindow adwindow = (ADWindow) parent.getAttribute(ADWindow.AD_WINDOW_ATTRIBUTE_KEY);
+				return adwindow.getADWindowContent();
+			}
+			parent = parent.getParent();
+		}
+		return null;
+	}
 
 }

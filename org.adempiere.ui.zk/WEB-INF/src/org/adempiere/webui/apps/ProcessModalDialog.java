@@ -177,7 +177,7 @@ public class ProcessModalDialog extends Window implements EventListener<Event>, 
 		hbox.setStyle("margin-top: 10px");
 		Button btn = new Button("");
 		btn.setImage("/images/Ok24.png");
-		LayoutUtils.addSclass("action-text-button", btn);
+		LayoutUtils.addSclass("action-button", btn);
 		btn.setId("Ok");
 		btn.addEventListener(Events.ON_CLICK, this);
 		hbox.appendChild(btn);
@@ -185,7 +185,7 @@ public class ProcessModalDialog extends Window implements EventListener<Event>, 
 		btn = new Button("");
 		btn.setImage("/images/Cancel24.png");
 		btn.setId("Cancel");
-		LayoutUtils.addSclass("action-text-button", btn);
+		LayoutUtils.addSclass("action-button", btn);
 		btn.addEventListener(Events.ON_CLICK, this);
 
 		hbox.appendChild(btn);
@@ -215,7 +215,6 @@ public class ProcessModalDialog extends Window implements EventListener<Event>, 
 	private BusyDialog progressWindow;
 	private boolean isLocked = false;
 	private org.adempiere.webui.apps.ProcessModalDialog.ProcessDialogRunnable processDialogRunnable;
-	@SuppressWarnings("unused")
 	private Future<?> future;
 
 	/**
@@ -427,6 +426,16 @@ public class ProcessModalDialog extends Window implements EventListener<Event>, 
 	}
 
 	private void onComplete() {
+		if (future != null) {
+			try {
+				future.get();
+			} catch (Exception e) {
+				log.log(Level.SEVERE, e.getLocalizedMessage(), e);
+				if (!m_pi.isError()) {
+					m_pi.setSummary(e.getLocalizedMessage(), true);
+				}
+			}
+		}
 		future = null;			
 		processDialogRunnable = null;
 		unlockUI(m_pi);

@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
 
+import org.adempiere.webui.AdempiereWebUI;
 import org.adempiere.webui.component.Button;
 import org.adempiere.webui.component.ConfirmPanel;
 import org.adempiere.webui.component.Label;
@@ -98,9 +99,9 @@ public class WChat extends Window implements EventListener<Event>, DialogEvents
 		}
 		//	Create Model
 		if (CM_Chat_ID > 0)
-			m_chat = new MChat (Env.getCtx(), AD_Table_ID, Record_ID, Description, trxName);
-		else
 			m_chat = new MChat (Env.getCtx(), CM_Chat_ID, trxName);
+		else
+			m_chat = new MChat (Env.getCtx(), AD_Table_ID, Record_ID, Description, trxName);
 		loadChat();
 		//
 	}	//	Attachment
@@ -132,6 +133,7 @@ public class WChat extends Window implements EventListener<Event>, DialogEvents
 	 */
 	private void staticInit () throws Exception
 	{
+		this.setAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "chat");
 		this.appendChild(mainPanel);
 		mainPanel.setStyle("position:absolute; height:90%; width:95%; border: none; background-color: white;");
 		//
@@ -163,7 +165,8 @@ public class WChat extends Window implements EventListener<Event>, DialogEvents
 		confirmPanel.setStyle("position:absolute; height:30px; width:99%; top:80px;");
 		confirmPanel.addActionListener(this);				
 
-		this.setStyle("position: relative; height: 600px; width: 500px;");
+		this.setHeight("600px");
+		this.setWidth("500px");
 		this.setMaximizable(true);
 		this.setSizable(true);
 		this.setBorder("normal");
