@@ -21,7 +21,8 @@ Bundle-ClassPath: WEB-INF/classes/,
  WEB-INF/lib/atmosphere-compat-jbossweb-1.0.4.jar,
  WEB-INF/lib/atmosphere-compat-tomcat-1.0.4.jar,
  WEB-INF/lib/atmosphere-compat-tomcat7-1.0.4.jar,
- WEB-INF/lib/atmosphere-runtime-1.0.4.jar
+ WEB-INF/lib/atmosphere-runtime-1.0.4.jar,
+ .
 Export-Package: metainfo.zk,
  org.adempiere.webui,
  org.adempiere.webui.acct,
@@ -58,4 +59,4 @@ Bundle-Activator: org.adempiere.webui.WebUIActivator
 Eclipse-ExtensibleAPI: true
 Eclipse-RegisterBuddy: org.zkoss.zk.library
 Web-ContextPath: webui
-Service-Component: OSGI-INF/reportviewerprovider.xml, OSGI-INF/defaultinfofactory.xml, OSGI-INF/defaulteditorfactory.xml, OSGI-INF/jrviewerprovider.xml, OSGI-INF/resourcefinder.xml, OSGI-INF/defaultpaymentformfactory.xml, OSGI-INF/processfactory.xml, OSGI-INF/defaultprintshippinglabel.xml
+Service-Component: OSGI-INF/reportviewerprovider.xml, OSGI-INF/defaultinfofactory.xml, OSGI-INF/defaulteditorfactory.xml, OSGI-INF/jrviewerprovider.xml, OSGI-INF/resourcefinder.xml, OSGI-INF/defaultpaymentformfactory.xml, OSGI-INF/processfactory.xml, OSGI-INF/defaultprintshippinglabel.xml, OSGI-INF/defaultcreatefromfactory.xml

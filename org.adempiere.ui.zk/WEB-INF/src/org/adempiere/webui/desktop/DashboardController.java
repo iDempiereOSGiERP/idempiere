@@ -97,7 +97,7 @@ public class DashboardController implements EventListener<Event> {
 	private Anchorchildren maximizedHolder;	
 	private DashboardRunnable dashboardRunnable;
 	private ScheduledFuture<?> dashboardFuture;
-
+	
 	public DashboardController() {
 		dashboardLayout = new Anchorlayout();
         dashboardLayout.setSclass("dashboard-layout");
@@ -120,7 +120,7 @@ public class DashboardController implements EventListener<Event> {
         if (!dashboardLayout.getDesktop().isServerPushEnabled())
         	dashboardLayout.getDesktop().enableServerPush(true);
         
-        dashboardRunnable = new DashboardRunnable(parent.getDesktop(), desktopImpl);
+        dashboardRunnable = new DashboardRunnable(parent.getDesktop());
         
         // Dashboard content
         Vlayout dashboardColumnLayout = null;
@@ -141,7 +141,7 @@ public class DashboardController implements EventListener<Event> {
         	dps = MDashboardPreference.getForSession(isShowInDashboard, AD_User_ID, AD_Role_ID); // based on user and role       	
         	noOfCols = MDashboardPreference.getForSessionColumnCount(isShowInDashboard, AD_User_ID, AD_Role_ID);
             
-        	int dashboardWidth = isShowInDashboard ? 98 : 100;
+        	int dashboardWidth = isShowInDashboard ? 95 : 100;
             width = noOfCols <= 0 ? dashboardWidth : dashboardWidth / noOfCols;
             int useWidth = 0; 
             for (final MDashboardPreference dp : dps)
@@ -395,6 +395,7 @@ public class DashboardController implements EventListener<Event> {
             {
             	// additional column
             	dashboardColumnLayout = new Vlayout();
+            	dashboardColumnLayout.setWidth("100%");
         		dashboardColumnLayout.setAttribute("ColumnNo", currentColumnNo + 1);
         		dashboardColumnLayout.setAttribute("IsShowInDashboard", isShowInDashboard);
         		dashboardColumnLayout.setAttribute("IsAdditionalColumn", true);
@@ -416,7 +417,7 @@ public class DashboardController implements EventListener<Event> {
                 
         if (!dashboardRunnable.isEmpty())
         {
-        	dashboardRunnable.refreshDashboard();
+        	dashboardRunnable.refreshDashboard(false);
 
         	// default Update every one minutes
     		int interval = MSysConfig.getIntValue(MSysConfig.ZK_DASHBOARD_REFRESH_INTERVAL, 60000);
@@ -617,7 +618,7 @@ public class DashboardController implements EventListener<Event> {
 				}
 				
                 if (!dashboardRunnable.isEmpty())
-                	dashboardRunnable.refreshDashboard();
+                	dashboardRunnable.refreshDashboard(false);
 			}
 		}
 	}
@@ -626,14 +627,13 @@ public class DashboardController implements EventListener<Event> {
 	 * 
 	 * @param page
 	 * @param desktop
-	 * @param appDesktop
 	 */
-	public void onSetPage(Page page, Desktop desktop, IDesktop appDesktop) {
+	public void onSetPage(Page page, Desktop desktop) {
 		if (dashboardFuture != null && !dashboardFuture.isDone()) {
 			dashboardFuture.cancel(true);
 
 			DashboardRunnable tmp = dashboardRunnable;
-			dashboardRunnable = new DashboardRunnable(tmp, desktop, appDesktop);
+			dashboardRunnable = new DashboardRunnable(tmp, desktop);
 			// default Update every one minutes
 			int interval = MSysConfig.getIntValue(MSysConfig.ZK_DASHBOARD_REFRESH_INTERVAL, 60000);
 			dashboardFuture = Adempiere.getThreadPoolExecutor().scheduleWithFixedDelay(dashboardRunnable, interval, interval, TimeUnit.MILLISECONDS);
