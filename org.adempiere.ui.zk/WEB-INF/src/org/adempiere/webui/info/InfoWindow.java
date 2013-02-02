@@ -43,6 +43,7 @@ import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
+import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.event.Events;
@@ -71,7 +72,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener {
 	private Borderlayout layout;
 	private Vbox southBody;
 	/** List of WEditors            */
-    private List<WEditor> editors;
+    protected List<WEditor> editors;
     protected Properties infoContext;
 
 	/** Max Length of Fields */
@@ -85,6 +86,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener {
 	
 	private List<GridField> gridFields;
 	private int AD_InfoWindow_ID;
+	private Checkbox checkAND;
     
 	/**
 	 * @param WindowNo
@@ -195,6 +197,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener {
 				if (infoColumn.getAD_Val_Rule_ID() > 0) {
 					vo.ValidationCode = infoColumn.getAD_Val_Rule().getCode();
 				}
+				vo.DisplayLogic = infoColumn.getDisplayLogic() != null ? infoColumn.getDisplayLogic() : "";
 				GridField gridField = new GridField(vo);
 				gridFields.add(gridField);
 			}
@@ -257,6 +260,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener {
 				{
 					columnInfo = new ColumnInfo(infoColumn.getName(), infoColumn.getSelectClause(), DisplayType.getClass(infoColumn.getAD_Reference_ID(), true));
 				}
+				columnInfo.setColDescription(infoColumn.getDescription());
 				columnInfo.setGridField(gridFields.get(i));
 				list.add(columnInfo);				
 			}		
@@ -319,14 +323,24 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener {
 			builder.append(tableInfos[0].getSynonym()).append(".IsActive='Y'");
 		}
 		for(WEditor editor : editors) {
-			if (editor.getGridField() != null && editor.getValue() != null && editor.getValue().toString().trim().length() > 0) {
+			if (editor instanceof IWhereClauseEditor) {
+				String whereClause = ((IWhereClauseEditor) editor).getWhereClause();
+				if (whereClause != null && whereClause.trim().length() > 0) {
+					if (builder.length() > 0) {
+						builder.append(checkAND.isChecked() ? " AND " : " OR ");
+					} else if (p_whereClause != null && p_whereClause.trim().length() > 0) {
+						builder.append(" AND ");
+					}	
+					builder.append(whereClause);
+				}
+			} else if (editor.getGridField() != null && editor.getValue() != null && editor.getValue().toString().trim().length() > 0) {
 				MInfoColumn mInfoColumn = findInfoColumn(editor.getGridField());
 				if (mInfoColumn == null || mInfoColumn.getSelectClause().equals("0")) {
 					continue;
 				}
 				String columnName = mInfoColumn.getSelectClause();
 				if (builder.length() > 0) {
-					builder.append(" AND ");
+					builder.append(checkAND.isChecked() ? " AND " : " OR ");
 				} else if (p_whereClause != null && p_whereClause.trim().length() > 0) {
 					builder.append(" AND ");
 				}		
@@ -355,6 +369,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener {
 					   .append(" ?");				
 			}
 		}		
+		System.out.println(builder.toString());
 		return builder.toString();
 	}
 
@@ -451,6 +466,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener {
         North north = new North();
         layout.appendChild(north);
         renderParameterPane(north);
+        
 
         Center center = new Center();
 		layout.appendChild(center);
@@ -488,13 +504,17 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener {
 
 	protected void createParameterPanel() {
 		parameterGrid = GridFactory.newGridLayout();
-//		parameterGrid.setInnerWidth("auto");
 		parameterGrid.setWidgetAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "infoParameterPanel");
-		parameterGrid.setStyle("width: 90%; margin: auto;");
+		parameterGrid.setStyle("width: 95%; margin: auto !important;");
 		Columns columns = new Columns();
 		parameterGrid.appendChild(columns);
-		for(int i = 0; i < 8; i++)
+		for(int i = 0; i < 6; i++)
 			columns.appendChild(new Column());
+		
+		Column column = new Column();
+		column.setWidth("100px");
+		column.setAlign("right");
+		columns.appendChild(column);
 		
 		Rows rows = new Rows();
 		parameterGrid.appendChild(rows);
@@ -505,6 +525,35 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener {
 			if (infoColumns[i].isQueryCriteria())
 				addSelectionColumn(gridFields.get(i));
 		}
+		
+		if (checkAND == null) {
+			if (parameterGrid.getRows() != null && parameterGrid.getRows().getFirstChild() != null) {
+				Row row = (Row) parameterGrid.getRows().getFirstChild();
+				int col = row.getChildren().size();
+				while (col < 6) {
+					row.appendChild(new Space());
+					col++;
+				}
+				createAndCheckbox();
+				row.appendChild(checkAND);
+			}
+		}
+		evalDisplayLogic();
+	}
+
+	private void evalDisplayLogic() {
+		for(WEditor editor : editors) {
+        	if (editor.getGridField() != null && !editor.getGridField().isDisplayed(true)) {        		
+        		editor.getComponent().setVisible(false);
+        		if (editor.getLabel() != null)
+        			editor.getLabel().setVisible(false);
+        	}
+        	else if (!editor.getComponent().isVisible()) {
+        		editor.getComponent().setVisible(true);
+        		if (editor.getLabel() != null)
+        			editor.getLabel().setVisible(true);
+        	}
+        }
 	}
 	
 	/**
@@ -521,12 +570,19 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener {
 
         //  Editor
         WEditor editor = null;
-        editor = WebEditorFactory.getEditor(mField, false);
-        editor.setMandatory(false);
-        editor.setReadWrite(true);
-        editor.dynamicDisplay();
-        editor.addValueChangeListener(this);
-        editor.fillHorizontal();
+        if (mField.getDisplayType() == DisplayType.PAttribute) 
+        {
+        	editor = new WInfoPAttributeEditor(infoContext, p_WindowNo, mField);
+        }
+        else 
+        {
+	        editor = WebEditorFactory.getEditor(mField, false);
+	        editor.setMandatory(false);
+	        editor.setReadWrite(true);
+	        editor.dynamicDisplay();
+	        editor.addValueChangeListener(this);
+	        editor.fillHorizontal();
+        }
         Label label = editor.getLabel();
         Component fieldEditor = editor.getComponent();
 
@@ -552,8 +608,17 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener {
         else
         {
         	panel = (Row) parameterGrid.getRows().getLastChild();
-        	if (panel.getChildren().size() >= 8)
+        	if (panel.getChildren().size() == 6)
         	{
+        		if (parameterGrid.getRows().getChildren().size() == 1) 
+        		{
+        			createAndCheckbox();
+					panel.appendChild(checkAND);
+        		}
+        		else
+        		{
+        			panel.appendChild(new Space());
+        		}
         		panel = new Row();
             	parameterGrid.getRows().appendChild(panel); 
         	}
@@ -565,6 +630,28 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener {
         	panel.appendChild(new Space());
         }
         panel.appendChild(fieldEditor);
+	}
+
+	private void createAndCheckbox() {
+		checkAND = new Checkbox();
+		checkAND.setLabel(Msg.getMsg(Env.getCtx(), "SearchAND", true));
+		String tips = Msg.getMsg(Env.getCtx(), "SearchAND", false);
+		if (!Util.isEmpty(tips)) 
+		{
+			checkAND.setTooltiptext(tips);
+		}
+		checkAND.setChecked(true);
+		checkAND.addEventListener(Events.ON_CHECK, this);
+	}
+	
+	protected int findColumnIndex(String columnName) {
+		for(int i = 0; i < columnInfos.length; i++) {
+			GridField field = columnInfos[i].getGridField();
+			if (field != null && field.getColumnName().equalsIgnoreCase(columnName)) {
+				return i;
+			}
+		}
+		return -1;
 	}
     
     /**
@@ -681,9 +768,11 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener {
             	if (otherEditor == editor) 
             		continue;
             	
-            	editor.dynamicDisplay();
+            	otherEditor.dynamicDisplay();
             }
+            
+            evalDisplayLogic();
         }
 		
-	}    
+	}
 }

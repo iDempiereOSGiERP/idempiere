@@ -20,15 +20,17 @@ import org.adempiere.webui.component.Tabpanel;
 import org.adempiere.webui.component.Tabpanels;
 import org.adempiere.webui.component.Tabs;
 import org.adempiere.webui.component.Textbox;
-import org.adempiere.webui.component.VerticalBox;
 import org.adempiere.webui.component.Window;
-import org.zkforge.ckez.*;
+import org.zkforge.ckez.CKeditor;
+import org.zkoss.zk.au.out.AuScript;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
+import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zul.Div;
 import org.zkoss.zul.Html;
 import org.zkoss.zul.Separator;
+import org.zkoss.zul.Vlayout;
 
 /**
  * 
@@ -49,6 +51,7 @@ public class WTextEditorDialog extends Window implements EventListener<Event>{
 	private Textbox textBox;
 	private CKeditor editor;
 	private Label status;
+	private Tab htmlTab;
 
 	/**
 	 * 
@@ -69,9 +72,15 @@ public class WTextEditorDialog extends Window implements EventListener<Event>{
 	
 	private void init() {
 		setBorder("normal");
+		setHeight("450px");
+		setWidth("800px");
+		setStyle("position: absolute;");
+		setSizable(false);
 		
-		VerticalBox vbox = new VerticalBox();
+		Vlayout vbox = new Vlayout();
 		appendChild(vbox);
+		vbox.setWidth("100%");
+		vbox.setVflex("true");
 		
 		tabbox = new Tabbox();
 		vbox.appendChild(tabbox);
@@ -79,6 +88,8 @@ public class WTextEditorDialog extends Window implements EventListener<Event>{
 		tabbox.appendChild(tabs);
 		Tabpanels tabPanels = new Tabpanels();
 		tabbox.appendChild(tabPanels);
+		tabbox.setVflex("1");
+		tabbox.setHflex("1");
 		
 		Tab tab = new Tab("Text");
 		tabs.appendChild(tab);
@@ -89,25 +100,21 @@ public class WTextEditorDialog extends Window implements EventListener<Event>{
 		textBox.setCols(80);
 		textBox.setRows(30);
 		textBox.setEnabled(editable);
-		textBox.setWidth("700px");
-		textBox.setHeight("500px");
+		textBox.setHflex("1");
+		textBox.setVflex("1");
 		tabPanel.appendChild(textBox);
 		
-		tab = new Tab("HTML");
-		tabs.appendChild(tab);
+		htmlTab = new Tab("HTML");
+		tabs.appendChild(htmlTab);
 		
 		tabPanel = new Tabpanel();
 		tabPanels.appendChild(tabPanel);
 		if (editable) {
-			editor = new CKeditor();
-			tabPanel.appendChild(editor);
-			editor.setWidth("700px");
-			editor.setHeight("500px");
-			editor.setValue(text);
+			createEditor(tabPanel);
 		} else {
 			Div div = new Div();
-			div.setHeight("500px");
-			div.setWidth("700px");
+			div.setHeight("100%");
+			div.setWidth("100%");
 			div.setStyle("overflow: auto; border: 1px solid");
 			tabPanel.appendChild(div);
 			Html html = new Html();
@@ -135,6 +142,21 @@ public class WTextEditorDialog extends Window implements EventListener<Event>{
 		tabbox.addEventListener(Events.ON_SELECT, this);
 	}
 
+	private void createEditor(org.zkoss.zul.Tabpanel tabPanel) {
+		editor = new CKeditor();
+		editor.setCustomConfigurationsPath("/js/ckeditor/config.js");
+		editor.setToolbar("MyToolbar");
+		tabPanel.appendChild(editor);
+		editor.setVflex("1");
+		editor.setWidth("100%");
+		editor.setValue(text);
+	}
+
+	public void onEditorCallback(Event event) {
+		text = (String) event.getData();
+		detach();
+	}
+	
 	/**
 	 * @param event
 	 */
@@ -144,12 +166,16 @@ public class WTextEditorDialog extends Window implements EventListener<Event>{
 			detach();
 		} else if (event.getTarget().getId().equals(ConfirmPanel.A_OK)) {
 			if (editable) {
-				if (tabbox.getSelectedIndex() == 0)
+				if (tabbox.getSelectedIndex() == 0) {
 					text = textBox.getText();
-				else
-					text = editor.getValue();
-			}
-			detach();
+					detach();
+				} else {
+					String script = "var w=zk('#"+editor.getUuid()+"').$();var d=w.getEditor().getData();var t=zk('#" +
+							this.getUuid()+"').$();var e=new zk.Event(t,'onEditorCallback',d,{toServer:true});zAu.send(e);";
+					Clients.response(new AuScript(script));
+				}
+					
+			}			
 		} else if (event.getTarget().getId().equals(ConfirmPanel.A_RESET)) {
 			textBox.setText(text);
 			editor.setValue(text);
@@ -169,7 +195,7 @@ public class WTextEditorDialog extends Window implements EventListener<Event>{
 			} else if (event.getTarget() == editor) {
 				updateStatus(editor.getValue().length());
 			}
-		}		
+		} 
 	}
 	
 	private void updateStatus(int newLength) {

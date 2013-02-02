@@ -202,12 +202,12 @@ html,body {
 
 .action-text-button {
 	height: 30px;
-	width: 80px;
+	min-width: 80px;
 }
 
 .action-image-text-button {
 	height: 30px;
-	width: 80px;
+	min-width: 80px;
 }
 
 .action-button .z-button-cm img, 
@@ -488,6 +488,7 @@ div.wc-modal, div.wc-modal-none, div.wc-highlighted, div.wc-highlighted-none {
 	border: none;
 	width: 100%;
 	height: 100%;
+	background-color: #F9F9F9;
 }
 
 .adwindow-layout .z-center {
@@ -577,10 +578,12 @@ div.wc-modal, div.wc-modal-none, div.wc-highlighted, div.wc-highlighted-none {
 
 .adwindow-gridview-detail + .z-south-splt {
 	border-top: 1px solid #C5C5C5;
+	border-bottom: 1px solid #C5C5C5;
 }
 
 .adwindow-gridview-detail .z-south-body {
 	padding-top: 1px;
+	background-color: #D3D3D3;
 }
 
 .adwindow-gridview-borderlayout {
@@ -772,6 +775,8 @@ span.z-tree-tee, span.z-tree-last {
 .editor-box .editor-button img {
 	vertical-align: middle;
 	text-align: center;
+	width: 10px;
+	height: 10px;
 }
 
 .editor-box .editor-button-column {
@@ -803,6 +808,12 @@ tr.z-group {
 
 .z-group-inner .z-group-cnt .z-label, .z-group-inner .z-group-cnt {
 	font-family: Helvetica,Arial,sans-serif;
+}
+
+.z-group td.z-group-inner {
+	overflow: hidden !important;
+	border-bottom: 1px solid #CFCFCF !important;
+	border-top: 1px solid #CFCFCF !important;
 }
 
 <%-- Tablet --%>
@@ -880,6 +891,10 @@ div.simileAjax-bubble-container {
 	z-index: 2800 !important;
 }
 
+.info-panel .z-window-overlapped-bl, .info-panel .z-window-highlighted-bl {
+	background-color: #F4F4F4 !important;
+}
+
 .info-panel .z-grid {
 	border: none !important;
 }
@@ -896,7 +911,7 @@ div.simileAjax-bubble-container {
 .info-panel .z-south {
 	margin-top: 2px;
 	border-top: 1px solid #C5C5C5;
-	background-color: #D2E0EB;	
+	background-color: #F4F4F4; 
 }
 
 .info-panel .z-window-highlighted-cnt {
@@ -1037,12 +1052,6 @@ tbody.z-grid-empty-body td {
 	width: 85% !important;
 }
 
-.z-group td.z-group-inner {
-	overflow: hidden !important;
-	border-bottom: 1px solid #CFCFCF !important;
-	border-top: 1px solid #CFCFCF !important;
-}
-
 .embedded-dialog {
 	position: absolute;
 }
@@ -1052,23 +1061,26 @@ tbody.z-grid-empty-body td {
 	font-weight: bold;
 }
 
-.z-window-overlapped-cm,  .z-window-modal-cm, .z-window-highlighted-cm {
+.z-window-embedded-cnt {
+	border: none;
+}
+
+.z-window-overlapped-cm,  .z-window-modal-cm, .z-window-highlighted-cm, .z-window-embedded-cm {
 	border: none;
 }
 
 .z-window-overlapped-tl, .z-window-popup-tl, .z-window-modal-tl, .z-window-highlighted-tl, .embedded-dialog .z-window-embedded-tl
 {
-	border-left: 1px solid #484848;
-	border-right: 1px solid #484848;
-	border-top: 1px solid #484848;
-	border-top-left-radius:8px;
-	border-top-right-radius:8px;
-	margin: 0px;
+	display: none;
 }
 
 .z-window-overlapped-tr, .z-window-popup-tr, .z-window-modal-tr, .z-window-highlighted-tr, .embedded-dialog .z-window-embedded-tr
 {
 	display: none;
+}
+
+.z-window-overlapped-hl, .z-window-popup-hl, .z-window-modal-hl, .z-window-highlighted-hl, .embedded-dialog .z-window-embedded-hl {
+	padding-top: 3px;
 }
 
 .z-window-overlapped-tl, .z-window-popup-tl, .z-window-modal-tl, .z-window-highlighted-tl, .embedded-dialog .z-window-embedded-tl,
@@ -1094,13 +1106,11 @@ tbody.z-grid-empty-body td {
 
 .z-window-overlapped-bl, .z-window-popup-bl, .z-window-modal-bl, .z-window-highlighted-bl, .embedded-dialog .z-window-embedded-bl
 {
-	border-bottom: 1px solid #c5c5c5;
 	border-left: 1px solid #c5c5c5;
 	border-right: 1px solid #c5c5c5;
 	background-color: #fff;
 	margin: 0px;
-	border-bottom-left-radius:8px;
-	border-bottom-right-radius:8px;
+	padding-bottom: 3px;
 }
 
 .z-window-overlapped-br, .z-window-popup-br, .z-window-modal-br, .z-window-highlighted-br, .embedded-dialog .z-window-embedded-br
@@ -1110,24 +1120,35 @@ tbody.z-grid-empty-body td {
 
 .z-window-overlapped .z-window-overlapped-header,
 .z-window-popup .z-window-popup-header,
-.z-window-highlighted .z-window-modal-header,
+.z-window-modal .z-window-modal-header,
 .z-window-highlighted .z-window-highlighted-header
 {
 	color: #fff;
 	font-weight: bold;
 }
 
-.z-window-overlapped-hl, .z-window-popup-hl, .z-window-modal-hl, .z-window-highlighted-hl, 
-.z-window-overlapped-hr, .z-window-popup-hr, .z-window-modal-hr, .z-window-highlighted-hr,
-.z-window-overlapped-hm, .z-window-popup-hm, .z-window-modal-hm, .z-window-highlighted-hm,
-.z-window-overlapped-cl, .z-window-popup-cl, .z-window-modal-cl, .z-window-highlighted-cl, 
-.z-window-overlapped-cr, .z-window-popup-cr, .z-window-modal-cr, .z-window-highlighted-cr,
-.z-window-overlapped-tl, .z-window-popup-tl, .z-window-modal-tl, .z-window-highlighted-tl, 
-.z-window-overlapped-tr, .z-window-popup-tr, .z-window-modal-tr, .z-window-highlighted-tr,
-.z-window-overlapped-bl, .z-window-popup-bl, .z-window-modal-bl, .z-window-highlighted-bl, 
-.z-window-overlapped-br, .z-window-popup-br, .z-window-modal-br, .z-window-highlighted-br
+.z-window-overlapped, .z-window-modal, .z-window-highlighted
+{
+	border-top: 1px solid #c5c5c5 !important;
+	border-bottom: 1px solid #c5c5c5 !important;
+}
+
+.z-window-overlapped-hl, .z-window-popup-hl, .z-window-modal-hl, .z-window-highlighted-hl, .z-window-embedded-hl,
+.z-window-overlapped-hr, .z-window-popup-hr, .z-window-modal-hr, .z-window-highlighted-hr, .z-window-embedded-hr,
+.z-window-overlapped-hm, .z-window-popup-hm, .z-window-modal-hm, .z-window-highlighted-hm, .z-window-embedded-hm,
+.z-window-overlapped-cl, .z-window-popup-cl, .z-window-modal-cl, .z-window-highlighted-cl, .z-window-embedded-cl, 
+.z-window-overlapped-cr, .z-window-popup-cr, .z-window-modal-cr, .z-window-highlighted-cr, .z-window-embedded-cr,
+.z-window-overlapped-tl, .z-window-popup-tl, .z-window-modal-tl, .z-window-highlighted-tl, .z-window-embedded-tl, 
+.z-window-overlapped-tr, .z-window-popup-tr, .z-window-modal-tr, .z-window-highlighted-tr, .z-window-embedded-tr,
+.z-window-overlapped-bl, .z-window-popup-bl, .z-window-modal-bl, .z-window-highlighted-bl, .z-window-embedded-bl, 
+.z-window-overlapped-br, .z-window-popup-br, .z-window-modal-br, .z-window-highlighted-br, .z-window-embedded-br
 {
 	background-image: none !important;
+}
+
+.z-window-modal-shadow, .z-window-overlapped-shadow, .z-window-popup-shadow, .z-window-embedded-shadow, .z-window-highlighted-shadow
+{
+	border-radius: 0px !important;
 }
 
 <%-- Splitter button --%>
