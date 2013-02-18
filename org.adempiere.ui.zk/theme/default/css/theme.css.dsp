@@ -309,6 +309,10 @@ div.wc-modal, div.wc-modal-none, div.wc-highlighted, div.wc-highlighted-none {
 	border-left: 1px solid #c5c5c5;
 }
 
+.z-south-splt,  .z-west-splt, .z-east-splt, .z-north-splt {
+	background: none !important;
+}
+
 .desktop-left-column .z-west-body {
 	border-right: none;
 }
@@ -324,6 +328,12 @@ div.wc-modal, div.wc-modal-none, div.wc-highlighted, div.wc-highlighted-none {
 .desktop-left-column .z-anchorlayout-body, .desktop-right-column .z-anchorlayout-body {
 	overflow-x: hidden;
 }
+
+.z-anchorlayout-body { overflow:auto }
+ 
+.z-anchorchildren { overflow:visible }
+
+.slimScroll .z-anchorlayout-body { overflow:hidden }
 
 .desktop-hometab {
 	margin-left: 4px !important;
@@ -650,6 +660,16 @@ div.wc-modal, div.wc-modal-none, div.wc-highlighted, div.wc-highlighted-none {
 .row-indicator {
 	background-color: transparent !important;
 	background-image: none !important; 
+}
+
+.form-label 
+{
+	text-align: right;
+}
+
+.form-label-heading
+{
+	text-align: center;
 }
 
 <%-- status bar --%>
@@ -1187,5 +1207,7 @@ tbody.z-grid-empty-body td {
 
 .content
 {
-	font-size: ${fontSizeM};
+	padding: 5px;
+	font-size: 11px;
+	font-weight: normal;
 }
