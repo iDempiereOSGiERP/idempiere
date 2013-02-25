@@ -645,4 +645,3 @@ UPDATE AD_Process_Para SET DefaultValue='@IsPriviledgedRate@',Updated=TO_DATE('2
 
 SELECT register_migration_script('201302221708_TICKET-1001758.sql') FROM dual
 ;
-
