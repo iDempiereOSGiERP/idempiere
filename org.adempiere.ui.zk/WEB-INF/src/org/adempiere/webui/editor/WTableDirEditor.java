@@ -22,28 +22,38 @@ import java.beans.PropertyChangeEvent;
 import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
 
+import org.adempiere.util.Callback;
 import org.adempiere.webui.ValuePreference;
+import org.adempiere.webui.adwindow.ADWindow;
 import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.component.Combobox;
 import org.adempiere.webui.event.ContextMenuEvent;
 import org.adempiere.webui.event.ContextMenuListener;
 import org.adempiere.webui.event.DialogEvents;
 import org.adempiere.webui.event.ValueChangeEvent;
+import org.adempiere.webui.exception.ApplicationException;
 import org.adempiere.webui.grid.WQuickEntry;
+import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.window.WFieldRecordInfo;
 import org.adempiere.webui.window.WLocationDialog;
 import org.compiere.model.GridField;
+import org.compiere.model.GridTab;
 import org.compiere.model.Lookup;
 import org.compiere.model.MBPartnerLocation;
 import org.compiere.model.MLocation;
+import org.compiere.model.MQuery;
 import org.compiere.model.MTable;
+import org.compiere.util.CCache;
 import org.compiere.util.CLogger;
+import org.compiere.util.CacheMgt;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
 import org.compiere.util.NamePair;
 import org.compiere.util.ValueNamePair;
+import org.zkoss.zk.ui.Executions;
+import org.zkoss.zk.ui.Page;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
@@ -75,9 +85,12 @@ ContextMenuListener, IZoomableEditor
     public static final String SHORT_LIST_EVENT = "SHORT_LIST";	// IDEMPIERE 90
     protected boolean onlyShortListItems;	// IDEMPIERE 90
 
+	private CCacheListener tableCacheListener;
+
     public WTableDirEditor(GridField gridField)
     {
-        super(new Combobox(), gridField);
+        super(new EditorCombobox(), gridField);
+        ((EditorCombobox)getComponent()).editor = this;
         lookup = gridField.getLookup();
         init();
     }
@@ -94,7 +107,8 @@ ContextMenuListener, IZoomableEditor
 	 */   
     public WTableDirEditor(Lookup lookup, String label, String description, boolean mandatory, boolean readonly, boolean updateable)
 	{
-		super(new Combobox(), label, description, mandatory, readonly, updateable);
+		super(new EditorCombobox(), label, description, mandatory, readonly, updateable);
+		((EditorCombobox)getComponent()).editor = this;
 		
 		if (lookup == null)
 		{
@@ -117,7 +131,8 @@ ContextMenuListener, IZoomableEditor
     public WTableDirEditor(String columnName, boolean mandatory, boolean isReadOnly, boolean isUpdateable,
     		Lookup lookup)
     {
-    	super(new Combobox(), columnName, null, null, mandatory, isReadOnly, isUpdateable);
+    	super(new EditorCombobox(), columnName, null, null, mandatory, isReadOnly, isUpdateable);
+    	((EditorCombobox)getComponent()).editor = this;
     	if (lookup == null)
 		{
 			throw new IllegalArgumentException("Lookup cannot be null");
@@ -149,7 +164,7 @@ ContextMenuListener, IZoomableEditor
             //no need to refresh readonly lookup
             if (isReadWrite())
             	lookup.refresh();
-            refreshList();
+            refreshList();            
         }
         
         if (gridField != null) 
@@ -194,6 +209,12 @@ ContextMenuListener, IZoomableEditor
         	//	IDEMPIERE 90
         }
     }
+
+	private void createCacheListener() {
+		String columnName = lookup.getColumnName();
+		String tableName = columnName.substring(0, columnName.indexOf("."));
+		tableCacheListener = new CCacheListener(tableName, this);
+	}
 
     @Override
     public String getDisplay()
@@ -422,7 +443,39 @@ ContextMenuListener, IZoomableEditor
 	 */
     public void actionZoom()
 	{
-    	AEnv.actionZoom(lookup, getValue());
+    	if (getValue() == null) 
+    	{
+    		onNewRecord();
+    	}
+    	else
+    	{
+    		AEnv.actionZoom(lookup, getValue());
+    	}
+	}
+    
+    private void onNewRecord() {
+    	try
+        {
+    		MQuery query = new MQuery("");
+    		query.addRestriction("1=2");
+			query.setRecordCount(0);
+
+			SessionManager.getAppDesktop().openWindow(lookup.getZoom(query), query, new Callback<ADWindow>() {				
+				@Override
+				public void onCallback(ADWindow result) {
+					if(result == null)
+						return;
+		    					
+					GridTab tab = result.getADWindowContent().getActiveGridTab();
+					tab.dataNew(false);					
+				}
+			});			
+        }
+        catch (Exception e)
+        {
+            throw new ApplicationException(e.getMessage(), e);
+        }
+		
 	}
     
 	/**
@@ -562,4 +615,70 @@ ContextMenuListener, IZoomableEditor
 			|| (isReadWrite() && lookup.getSize() != getComponent().getItemCount())))
 			this.actionRefresh();
     }
+	
+	private static class EditorCombobox extends Combobox {
+		
+		/**
+		 * generated serial id
+		 */
+		private static final long serialVersionUID = 4540856986889452983L;
+		protected WTableDirEditor editor;
+
+		@Override
+		public void onPageAttached(Page newpage, Page oldpage) {
+			super.onPageAttached(newpage, oldpage);
+			if (editor.tableCacheListener == null) {
+				editor.createCacheListener();
+			}
+		}
+
+		@Override
+		public void onPageDetached(Page page) {
+			super.onPageDetached(page);
+			if (editor.tableCacheListener != null) {
+				CacheMgt.get().unregister(editor.tableCacheListener);
+				editor.tableCacheListener = null;
+			}
+		}
+	}
+	
+	private static class CCacheListener extends CCache<String, Object> {
+		/**
+		 * generated serial
+		 */
+		private static final long serialVersionUID = 3543247404379028327L;
+		private WTableDirEditor editor;
+		
+		protected CCacheListener(String tableName, WTableDirEditor editor) {
+			super(tableName, tableName, 0, true);
+			this.editor = editor;
+		}
+
+		@Override
+		public int reset() {			
+			if (editor.getComponent().getDesktop() != null && editor.isReadWrite()) {
+				refreshLookupList();
+			}
+			return 0;					
+		}
+
+		private void refreshLookupList() {
+			Executions.schedule(editor.getComponent().getDesktop(), new EventListener<Event>() {
+				@Override
+				public void onEvent(Event event) {
+					try {
+						if (editor.isReadWrite())
+							editor.actionRefresh();
+					} catch (Exception e) {}
+				}
+			}, new Event("onResetLookupList"));
+		}
+				
+		@Override
+		public void newRecord(int record_ID) {
+			if (editor.getComponent().getDesktop() != null && editor.isReadWrite()) {
+				refreshLookupList();
+			}
+		}
+	}
 }
