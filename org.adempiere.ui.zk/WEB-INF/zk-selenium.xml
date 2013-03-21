@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+	<!--
+		zk.xml Copyright (C) 2006 Potix Corporation. All Rights Reserved.
+	-->
+
+<zk>
+	<!-- id generator for selenium testing -->
+	<system-config>
+		<id-generator-class>org.adempiere.webui.AdempiereIdGenerator</id-generator-class>
+	</system-config>
+
+	<listener>
+    	<listener-class>org.adempiere.webui.UiLifeCycleListener</listener-class>
+	</listener>
+</zk>
