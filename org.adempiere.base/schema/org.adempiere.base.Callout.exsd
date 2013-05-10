@@ -1,0 +1,147 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- Schema file written by PDE -->
+<schema targetNamespace="org.adempiere.base" xmlns="http://www.w3.org/2001/XMLSchema">
+<annotation>
+      <appinfo>
+         <meta.schema plugin="org.adempiere.base" id="org.adempiere.base.Callout" name="Callout"/>
+      </appinfo>
+      <documentation>
+         This is the ADempiere Call extension point.
+
+Callouts provided by plugins are not entered into the application dictionary.
+Instead, you specify Table and Column in the extension declaration.
+      </documentation>
+   </annotation>
+
+   <element name="extension">
+      <annotation>
+         <appinfo>
+            <meta.element />
+         </appinfo>
+      </annotation>
+      <complexType>
+         <choice>
+            <element ref="callout" minOccurs="1" maxOccurs="unbounded"/>
+         </choice>
+         <attribute name="point" type="string" use="required">
+            <annotation>
+               <documentation>
+                  
+               </documentation>
+            </annotation>
+         </attribute>
+         <attribute name="id" type="string">
+            <annotation>
+               <documentation>
+                  
+               </documentation>
+            </annotation>
+         </attribute>
+         <attribute name="name" type="string">
+            <annotation>
+               <documentation>
+                  
+               </documentation>
+               <appinfo>
+                  <meta.attribute translatable="true"/>
+               </appinfo>
+            </annotation>
+         </attribute>
+      </complexType>
+   </element>
+
+   <element name="callout">
+      <complexType>
+         <attribute name="class" type="string" use="required">
+            <annotation>
+               <documentation>
+                  Implementation class for the org.adempiere.base.IColumnCallout interface
+               </documentation>
+               <appinfo>
+                  <meta.attribute kind="java" basedOn=":org.adempiere.base.IColumnCallout"/>
+               </appinfo>
+            </annotation>
+         </attribute>
+         <attribute name="tableName" type="string" use="required">
+            <annotation>
+               <documentation>
+                  Table name that this callout is for. Case sensitive and must match the tableName value in AD_Table.
+               </documentation>
+            </annotation>
+         </attribute>
+         <attribute name="columnName" type="string" use="required">
+            <annotation>
+               <documentation>
+                  Column name that this callout is for. Case sensitive and must match the columnName value in AD_Column
+               </documentation>
+            </annotation>
+         </attribute>
+         <attribute name="priority" type="string">
+            <annotation>
+               <documentation>
+                  numeric priority value, higher value is of higher priority.
+               </documentation>
+            </annotation>
+         </attribute>
+      </complexType>
+   </element>
+
+   <annotation>
+      <appinfo>
+         <meta.section type="since"/>
+      </appinfo>
+      <documentation>
+         1.0.0
+      </documentation>
+   </annotation>
+
+   <annotation>
+      <appinfo>
+         <meta.section type="examples"/>
+      </appinfo>
+      <documentation>
+         &lt;pre&gt;
+&lt;extension id=&quot;org.adempiere.extend.myCallout&quot; point=&quot;org.adempiere.base.Callout&quot;&gt;
+ &lt;callout class=&quot;org.adempiere.extend.MyCallout&quot; tableName=&quot;C_Order&quot; columnName=&quot;C_BPartner_ID&quot;&gt;
+ &lt;/callout&gt;
+&lt;/extension&gt;
+&lt;/pre&gt;
+      </documentation>
+   </annotation>
+
+   <annotation>
+      <appinfo>
+         <meta.section type="apiinfo"/>
+      </appinfo>
+      <documentation>
+         The class attribute must represent an implmentor of org.adempiere.base.IColumnCallout
+      </documentation>
+   </annotation>
+
+
+   <annotation>
+      <appinfo>
+         <meta.section type="copyright"/>
+      </appinfo>
+      <documentation>
+         This file is part of Adempiere ERP Bazaar http://www.adempiere.org.
+                                                                           
+ Copyright (C) Jorg Viola.
+ Copyright (C) Contributors.
+                                                                           
+ This program is free software; you can redistribute it and/or modify it   
+ under the terms version 2 of the GNU General Public License as published  
+ by the Free Software Foundation. This program is distributed in the hope  
+ that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.          
+ See the GNU General Public License for more details.                      
+ You should have received a copy of the GNU General Public License along   
+ with this program; if not, write to the Free Software Foundation, Inc.,   
+ 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.                    
+                                                                           
+ Contributors:                                                             
+   Heng Sin Low
+      </documentation>
+   </annotation>
+
+</schema>
