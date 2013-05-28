@@ -1,0 +1,11 @@
+{
+  Description   = "iDempiere";
+  Provides      = ("idempiere");
+  Requires      = ("postgresql-8.4");
+  Preference    = "Late";
+  Messages =
+  {
+    start = "Starting iDempiere";
+    stop  = "Stopping iDempiere";
+  };
+}

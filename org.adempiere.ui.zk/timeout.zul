@@ -1,0 +1,19 @@
+<?page title="iDempiere" contentType="text/html;charset=UTF-8" automaticTimeout="false" ?>
+<zk>
+<script defer="true">
+<![CDATA[
+	var callback = function(ok, val) {
+		if (ok && !!val)
+		{
+			window.location = val;
+		}
+		else
+		{
+			window.location = "sessiontimeout.zul";
+		}
+	};
+    
+    adempiere.store.get("zkTimeoutURL", callback);
+]]>	
+</script>
+</zk>
