@@ -2112,6 +2112,7 @@ public abstract class PO
 				}
 				else
 				{
+					validateUniqueIndex();
 					if (localTrx != null)
 						localTrx.rollback();
 					else
@@ -2131,6 +2132,7 @@ public abstract class PO
 				}
 				else
 				{
+					validateUniqueIndex();
 					if (localTrx != null)
 						localTrx.rollback();
 					else
@@ -4409,5 +4411,44 @@ public abstract class PO
 	    // default deserialization
 	    ois.defaultReadObject();
 	    log = CLogger.getCLogger(getClass());
+	}
+	
+	private void validateUniqueIndex()
+	{
+		ValueNamePair ppE = CLogger.retrieveError();
+		if (ppE != null)
+		{
+			String msg = ppE.getValue();
+			String info = ppE.getName();
+			if ("DBExecuteError".equals(msg))
+				info = "DBExecuteError:" + info;
+			//	Unique Constraint
+			Exception e = CLogger.retrieveException();
+			if (DBException.isUniqueContraintError(e))
+			{
+				boolean found = false;
+				String dbIndexName = DB.getDatabase().getNameOfUniqueConstraintError(e);
+				if (log.isLoggable(Level.FINE)) log.fine("dbIndexName=" + dbIndexName);
+				MTableIndex[] indexes = MTableIndex.get(MTable.get(getCtx(), get_Table_ID()));
+				for (MTableIndex index : indexes)
+				{
+					if (dbIndexName.equalsIgnoreCase(index.getName()))
+					{
+						if (index.getAD_Message_ID() > 0)
+						{
+							MMessage message = MMessage.get(getCtx(), index.getAD_Message_ID());
+							log.saveError("SaveError", Msg.getMsg(getCtx(), message.getValue()));
+							found = true;
+						}
+						break;
+					}
+				}
+				
+				if (!found)
+					log.saveError(msg, info);
+			}
+			else
+				log.saveError(msg, info);
+		}
 	}
 }   //  PO
