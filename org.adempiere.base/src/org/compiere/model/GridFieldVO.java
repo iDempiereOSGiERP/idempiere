@@ -46,7 +46,7 @@ public class GridFieldVO implements Serializable
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -767158053380874050L;
+	private static final long serialVersionUID = 7595228091613559685L;
 
 	/**
 	 *  Return the SQL statement used for the MFieldVO.create
@@ -192,6 +192,8 @@ public class GridFieldVO implements Serializable
 					vo.MandatoryLogic = rs.getString (i);	
 				else if (columnName.equalsIgnoreCase("ObscureType"))
 					vo.ObscureType = rs.getString (i);
+				else if (columnName.equalsIgnoreCase("IsDefaultFocus"))
+					vo.IsDefaultFocus = "Y".equals(rs.getString(i));
 				//
 				else if (columnName.equalsIgnoreCase("AD_Reference_Value_ID"))
 					vo.AD_Reference_Value_ID = rs.getInt(i);
@@ -571,7 +573,8 @@ public class GridFieldVO implements Serializable
 	public String       ReadOnlyLogic = "";
 	/**	Display Obscure	*/
 	public String		ObscureType = null;
-
+	/** Default Focus	*/
+	public boolean		IsDefaultFocus = false;
 
 	/**	Lookup Validation code	*/
 	public String		ValidationCode = "";
@@ -737,6 +740,7 @@ public class GridFieldVO implements Serializable
 		clone.ReadOnlyLogic = ReadOnlyLogic;
 		clone.MandatoryLogic = MandatoryLogic;
 		clone.ObscureType = ObscureType;
+		clone.IsDefaultFocus = IsDefaultFocus;
 		//	Lookup
 		clone.ValidationCode = ValidationCode;
 		clone.AD_Reference_Value_ID = AD_Reference_Value_ID;
