@@ -46,7 +46,9 @@ public class GridFieldVO implements Serializable
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -767158053380874050L;
+	private static final long serialVersionUID = 7595228091613559685L;
+
+	
 
 	/**
 	 *  Return the SQL statement used for the MFieldVO.create
@@ -192,6 +194,8 @@ public class GridFieldVO implements Serializable
 					vo.MandatoryLogic = rs.getString (i);	
 				else if (columnName.equalsIgnoreCase("ObscureType"))
 					vo.ObscureType = rs.getString (i);
+				else if (columnName.equalsIgnoreCase("IsDefaultFocus"))
+					vo.IsDefaultFocus = "Y".equals(rs.getString(i));
 				//
 				else if (columnName.equalsIgnoreCase("AD_Reference_Value_ID"))
 					vo.AD_Reference_Value_ID = rs.getInt(i);
@@ -221,6 +225,8 @@ public class GridFieldVO implements Serializable
 					vo.NumLines=rs.getInt(i);
 				else if (columnName.equalsIgnoreCase("IsToolbarButton"))
 					vo.IsToolbarButton  = "Y".equals(rs.getString(i));
+				else if (columnName.equalsIgnoreCase("AD_Chart_ID"))
+					vo.AD_Chart_ID = rs.getInt (i);
 			}
 			if (vo.Header == null)
 				vo.Header = vo.ColumnName;
@@ -571,7 +577,8 @@ public class GridFieldVO implements Serializable
 	public String       ReadOnlyLogic = "";
 	/**	Display Obscure	*/
 	public String		ObscureType = null;
-
+	/** Default Focus	*/
+	public boolean		IsDefaultFocus = false;
 
 	/**	Lookup Validation code	*/
 	public String		ValidationCode = "";
@@ -609,6 +616,8 @@ public class GridFieldVO implements Serializable
 	public boolean IsAllowCopy = false;
 	/** Toolbar Button **/
 	public boolean IsToolbarButton = false;
+	
+	public int AD_Chart_ID = 0;
 	
 	/**
 	 *  Set Context including contained elements
@@ -710,6 +719,7 @@ public class GridFieldVO implements Serializable
 		clone.DefaultValue = DefaultValue;
 		clone.IsMandatory = IsMandatory;
 		clone.IsReadOnly = IsReadOnly;
+		clone.AD_Chart_ID = AD_Chart_ID;
 		clone.IsUpdateable = IsUpdateable;
 		clone.IsAlwaysUpdateable = IsAlwaysUpdateable;
 		clone.IsHeading = IsHeading;
@@ -737,6 +747,7 @@ public class GridFieldVO implements Serializable
 		clone.ReadOnlyLogic = ReadOnlyLogic;
 		clone.MandatoryLogic = MandatoryLogic;
 		clone.ObscureType = ObscureType;
+		clone.IsDefaultFocus = IsDefaultFocus;
 		//	Lookup
 		clone.ValidationCode = ValidationCode;
 		clone.AD_Reference_Value_ID = AD_Reference_Value_ID;
