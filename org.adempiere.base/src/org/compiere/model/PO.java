@@ -105,7 +105,7 @@ public abstract class PO
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -341748204028700040L;
+	private static final long serialVersionUID = -591429462738850345L;
 
 	public static final String LOCAL_TRX_PREFIX = "POSave";
 
@@ -253,7 +253,7 @@ public abstract class PO
 	private HashMap<String,String>	m_custom = null;
 	/** Attributes	 				*/
 	private HashMap<String,Object>	m_attributes = null;
-	
+
 	/** Zero Integer				*/
 	protected static final Integer I_ZERO = new Integer(0);
 	/** Accounting Columns			*/
@@ -2114,6 +2114,7 @@ public abstract class PO
 				}
 				else
 				{
+					validateUniqueIndex();
 					if (localTrx != null)
 						localTrx.rollback();
 					else
@@ -2133,6 +2134,7 @@ public abstract class PO
 				}
 				else
 				{
+					validateUniqueIndex();
 					if (localTrx != null)
 						localTrx.rollback();
 					else
@@ -4532,5 +4534,44 @@ public abstract class PO
 	
 	public HashMap<String,Object> get_Attributes() {
 		return m_attributes;
+	}
+
+	private void validateUniqueIndex()
+	{
+		ValueNamePair ppE = CLogger.retrieveError();
+		if (ppE != null)
+		{
+			String msg = ppE.getValue();
+			String info = ppE.getName();
+			if ("DBExecuteError".equals(msg))
+				info = "DBExecuteError:" + info;
+			//	Unique Constraint
+			Exception e = CLogger.retrieveException();
+			if (DBException.isUniqueContraintError(e))
+			{
+				boolean found = false;
+				String dbIndexName = DB.getDatabase().getNameOfUniqueConstraintError(e);
+				if (log.isLoggable(Level.FINE)) log.fine("dbIndexName=" + dbIndexName);
+				MTableIndex[] indexes = MTableIndex.get(MTable.get(getCtx(), get_Table_ID()));
+				for (MTableIndex index : indexes)
+				{
+					if (dbIndexName.equalsIgnoreCase(index.getName()))
+					{
+						if (index.getAD_Message_ID() > 0)
+						{
+							MMessage message = MMessage.get(getCtx(), index.getAD_Message_ID());
+							log.saveError("SaveError", Msg.getMsg(getCtx(), message.getValue()));
+							found = true;
+						}
+						break;
+					}
+				}
+				
+				if (!found)
+					log.saveError(msg, info);
+			}
+			else
+				log.saveError(msg, info);
+		}
 	}
 }   //  PO

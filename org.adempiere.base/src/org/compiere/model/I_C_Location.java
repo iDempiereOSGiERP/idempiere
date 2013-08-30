@@ -49,6 +49,19 @@ public interface I_C_Location
 	  */
 	public int getAD_Client_ID();
 
+    /** Column name AD_Org_ID */
+    public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
+
+	/** Set Organization.
+	  * Organizational entity within client
+	  */
+	public void setAD_Org_ID (int AD_Org_ID);
+
+	/** Get Organization.
+	  * Organizational entity within client
+	  */
+	public int getAD_Org_ID();
+
     /** Column name Address1 */
     public static final String COLUMNNAME_Address1 = "Address1";
 
@@ -101,18 +114,16 @@ public interface I_C_Location
 	  */
 	public String getAddress4();
 
-    /** Column name AD_Org_ID */
-    public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
+    /** Column name C_AddressValidation_ID */
+    public static final String COLUMNNAME_C_AddressValidation_ID = "C_AddressValidation_ID";
 
-	/** Set Organization.
-	  * Organizational entity within client
-	  */
-	public void setAD_Org_ID (int AD_Org_ID);
+	/** Set Address Validation	  */
+	public void setC_AddressValidation_ID (int C_AddressValidation_ID);
 
-	/** Get Organization.
-	  * Organizational entity within client
-	  */
-	public int getAD_Org_ID();
+	/** Get Address Validation	  */
+	public int getC_AddressValidation_ID();
+
+	public org.compiere.model.I_C_AddressValidation getC_AddressValidation() throws RuntimeException;
 
     /** Column name C_City_ID */
     public static final String COLUMNNAME_C_City_ID = "C_City_ID";
@@ -144,19 +155,6 @@ public interface I_C_Location
 
 	public org.compiere.model.I_C_Country getC_Country() throws RuntimeException;
 
-    /** Column name City */
-    public static final String COLUMNNAME_City = "City";
-
-	/** Set City.
-	  * Identifies a City
-	  */
-	public void setCity (String City);
-
-	/** Get City.
-	  * Identifies a City
-	  */
-	public String getCity();
-
     /** Column name C_Location_ID */
     public static final String COLUMNNAME_C_Location_ID = "C_Location_ID";
 
@@ -179,6 +177,34 @@ public interface I_C_Location
 	/** Get C_Location_UU	  */
 	public String getC_Location_UU();
 
+    /** Column name C_Region_ID */
+    public static final String COLUMNNAME_C_Region_ID = "C_Region_ID";
+
+	/** Set Region.
+	  * Identifies a geographical Region
+	  */
+	public void setC_Region_ID (int C_Region_ID);
+
+	/** Get Region.
+	  * Identifies a geographical Region
+	  */
+	public int getC_Region_ID();
+
+	public org.compiere.model.I_C_Region getC_Region() throws RuntimeException;
+
+    /** Column name City */
+    public static final String COLUMNNAME_City = "City";
+
+	/** Set City.
+	  * Identifies a City
+	  */
+	public void setCity (String City);
+
+	/** Get City.
+	  * Identifies a City
+	  */
+	public String getCity();
+
     /** Column name Created */
     public static final String COLUMNNAME_Created = "Created";
 
@@ -195,21 +221,6 @@ public interface I_C_Location
 	  */
 	public int getCreatedBy();
 
-    /** Column name C_Region_ID */
-    public static final String COLUMNNAME_C_Region_ID = "C_Region_ID";
-
-	/** Set Region.
-	  * Identifies a geographical Region
-	  */
-	public void setC_Region_ID (int C_Region_ID);
-
-	/** Get Region.
-	  * Identifies a geographical Region
-	  */
-	public int getC_Region_ID();
-
-	public org.compiere.model.I_C_Region getC_Region() throws RuntimeException;
-
     /** Column name IsActive */
     public static final String COLUMNNAME_IsActive = "IsActive";
 
@@ -222,6 +233,19 @@ public interface I_C_Location
 	  * The record is active in the system
 	  */
 	public boolean isActive();
+
+    /** Column name IsValid */
+    public static final String COLUMNNAME_IsValid = "IsValid";
+
+	/** Set Valid.
+	  * Element is valid
+	  */
+	public void setIsValid (boolean IsValid);
+
+	/** Get Valid.
+	  * Element is valid
+	  */
+	public boolean isValid();
 
     /** Column name Postal */
     public static final String COLUMNNAME_Postal = "Postal";
@@ -262,6 +286,19 @@ public interface I_C_Location
 	  */
 	public String getRegionName();
 
+    /** Column name Result */
+    public static final String COLUMNNAME_Result = "Result";
+
+	/** Set Result.
+	  * Result of the action taken
+	  */
+	public void setResult (String Result);
+
+	/** Get Result.
+	  * Result of the action taken
+	  */
+	public String getResult();
+
     /** Column name Updated */
     public static final String COLUMNNAME_Updated = "Updated";
 
@@ -277,4 +314,13 @@ public interface I_C_Location
 	  * User who updated this records
 	  */
 	public int getUpdatedBy();
+
+    /** Column name ValidateAddress */
+    public static final String COLUMNNAME_ValidateAddress = "ValidateAddress";
+
+	/** Set Validate Address	  */
+	public void setValidateAddress (String ValidateAddress);
+
+	/** Get Validate Address	  */
+	public String getValidateAddress();
 }
