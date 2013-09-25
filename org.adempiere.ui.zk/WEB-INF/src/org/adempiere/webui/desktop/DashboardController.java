@@ -23,8 +23,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.apps.graph.WGraph;
 import org.adempiere.webui.apps.graph.WPerformanceDetail;
@@ -37,6 +39,7 @@ import org.adempiere.webui.theme.ThemeManager;
 import org.adempiere.webui.window.ZkReportViewerProvider;
 import org.compiere.model.I_AD_Menu;
 import org.compiere.model.MDashboardContent;
+import org.compiere.model.MDashboardContentAccess;
 import org.compiere.model.MDashboardPreference;
 import org.compiere.model.MGoal;
 import org.compiere.model.MMenu;
@@ -95,7 +98,7 @@ public class DashboardController implements EventListener<Event> {
 	
 	public DashboardController() {
 		dashboardLayout = new Anchorlayout();
-        dashboardLayout.setSclass("dashboard-layout");
+        dashboardLayout.setSclass("dashboard-layout slimScroll");
         dashboardLayout.setVflex("1");
         dashboardLayout.setHflex("1");
         
@@ -105,10 +108,9 @@ public class DashboardController implements EventListener<Event> {
 	}
 	
 	public void render(Component parent, IDesktop desktopImpl, boolean isShowInDashboard) {
-        parent.appendChild(dashboardLayout);
-        dashboardLayout.setSclass("slimScroll");
+		parent.appendChild(dashboardLayout);
+		dashboardLayout.getChildren().clear();
         
-
         if (!dashboardLayout.getDesktop().isServerPushEnabled())
         	dashboardLayout.getDesktop().enableServerPush(true);
         
@@ -127,17 +129,30 @@ public class DashboardController implements EventListener<Event> {
         	int AD_Role_ID = Env.getAD_Role_ID(Env.getCtx());
         	
         	MDashboardPreference[] dps = MDashboardPreference.getForSession(AD_User_ID, AD_Role_ID);
-        	if (dps.length == 0)
-        		createDashboardPreference();
+        	MDashboardContent [] dcs =  MDashboardContentAccess.get(Env.getCtx(), AD_Role_ID, AD_User_ID, null);
         	
-        	dps = MDashboardPreference.getForSession(isShowInDashboard, AD_User_ID, AD_Role_ID); // based on user and role       	
+        	if(dps.length == 0){
+        	    createDashboardPreference(AD_User_ID, AD_Role_ID);
+        	    dps = MDashboardPreference.getForSession(AD_User_ID, AD_Role_ID);
+        	}else{
+        		if(updatePreferences(dps, dcs,Env.getCtx())){        			
+        			dps = MDashboardPreference.getForSession(AD_User_ID, AD_Role_ID);
+        		}
+        	}
+        	               
         	noOfCols = MDashboardPreference.getForSessionColumnCount(isShowInDashboard, AD_User_ID, AD_Role_ID);
             
         	int dashboardWidth = isShowInDashboard ? DEFAULT_DASHBOARD_WIDTH : 100;
             width = noOfCols <= 0 ? dashboardWidth : dashboardWidth / noOfCols;
             int extraWidth = 100 - (noOfCols <= 0 ? dashboardWidth : width * noOfCols) - (100 - dashboardWidth - 1);
-            for (final MDashboardPreference dp : dps)
-			{            	            	
+            for (final MDashboardPreference dp : dps)            	
+			{            	            	            	
+            	if(!dp.isActive())
+            		continue;
+            	
+            	if (dp.isShowInDashboard() != isShowInDashboard)
+            		continue;
+            	
             	MDashboardContent dc = new MDashboardContent(dp.getCtx(), dp.getPA_DashboardContent_ID(), dp.get_TrxName());
             	
 	        	int columnNo = dp.getColumnNo();
@@ -334,6 +349,7 @@ public class DashboardController implements EventListener<Event> {
 		                }
 					} catch (Exception e) {
 						logger.log(Level.WARNING, "Failed to create components. zul="+url, e);
+						throw new AdempiereException(e);
 					}
 	        	}
 
@@ -508,15 +524,15 @@ public class DashboardController implements EventListener<Event> {
 		}
 	}
 	
-	private void createDashboardPreference()
+	private void createDashboardPreference(int AD_User_ID, int AD_Role_ID)
 	{
-		MDashboardContent[] dcs = MDashboardContent.getForSession(0, 0);
+		MDashboardContent[] dcs = MDashboardContentAccess.get(Env.getCtx(),AD_Role_ID, AD_User_ID, null);
 		for (MDashboardContent dc : dcs)
 		{
 			MDashboardPreference preference = new MDashboardPreference(Env.getCtx(), 0, null);
-			preference.setAD_Org_ID(Env.getAD_Org_ID(Env.getCtx()));
-			preference.setAD_Role_ID(Env.getAD_Role_ID(Env.getCtx()));
-			preference.set_ValueNoCheck("AD_User_ID", Env.getAD_User_ID(Env.getCtx()));
+			preference.setAD_Org_ID(0);
+			preference.setAD_Role_ID(AD_Role_ID);
+			preference.set_ValueNoCheck("AD_User_ID", AD_User_ID);
 			preference.setColumnNo(dc.getColumnNo());
 			preference.setIsCollapsedByDefault(dc.isCollapsedByDefault());
 			preference.setIsShowInDashboard(dc.isShowInDashboard());
@@ -526,6 +542,47 @@ public class DashboardController implements EventListener<Event> {
 			if (!preference.save())
 				logger.log(Level.SEVERE, "Failed to create dashboard preference " + preference.toString());
 		}
+	}
+	
+	
+	private boolean updatePreferences(MDashboardPreference[] dps,MDashboardContent[] dcs, Properties ctx) {
+		boolean change = false;
+		for (int i = 0; i < dcs.length; i++) {
+			
+			boolean isNew = true;
+			for (int j = 0; j < dps.length; j++) {
+				if (dps[j].getPA_DashboardContent_ID() == dcs[i].getPA_DashboardContent_ID()) {
+					isNew = false;
+				}
+			}
+			if (isNew) {
+				MDashboardPreference preference = new MDashboardPreference(ctx,0, null);
+				preference.setAD_Org_ID(0);
+				preference.setAD_Role_ID(Env.getAD_Role_ID(ctx));
+				preference.set_ValueNoCheck("AD_User_ID",Env.getAD_User_ID(ctx));
+				preference.setColumnNo(dcs[i].getColumnNo());
+				preference.setIsCollapsedByDefault(dcs[i].isCollapsedByDefault());
+				preference.setIsShowInDashboard(dcs[i].isShowInDashboard());
+				preference.setLine(dcs[i].getLine());
+				preference.setPA_DashboardContent_ID(dcs[i].getPA_DashboardContent_ID());
+
+				preference.saveEx();
+				if (!change) change = true;
+			}
+		}
+		for (int i = 0; i < dps.length; i++) {
+			boolean found = false;
+			for (int j = 0; j < dcs.length; j++) {
+				if (dcs[j].getPA_DashboardContent_ID() == dps[i].getPA_DashboardContent_ID()) {
+					found = true;
+				}
+			}
+			if (!found) {
+				dps[i].deleteEx(true);
+				if (!change) change = true;
+			}
+		}
+		return change;
 	}
 	
 	private void saveDashboardPreference(Vlayout layout)
