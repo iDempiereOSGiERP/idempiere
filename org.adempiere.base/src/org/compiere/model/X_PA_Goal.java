@@ -26,14 +26,14 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Model for PA_Goal
  *  @author iDempiere (generated) 
- *  @version Release 1.0c - $Id$ */
+ *  @version Release 2.0 - $Id$ */
 public class X_PA_Goal extends PO implements I_PA_Goal, I_Persistent 
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20130626L;
+	private static final long serialVersionUID = 20131031L;
 
     /** Standard Constructor */
     public X_PA_Goal (Properties ctx, int PA_Goal_ID, String trxName)
@@ -157,7 +157,7 @@ public class X_PA_Goal extends PO implements I_PA_Goal, I_Persistent
 	public static final String CHARTTYPE_WaterfallChart = "WC";
 	/** Set Chart Type.
 		@param ChartType 
-		Type fo chart to render
+		Type of chart to render
 	  */
 	public void setChartType (String ChartType)
 	{
@@ -166,7 +166,7 @@ public class X_PA_Goal extends PO implements I_PA_Goal, I_Persistent
 	}
 
 	/** Get Chart Type.
-		@return Type fo chart to render
+		@return Type of chart to render
 	  */
 	public String getChartType () 
 	{
