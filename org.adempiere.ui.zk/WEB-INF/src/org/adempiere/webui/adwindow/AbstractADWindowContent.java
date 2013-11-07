@@ -25,11 +25,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.logging.Level;
 
@@ -46,9 +44,6 @@ import org.adempiere.webui.apps.HelpWindow;
 import org.adempiere.webui.apps.ProcessModalDialog;
 import org.adempiere.webui.apps.form.WCreateFromFactory;
 import org.adempiere.webui.apps.form.WCreateFromWindow;
-import org.adempiere.webui.component.Button;
-import org.adempiere.webui.component.ConfirmPanel;
-import org.adempiere.webui.component.Listbox;
 import org.adempiere.webui.component.Mask;
 import org.adempiere.webui.component.ProcessInfoDialog;
 import org.adempiere.webui.component.Window;
@@ -60,7 +55,6 @@ import org.adempiere.webui.event.ActionListener;
 import org.adempiere.webui.event.DialogEvents;
 import org.adempiere.webui.event.ToolbarListener;
 import org.adempiere.webui.exception.ApplicationException;
-import org.adempiere.webui.factory.ButtonFactory;
 import org.adempiere.webui.panel.ADForm;
 import org.adempiere.webui.panel.InfoPanel;
 import org.adempiere.webui.panel.WAttachment;
@@ -84,12 +78,12 @@ import org.compiere.model.GridTab;
 import org.compiere.model.GridTable;
 import org.compiere.model.GridWindow;
 import org.compiere.model.GridWindowVO;
-import org.compiere.model.Lookup;
 import org.compiere.model.MImage;
 import org.compiere.model.MProcess;
 import org.compiere.model.MQuery;
 import org.compiere.model.MRecentItem;
 import org.compiere.model.MRole;
+import org.compiere.model.MWindow;
 import org.compiere.model.X_AD_CtxHelp;
 import org.compiere.process.DocAction;
 import org.compiere.process.ProcessInfo;
@@ -97,7 +91,6 @@ import org.compiere.process.ProcessInfoLog;
 import org.compiere.process.ProcessInfoUtil;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
-import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
@@ -115,8 +108,6 @@ import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zul.Column;
 import org.zkoss.zul.Columns;
 import org.zkoss.zul.Div;
-import org.zkoss.zul.Hbox;
-import org.zkoss.zul.Listitem;
 import org.zkoss.zul.Menuitem;
 import org.zkoss.zul.Menupopup;
 import org.zkoss.zul.Window.Mode;
@@ -312,7 +303,12 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 		boolean autoNew = Env.isAutoNew(ctx);
 		Env.setAutoNew(ctx, curWindowNo, autoNew);
 
-        
+        // WindowName variable preserved for backward compatibility
+        // please consider it as DEPRECATED and use _WinInfo_WindowName instead 
+        Env.setContext(ctx, curWindowNo, "WindowName", gridWindow.getName()); // deprecated
+        Env.setContext(ctx, curWindowNo, "_WinInfo_WindowName", gridWindow.getName());
+        Env.setContext(ctx, curWindowNo, "_WinInfo_AD_Window_ID", gridWindow.getAD_Window_ID());
+        Env.setContext(ctx, curWindowNo, "_WinInfo_AD_Window_UU", gridWindow.getAD_Window_UU());
 
         // Set SO/AutoNew for Window
         Env.setContext(ctx, curWindowNo, "IsSOTrx", gridWindow.isSOTrx());
@@ -348,12 +344,6 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
             if (tab == 0 && gridTab == null && m_findCancelled)
             	return false;
         }
-        // WindowName variable preserved for backward compatibility
-        // please consider it as DEPRECATED and use _WinInfo_WindowName instead 
-        Env.setContext(ctx, curWindowNo, "WindowName", gridWindow.getName()); // deprecated
-        Env.setContext(ctx, curWindowNo, "_WinInfo_WindowName", gridWindow.getName());
-        Env.setContext(ctx, curWindowNo, "_WinInfo_AD_Window_ID", gridWindow.getAD_Window_ID());
-        Env.setContext(ctx, curWindowNo, "_WinInfo_AD_Window_UU", gridWindow.getAD_Window_UU());
 
         if (gridTab != null)
         	gridTab.getTableModel().setChanged(false);
@@ -634,17 +624,11 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
         }
 
         //
-        StringBuffer where = new StringBuffer();
+		StringBuffer where = new StringBuffer(Env.parseContext(ctx, curWindowNo, mTab.getWhereExtended(), false));
         // Query automatically if high volume and no query
         boolean require = mTab.isHighVolume();
         if (!require && !m_onlyCurrentRows) // No Trx Window
         {
-            String wh1 = Env.parseContext(ctx, curWindowNo, mTab.getWhereExtended(), false);
-            if (wh1 == null || wh1.length() == 0)
-                wh1 = mTab.getWhereClause();
-            if (wh1 != null && wh1.length() > 0)
-                where.append(wh1);
-            //
             if (query != null)
             {
                 String wh2 = query.getWhereClause();
@@ -975,22 +959,31 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
     	//Deepak-Enabling customize button IDEMPIERE-364
         if(!(adTabbox.getSelectedTabpanel() instanceof ADSortTab))
         	toolbar.enableCustomize(((ADTabpanel)adTabbox.getSelectedTabpanel()).isGridView());
+        if (adTabbox.getSelectedTabpanel().isGridView()) 
+        {
+        	toolbar.enableDeleteSelection(toolbar.isDeleteEnable());
+        }
+        else
+        {
+        	toolbar.enableDeleteSelection(false);
+        }
     	focusToActivePanel();
     }
 
-    /**
-     * @return boolean
+	/**
+     * @param callback
      */
-    public boolean onExit()
+    public void onExit(Callback<Boolean> callback)
     {
     	if (!boolChanges)
     	{
-    		return true;
+    		callback.onCallback(Boolean.TRUE);
     	}
     	else
-    		FDialog.info(this.curWindowNo, null, "SaveBeforeClose");
-
-    	return false;
+    	{
+    		FDialog.ask(curWindowNo, null, "CloseUnSave?", callback);
+    	}
+    	
     }
 
     /**
@@ -1287,7 +1280,34 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 	        if (adTabbox.getSelectedGridTab() != null && adTabbox.getSelectedGridTab().isQueryActive())
 	            dbInfo = "[ " + dbInfo + " ]";
 	        breadCrumb.setStatusDB(dbInfo, e);
-    	} else if (adTabbox.getSelectedDetailADTabpanel() == null)
+
+	        String prefix = null;
+	        if (dbInfo.contains("*"))
+	        	prefix = "*";
+
+	        String titleLogic = null;
+	        int windowID = getADTab().getSelectedGridTab().getAD_Window_ID();
+	        if (windowID > 0) {
+	        	titleLogic = MWindow.get(Env.getCtx(), windowID).getTitleLogic();
+	        }
+	        String header = null;
+	        if (! Util.isEmpty(titleLogic)) {
+		        StringBuilder sb = new StringBuilder();
+		        if (prefix != null)
+		        	sb.append(prefix);
+				sb.append(Env.getContext(ctx, curWindowNo, "_WinInfo_WindowName", false)).append(": ");
+				titleLogic = Env.parseContext(Env.getCtx(), curWindowNo, titleLogic, false, true);
+        		sb.append(titleLogic);
+        		header = sb.toString().trim();
+        		if (header.endsWith(":"))
+        			header = header.substring(0, header.length()-1);
+	        }
+	        if (Util.isEmpty(header))
+	        	header = AEnv.getDialogHeader(Env.getCtx(), curWindowNo, prefix);
+
+	        SessionManager.getAppDesktop().setTabTitle(header);
+    	}
+    	else if (adTabbox.getSelectedDetailADTabpanel() == null)
     	{
     		return;
     	}
@@ -1425,6 +1445,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 	        toolbar.enableCopy(!changed && insertRecord && !tabPanel.getGridTab().isSortTab() && adTabbox.getSelectedGridTab().getRowCount()>0);
 	        toolbar.enableRefresh(!changed);
 	        toolbar.enableDelete(!changed && !readOnly && !tabPanel.getGridTab().isSortTab() && !processed);
+	        toolbar.enableDeleteSelection(!changed && !readOnly && !tabPanel.getGridTab().isSortTab() && !processed && tabPanel.isGridView());
 	        //
 	        if (readOnly && adTabbox.getSelectedGridTab().isAlwaysUpdateField())
 	        {
@@ -1470,6 +1491,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
             toolbar.enableNew(true);
             toolbar.enableCopy(false);
             toolbar.enableDelete(false);
+            toolbar.enableDeleteSelection(false);
         }
 
         //  Transaction info
@@ -1647,6 +1669,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 			            toolbar.enableNew(false);
 			            toolbar.enableCopy(false);
 			            toolbar.enableDelete(false);
+			            toolbar.enableDeleteSelection(false);
 			            breadCrumb.enableFirstNavigation(adTabbox.getSelectedGridTab().getCurrentRow() > 0);
 			            breadCrumb.enableLastNavigation(adTabbox.getSelectedGridTab().getCurrentRow() + 1 < adTabbox.getSelectedGridTab().getRowCount());
 			            toolbar.enableTabNavigation(breadCrumb.hasParentLink(), adTabbox.getSelectedDetailADTabpanel() != null);
@@ -1695,6 +1718,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
             toolbar.enableNew(false);
             toolbar.enableCopy(false);
             toolbar.enableDelete(false);
+            toolbar.enableDeleteSelection(false);
             breadCrumb.enableFirstNavigation(adTabbox.getSelectedGridTab().getCurrentRow() > 0);
             breadCrumb.enableLastNavigation(adTabbox.getSelectedGridTab().getCurrentRow() + 1 < adTabbox.getSelectedGridTab().getRowCount());
             toolbar.enableTabNavigation(false);
@@ -1717,6 +1741,8 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
     {
         if (adTabbox.getSelectedGridTab() == null)
             return;
+
+        clearTitleRelatedContext();
 
         onSave(false, false, new Callback<Boolean>() {
 
@@ -1798,6 +1824,8 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
     	}
     	else
     	{
+    		clearTitleRelatedContext();
+
 	        adTabbox.dataIgnore();
 	        toolbar.enableIgnore(false);
 	        if (newrecod) {
@@ -2044,197 +2072,42 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 	 */
     public void onDeleteSelection()
 	{
-		if (adTabbox.getSelectedGridTab().isReadOnly())
+    	if (adTabbox.getSelectedGridTab().isReadOnly() || !adTabbox.getSelectedTabpanel().isGridView())
         {
             return;
         }
 
-		//show table with deletion rows -> value, name...
-		final Window messagePanel = new Window();
-		messagePanel.setBorder("normal");
-		messagePanel.setWidth("600px");
-		messagePanel.setTitle(Msg.getMsg(Env.getCtx(), "Find").replaceAll("&", "") + ": " + title);
-        messagePanel.setClosable(true);
-        messagePanel.setSizable(true);
-        messagePanel.setWidgetAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "deleteSelection");
-
-		final Listbox listbox = new Listbox();
-		listbox.setHeight("400px");
-
-		// Display the first 5 fields data exclude Organization, Client and YesNo field data
-		ArrayList<String> columnNames = new ArrayList<String>();
-		GridField[] fields = adTabbox.getSelectedGridTab().getFields();
-		if(adTabbox.getSelectedGridTab().getField("DocumentNo")!=null){
-			columnNames.add(adTabbox.getSelectedGridTab().getField("DocumentNo").getColumnName());
-		}
-		if(adTabbox.getSelectedGridTab().getField("Line")!=null){
-			columnNames.add(adTabbox.getSelectedGridTab().getField("Line").getColumnName());
-		}
-		if(adTabbox.getSelectedGridTab().getField("Value")!=null){
-			columnNames.add(adTabbox.getSelectedGridTab().getField("Value").getColumnName());
-		}
-		if(adTabbox.getSelectedGridTab().getField("Name")!=null){
-			columnNames.add(adTabbox.getSelectedGridTab().getField("Name").getColumnName());
-		}
-		for(int i = 0; i < fields.length; i++)
-		{
-			GridField field = fields[i];
-			if(field.getColumnName().equalsIgnoreCase("AD_Org_ID")
-					|| field.getColumnName().equalsIgnoreCase("AD_Client_ID")
-					|| field.getDisplayType() == DisplayType.YesNo)
-				continue;
-			if (!columnNames.contains(field.getColumnName()))
-			{
-				columnNames.add(field.getColumnName());
-			}
-		}
-
-		ArrayList<String> data = new ArrayList<String>();
-		int noOfRows = adTabbox.getSelectedGridTab().getRowCount();
-		for(int i=0; i<noOfRows; i++)
-		{
-			StringBuffer displayValue = new StringBuffer();
-			if("".equals(adTabbox.getSelectedGridTab().getKeyColumnName()))
-			{
-				ArrayList<String> parentColumnNames = adTabbox.getSelectedGridTab().getParentColumnNames();
-				for (Iterator<String> iter = parentColumnNames.iterator(); iter.hasNext();)
-				{
-					String columnName = iter.next();
-					GridField field = adTabbox.getSelectedGridTab().getField(columnName);
-					if(field.isLookup()){
-						Lookup lookup = field.getLookup();
-						if (lookup != null){
-							displayValue = displayValue.append(lookup.getDisplay(adTabbox.getSelectedGridTab().getValue(i,columnName))).append(" | ");
-						} else {
-							displayValue = displayValue.append(adTabbox.getSelectedGridTab().getValue(i,columnName)).append(" | ");
-						}
-					} else {
-						displayValue = displayValue.append(adTabbox.getSelectedGridTab().getValue(i,columnName)).append(" | ");
-					}
-				}
-			} else {
-				displayValue = displayValue.append(adTabbox.getSelectedGridTab().getValue(i,adTabbox.getSelectedGridTab().getKeyColumnName()));
-			}
-
-			int count = 0;
-			for(int j=0; j < columnNames.size() && count < 5; j++)
-			{
-				Object value = adTabbox.getSelectedGridTab().getValue(i, columnNames.get(j));
-				if(value == null) continue; // skip when value is null
-				String text = value.toString().trim();
-				if(text.length() == 0) continue; // skip when value is empty
-				GridField field = adTabbox.getSelectedGridTab().getField(columnNames.get(j));
-				if(field != null)
-				{
-					if (field.isLookup())
-					{
-						Lookup lookup = field.getLookup();
-						if (lookup != null)
-							text = lookup.getDisplay(value);
-					}
-					else if (DisplayType.isDate(field.getDisplayType()))
-					{
-						text = DisplayType.getDateFormat(field.getDisplayType()).format(value);
-					}
-				}
-				if(text.length() > 30)
-					text = text.substring(0, 30); // display the first 30 characters
-				displayValue = displayValue.append(" | ").append(text);
-				count++;
-			}
-
-			data.add(displayValue.toString());
-		}
-
-		for(int i = 0; i < data.size(); i++)
-		{
-			String record = data.get(i);
-			listbox.appendItem(record, record);
-		}
-
-		listbox.setMultiple(true);
-		messagePanel.appendChild(listbox);
-
-		Div div = new Div();
-		div.setStyle("text-align: center");
-		messagePanel.appendChild(div);
-
-		Hbox hbox = new Hbox();
-		hbox.setStyle("padding-top: 2px");
-		div.appendChild(hbox);
-
-		Button btnOk = ButtonFactory.createNamedButton(ConfirmPanel.A_OK);
-		// Invert - Unify  OK/Cancel IDEMPIERE-77
-		btnOk.addEventListener(Events.ON_CLICK, new EventListener<Event>()
-		{
-			public void onEvent(Event event) throws Exception
-			{
-				FDialog.ask(curWindowNo, messagePanel, "DeleteSelection", new Callback<Boolean>() {
-
-					@Override
-					public void onCallback(Boolean result)
-					{
-						if (result)
+		final int[] indices = adTabbox.getSelectedGridTab().getSelection();
+		if(indices.length > 0) {
+			StringBuilder sb = new StringBuilder();
+			sb.append(Env.getContext(ctx, curWindowNo, "_WinInfo_WindowName", false)).append(" - ")
+				.append(indices.length).append(" ").append(Msg.getMsg(Env.getCtx(), "Selected"));
+			FDialog.ask(sb.toString(), curWindowNo, null,"DeleteSelection", new Callback<Boolean>() {
+				@Override
+				public void onCallback(Boolean result) {
+					if(result){
+						adTabbox.getSelectedGridTab().clearSelection();						
+						Arrays.sort(indices);
+						int offset = 0;
+						int count = 0;
+						for (int i = 0; i < indices.length; i++)
 						{
-							logger.fine("ok");
-							Set<Listitem> selectedValues = listbox.getSelectedItems();
-							if(selectedValues != null)
+							adTabbox.getSelectedGridTab().navigate(indices[i]-offset);
+							if (adTabbox.getSelectedGridTab().dataDelete())
 							{
-								for(Iterator<Listitem> iter = selectedValues.iterator(); iter.hasNext();)
-								{
-									Listitem li = iter.next();
-									if(li != null)
-										if (logger.isLoggable(Level.FINE)) logger.fine((String) li.getValue());
-								}
+								offset++;
+								count++;
 							}
-
-							int[] indices = listbox.getSelectedIndices();
-							Arrays.sort(indices);
-							int offset = 0;
-							for (int i = 0; i < indices.length; i++)
-							{
-								adTabbox.getSelectedGridTab().navigate(indices[i]-offset);
-								if (adTabbox.getSelectedGridTab().dataDelete())
-								{
-									offset++;
-								}
-							}
-							adTabbox.getSelectedTabpanel().dynamicDisplay(0);
-
-				            messagePanel.dispose();
-				            MRecentItem.publishChangedEvent(Env.getAD_User_ID(ctx));
-				        } else {
-							logger.fine("cancel");
 						}
+						
+						adTabbox.getSelectedTabpanel().dynamicDisplay(0);
+						statusBar.setStatusLine(Msg.getMsg(Env.getCtx(), "Deleted")+": "+count, false);
 					}
-
-				});
-			}
-		});
-		hbox.appendChild(btnOk);
-
-		Button btnCancel = ButtonFactory.createNamedButton(ConfirmPanel.A_CANCEL);
-		btnCancel.addEventListener(Events.ON_CLICK, new EventListener<Event>()
-		{
-			public void onEvent(Event event) throws Exception
-			{
-				messagePanel.dispose();
-			}
-		});
-		hbox.appendChild(btnCancel);
-		hbox.setPack("end");
-		hbox.setHflex("1");
-
-		messagePanel.addEventListener(DialogEvents.ON_WINDOW_CLOSE, new EventListener<Event>() {
-			@Override
-			public void onEvent(Event event) throws Exception {
-				hideBusyMask();
-				focusToActivePanel();
-			}
-		});		
-		getComponent().getParent().appendChild(messagePanel);
-		showBusyMask(messagePanel);
-		LayoutUtils.openOverlappedWindow(getComponent(), messagePanel, "middle_center");
+				}
+			});
+		} else {
+			statusBar.setStatusLine(Msg.getMsg(Env.getCtx(), "Selected")+": 0", false);
+		}
 	}
 	//
 
@@ -2945,7 +2818,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 		Map<Integer, String> columnsWidth = new HashMap<Integer, String>();
 		ArrayList<Integer> gridFieldIds = new ArrayList<Integer>();
 		for (int i = 0; i < fields.length; i++) {
-			Column column = (Column) columnList.get(i+1);
+			Column column = (Column) columnList.get(i+2);
 			String width = column.getWidth();
 			columnsWidth.put(fields[i].getAD_Field_ID(), width);
 			gridFieldIds.add(fields[i].getAD_Field_ID());
@@ -2976,6 +2849,44 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 
 	public boolean isPendingChanges() {
 		return boolChanges;
+	}
+
+	private void clearTitleRelatedContext() {
+		// IDEMPIERE-1328
+		// clear the values for the tab header
+        String titleLogic = null;
+        int windowID = getADTab().getSelectedGridTab().getAD_Window_ID();
+        if (windowID > 0) {
+        	titleLogic = MWindow.get(Env.getCtx(), windowID).getTitleLogic();
+        }
+        if (titleLogic != null) {
+    		String token;
+    		String inStr = new String(titleLogic);
+
+    		int i = inStr.indexOf('@');
+    		while (i != -1)
+    		{
+    			inStr = inStr.substring(i+1, inStr.length());	// from first @
+
+    			int j = inStr.indexOf('@');						// next @
+    			if (j < 0)
+    			{
+    				logger.log(Level.SEVERE, "No second tag: " + inStr);
+    				return;						//	no second tag
+    			}
+
+    			token = inStr.substring(0, j);
+        		Env.setContext(ctx, curWindowNo, token, "");
+
+    			inStr = inStr.substring(j+1, inStr.length());	// from second @
+    			i = inStr.indexOf('@');
+    		}
+        } else {
+    		Env.setContext(ctx, curWindowNo, "DocumentNo", "");
+    		Env.setContext(ctx, curWindowNo, "Value", "");
+    		Env.setContext(ctx, curWindowNo, "Name", "");
+        }
+		
 	}
 
 }

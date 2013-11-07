@@ -1930,3 +1930,12 @@ table.z-vbox > tbody > tr > td > table {
 	border-radius: 0px;
 	background-color: #ddd;
 }
+
+<%-- chart --%>
+.chart-field {
+	padding: 10px; 
+	border: 1px solid lightgray !important;
+}
+.dashboard-widget.dashboard-widget-max .chart-gadget {
+	height: 100% !important; 
+}
