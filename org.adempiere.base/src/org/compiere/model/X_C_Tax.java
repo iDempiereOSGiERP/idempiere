@@ -26,14 +26,14 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Model for C_Tax
  *  @author iDempiere (generated) 
- *  @version Release 1.0c - $Id$ */
+ *  @version Release 2.0 - $Id$ */
 public class X_C_Tax extends PO implements I_C_Tax, I_Persistent 
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20130626L;
+	private static final long serialVersionUID = 20131031L;
 
     /** Standard Constructor */
     public X_C_Tax (Properties ctx, int C_Tax_ID, String trxName)
@@ -208,6 +208,31 @@ public class X_C_Tax extends PO implements I_C_Tax, I_Persistent
 	public int getC_Tax_ID () 
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_C_Tax_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	public org.compiere.model.I_C_TaxProvider getC_TaxProvider() throws RuntimeException
+    {
+		return (org.compiere.model.I_C_TaxProvider)MTable.get(getCtx(), org.compiere.model.I_C_TaxProvider.Table_Name)
+			.getPO(getC_TaxProvider_ID(), get_TrxName());	}
+
+	/** Set Tax Provider.
+		@param C_TaxProvider_ID Tax Provider	  */
+	public void setC_TaxProvider_ID (int C_TaxProvider_ID)
+	{
+		if (C_TaxProvider_ID < 1) 
+			set_Value (COLUMNNAME_C_TaxProvider_ID, null);
+		else 
+			set_Value (COLUMNNAME_C_TaxProvider_ID, Integer.valueOf(C_TaxProvider_ID));
+	}
+
+	/** Get Tax Provider.
+		@return Tax Provider	  */
+	public int getC_TaxProvider_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_C_TaxProvider_ID);
 		if (ii == null)
 			 return 0;
 		return ii.intValue();

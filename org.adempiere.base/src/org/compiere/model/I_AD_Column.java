@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_Column
  *  @author iDempiere (generated) 
- *  @version Release 1.0c
+ *  @version Release 2.0
  */
 public interface I_AD_Column 
 {
@@ -40,6 +40,17 @@ public interface I_AD_Column
     BigDecimal accessLevel = BigDecimal.valueOf(4);
 
     /** Load Meta Data */
+
+    /** Column name AD_Chart_ID */
+    public static final String COLUMNNAME_AD_Chart_ID = "AD_Chart_ID";
+
+	/** Set Chart	  */
+	public void setAD_Chart_ID (int AD_Chart_ID);
+
+	/** Get Chart	  */
+	public int getAD_Chart_ID();
+
+	public org.compiere.model.I_AD_Chart getAD_Chart() throws RuntimeException;
 
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
@@ -284,6 +295,24 @@ public interface I_AD_Column
 	  * Length of the column in the database
 	  */
 	public int getFieldLength();
+
+    /** Column name FKConstraintName */
+    public static final String COLUMNNAME_FKConstraintName = "FKConstraintName";
+
+	/** Set Constraint Name	  */
+	public void setFKConstraintName (String FKConstraintName);
+
+	/** Get Constraint Name	  */
+	public String getFKConstraintName();
+
+    /** Column name FKConstraintType */
+    public static final String COLUMNNAME_FKConstraintType = "FKConstraintType";
+
+	/** Set Constraint Type	  */
+	public void setFKConstraintType (String FKConstraintType);
+
+	/** Get Constraint Type	  */
+	public String getFKConstraintType();
 
     /** Column name FormatPattern */
     public static final String COLUMNNAME_FormatPattern = "FormatPattern";
