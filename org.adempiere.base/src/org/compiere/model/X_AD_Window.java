@@ -23,14 +23,14 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Model for AD_Window
  *  @author iDempiere (generated) 
- *  @version Release 1.0c - $Id$ */
+ *  @version Release 2.0 - $Id$ */
 public class X_AD_Window extends PO implements I_AD_Window, I_Persistent 
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20130626L;
+	private static final long serialVersionUID = 20131031L;
 
     /** Standard Constructor */
     public X_AD_Window (Properties ctx, int AD_Window_ID, String trxName)
@@ -342,6 +342,23 @@ public class X_AD_Window extends PO implements I_AD_Window, I_Persistent
 			return "Y".equals(oo);
 		}
 		return false;
+	}
+
+	/** Set Title Logic.
+		@param TitleLogic 
+		The result determines the title to be displayed for this window
+	  */
+	public void setTitleLogic (String TitleLogic)
+	{
+		set_Value (COLUMNNAME_TitleLogic, TitleLogic);
+	}
+
+	/** Get Title Logic.
+		@return The result determines the title to be displayed for this window
+	  */
+	public String getTitleLogic () 
+	{
+		return (String)get_Value(COLUMNNAME_TitleLogic);
 	}
 
 	/** WindowType AD_Reference_ID=108 */
