@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for C_Location
  *  @author iDempiere (generated) 
- *  @version Release 1.0c
+ *  @version Release 2.0
  */
 public interface I_C_Location 
 {
@@ -113,6 +113,17 @@ public interface I_C_Location
 	  * Organizational entity within client
 	  */
 	public int getAD_Org_ID();
+
+    /** Column name C_AddressValidation_ID */
+    public static final String COLUMNNAME_C_AddressValidation_ID = "C_AddressValidation_ID";
+
+	/** Set Address Validation	  */
+	public void setC_AddressValidation_ID (int C_AddressValidation_ID);
+
+	/** Get Address Validation	  */
+	public int getC_AddressValidation_ID();
+
+	public org.compiere.model.I_C_AddressValidation getC_AddressValidation() throws RuntimeException;
 
     /** Column name C_City_ID */
     public static final String COLUMNNAME_C_City_ID = "C_City_ID";
@@ -223,6 +234,19 @@ public interface I_C_Location
 	  */
 	public boolean isActive();
 
+    /** Column name IsValid */
+    public static final String COLUMNNAME_IsValid = "IsValid";
+
+	/** Set Valid.
+	  * Element is valid
+	  */
+	public void setIsValid (boolean IsValid);
+
+	/** Get Valid.
+	  * Element is valid
+	  */
+	public boolean isValid();
+
     /** Column name Postal */
     public static final String COLUMNNAME_Postal = "Postal";
 
@@ -262,6 +286,19 @@ public interface I_C_Location
 	  */
 	public String getRegionName();
 
+    /** Column name Result */
+    public static final String COLUMNNAME_Result = "Result";
+
+	/** Set Result.
+	  * Result of the action taken
+	  */
+	public void setResult (String Result);
+
+	/** Get Result.
+	  * Result of the action taken
+	  */
+	public String getResult();
+
     /** Column name Updated */
     public static final String COLUMNNAME_Updated = "Updated";
 
@@ -277,4 +314,13 @@ public interface I_C_Location
 	  * User who updated this records
 	  */
 	public int getUpdatedBy();
+
+    /** Column name ValidateAddress */
+    public static final String COLUMNNAME_ValidateAddress = "ValidateAddress";
+
+	/** Set Validate Address	  */
+	public void setValidateAddress (String ValidateAddress);
+
+	/** Get Validate Address	  */
+	public String getValidateAddress();
 }
