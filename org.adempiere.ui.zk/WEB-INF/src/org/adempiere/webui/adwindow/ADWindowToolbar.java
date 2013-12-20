@@ -79,7 +79,7 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
 
     private ToolBarButton btnIgnore;
 
-    private ToolBarButton btnHelp, btnNew, btnCopy, btnDelete, btnDeleteSelection, btnSave;
+    private ToolBarButton btnHelp, btnNew, btnCopy, btnDelete, btnSave;
 
     private ToolBarButton btnSaveAndCreate; // Elaine 2009/03/02 - Save & Create
 
@@ -155,7 +155,6 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
         btnCopy.setTooltiptext(btnCopy.getTooltiptext()+ "    Alt+C");
         btnDelete = createButton("Delete", "Delete", "Delete");
         btnDelete.setTooltiptext(btnDelete.getTooltiptext()+ "    Alt+D");
-        btnDeleteSelection = createButton("DeleteSelection", "DeleteSelection", "DeleteSelection");
         btnSave = createButton("Save", "Save", "Save");
         btnSave.setTooltiptext(btnSave.getTooltiptext()+ "    Alt+S");
         btnSaveAndCreate = createButton("SaveCreate", "SaveCreate", "SaveCreate");
@@ -421,10 +420,14 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
 
     public void enableDelete(boolean enabled)
     {
-        this.btnDelete.setDisabled(!enabled);
-        this.btnDeleteSelection.setDisabled(!enabled);
+        this.btnDelete.setDisabled(!enabled);        
     }
-
+    
+    public boolean isDeleteEnable()
+    {
+    	return !btnDelete.isDisabled();
+    }
+    
     public void enableIgnore(boolean enabled)
     {
         this.btnIgnore.setDisabled(!enabled);
@@ -601,6 +604,23 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
 			}
 
 		}	// All restrictions
+		
+		if (!MRole.getDefault().isAccessAdvanced())
+		{
+			List<String> advancedList = adwindow.getWindowAdvancedButtonList();
+			for (String advancedName : advancedList)
+			{
+				for (Component p = this.getFirstChild(); p != null; p = p.getNextSibling()) {
+					if (p instanceof ToolBarButton) {
+						if ( advancedName.equals(((ToolBarButton)p).getName()) ) {
+							this.removeChild(p);
+							break;
+						}
+					}
+				}
+
+			}	// All advanced btn
+		}
 
 		dynamicDisplay();
 		// If no workflow set for the table => disable btnWorkflow
@@ -634,9 +654,9 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
 						label = mToolBarButton.getName();
 					}
 					if (tooltipKey.equals(tooltiptext)) {
-						tooltiptext = null;
+						tooltipKey = null;
 					}
-					ToolBarButton btn = createButton(mToolBarButton.getComponentName(), null, tooltiptext);
+					ToolBarButton btn = createButton(mToolBarButton.getComponentName(), null, tooltipKey);
 					btn.removeEventListener(Events.ON_CLICK, this);
 					btn.setId(mToolBarButton.getName());
 					btn.setDisabled(false);
