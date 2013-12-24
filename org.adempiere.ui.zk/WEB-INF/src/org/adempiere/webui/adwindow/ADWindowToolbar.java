@@ -54,6 +54,7 @@ import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.event.KeyEvent;
 import org.zkoss.zk.ui.util.Clients;
+import org.zkoss.zul.Separator;
 import org.zkoss.zul.Space;
 import org.zkoss.zul.Toolbarbutton;
 
@@ -79,7 +80,7 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
 
     private ToolBarButton btnIgnore;
 
-    private ToolBarButton btnHelp, btnNew, btnCopy, btnDelete, btnDeleteSelection, btnSave;
+    private ToolBarButton btnHelp, btnNew, btnCopy, btnDelete, btnSave;
 
     private ToolBarButton btnSaveAndCreate; // Elaine 2009/03/02 - Save & Create
 
@@ -155,7 +156,6 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
         btnCopy.setTooltiptext(btnCopy.getTooltiptext()+ "    Alt+C");
         btnDelete = createButton("Delete", "Delete", "Delete");
         btnDelete.setTooltiptext(btnDelete.getTooltiptext()+ "    Alt+D");
-        btnDeleteSelection = createButton("DeleteSelection", "DeleteSelection", "DeleteSelection");
         btnSave = createButton("Save", "Save", "Save");
         btnSave.setTooltiptext(btnSave.getTooltiptext()+ "    Alt+S");
         btnSaveAndCreate = createButton("SaveCreate", "SaveCreate", "SaveCreate");
@@ -198,7 +198,6 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
         btnProcess.setTooltiptext(btnProcess.getTooltiptext()+ "    Alt+O");
         btnProcess.setDisabled(false);
 
-
         // Help and Exit should always be enabled
         btnHelp.setDisabled(false);
         btnGridToggle.setDisabled(false);
@@ -214,7 +213,54 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
         }
         btnFileImport = createButton("FileImport", "FileImport", "FileImport");
 
-        configureKeyMap();
+        MToolBarButton[] officialButtons = MToolBarButton.getToolbarButtons("W", null);
+        for (MToolBarButton button : officialButtons) {
+        	if (! button.isActive()) {
+        		buttons.remove(button.getComponentName());
+        	} else {
+        		if (button.isCustomization()) {
+        			String actionId = button.getActionClassName();
+        			IServiceHolder<IAction> serviceHolder = Actions.getAction(actionId);
+        			if (serviceHolder != null && serviceHolder.getService() != null) {
+        				String labelKey = actionId + ".label";
+        				String tooltipKey = actionId + ".tooltip";
+        				String label = Msg.getMsg(Env.getCtx(), labelKey);
+        				String tooltiptext = Msg.getMsg(Env.getCtx(), tooltipKey);
+        				if (labelKey.equals(label)) {
+        					label = button.getName();
+        				}
+        				if (tooltipKey.equals(tooltiptext)) {
+        					tooltipKey = null;
+        				}
+        				ToolBarButton btn = createButton(button.getComponentName(), null, tooltipKey);
+        				this.appendChild(btn);
+        				btn.removeEventListener(Events.ON_CLICK, this);
+        				btn.setId(button.getName());
+        				btn.setDisabled(false);
+
+        				AImage aImage = Actions.getActionImage(actionId);
+        				if (aImage != null) {
+        					btn.setImageContent(aImage);
+        				} else {
+        					btn.setLabel(label);
+        				}
+
+        				ToolbarCustomButton toolbarCustomBtn = new ToolbarCustomButton(button, btn, actionId, windowNo);
+        				toolbarCustomButtons.add(toolbarCustomBtn);
+
+        				this.appendChild(btn);
+        			}
+        		}
+        		if (buttons.get(button.getComponentName()) != null) {
+        			this.appendChild(buttons.get(button.getComponentName()));
+        			if (button.isAddSeparator()) {
+        				this.appendChild(new Separator("vertical"));
+        			}
+        		}
+        	}
+        }
+
+    	configureKeyMap();
 
         setWidth("100%");
     }
@@ -240,7 +286,6 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
         btn.setSclass("toolbar-button");
 
         buttons.put(name, btn);
-        this.appendChild(btn);
         //make toolbar button last to receive focus
         btn.setTabindex(0);
         btn.addEventListener(Events.ON_CLICK, this);
@@ -421,10 +466,14 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
 
     public void enableDelete(boolean enabled)
     {
-        this.btnDelete.setDisabled(!enabled);
-        this.btnDeleteSelection.setDisabled(!enabled);
+        this.btnDelete.setDisabled(!enabled);        
     }
-
+    
+    public boolean isDeleteEnable()
+    {
+    	return !btnDelete.isDisabled();
+    }
+    
     public void enableIgnore(boolean enabled)
     {
         this.btnIgnore.setDisabled(!enabled);
@@ -580,9 +629,7 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
 	}
 
 	private boolean ToolBarMenuRestictionLoaded = false;
-	public void updateToolbarAccess(int AD_Window_ID) {
-		loadCustomButton(AD_Window_ID);
-
+	public void updateToolbarAccess(int xAD_Window_ID) {
 		if (ToolBarMenuRestictionLoaded)
 			return;
 		
@@ -601,6 +648,23 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
 			}
 
 		}	// All restrictions
+		
+		if (!MRole.getDefault().isAccessAdvanced())
+		{
+			List<String> advancedList = adwindow.getWindowAdvancedButtonList();
+			for (String advancedName : advancedList)
+			{
+				for (Component p = this.getFirstChild(); p != null; p = p.getNextSibling()) {
+					if (p instanceof ToolBarButton) {
+						if ( advancedName.equals(((ToolBarButton)p).getName()) ) {
+							this.removeChild(p);
+							break;
+						}
+					}
+				}
+
+			}	// All advanced btn
+		}
 
 		dynamicDisplay();
 		// If no workflow set for the table => disable btnWorkflow
@@ -617,44 +681,6 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
 	{
 		String sql = "SELECT COUNT(*) FROM AD_Workflow WHERE IsActive='Y' AND AD_Table_ID=? AND AD_Client_ID IN (0,?)";
 		return (DB.getSQLValueEx(null, sql, gridTab.getAD_Table_ID(), Env.getAD_Client_ID(Env.getCtx())) > 0);
-	}
-
-	private void loadCustomButton(int AD_Window_ID) {
-		MToolBarButton[] mToolbarButtons = MToolBarButton.getOfWindow(AD_Window_ID, null);
-		if (mToolbarButtons != null && mToolbarButtons.length > 0) {
-			for (MToolBarButton mToolBarButton : mToolbarButtons) {
-				String actionId = mToolBarButton.getActionClassName();
-				IServiceHolder<IAction> serviceHolder = Actions.getAction(actionId);
-				if (serviceHolder != null && serviceHolder.getService() != null) {
-					String labelKey = actionId + ".label";
-					String tooltipKey = actionId + ".tooltip";
-					String label = Msg.getMsg(Env.getCtx(), labelKey);
-					String tooltiptext = Msg.getMsg(Env.getCtx(), tooltipKey);
-					if (labelKey.equals(label)) {
-						label = mToolBarButton.getName();
-					}
-					if (tooltipKey.equals(tooltiptext)) {
-						tooltiptext = null;
-					}
-					ToolBarButton btn = createButton(mToolBarButton.getComponentName(), null, tooltiptext);
-					btn.removeEventListener(Events.ON_CLICK, this);
-					btn.setId(mToolBarButton.getName());
-					btn.setDisabled(false);
-
-					AImage aImage = Actions.getActionImage(actionId);
-					if (aImage != null) {
-						btn.setImageContent(aImage);
-					} else {
-						btn.setLabel(label);
-					}
-
-					ToolbarCustomButton toolbarCustomBtn = new ToolbarCustomButton(mToolBarButton, btn, actionId, windowNo);
-					toolbarCustomButtons.add(toolbarCustomBtn);
-
-					appendChild(btn);
-				}
-			}
-		}
 	}
 
 	public void enableProcessButton(boolean b) {

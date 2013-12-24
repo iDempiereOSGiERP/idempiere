@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_ToolBarButton
  *  @author iDempiere (generated) 
- *  @version Release 1.0c
+ *  @version Release 2.0
  */
 public interface I_AD_ToolBarButton 
 {
@@ -199,6 +199,28 @@ public interface I_AD_ToolBarButton
 	  * The record is active in the system
 	  */
 	public boolean isActive();
+
+    /** Column name IsAddSeparator */
+    public static final String COLUMNNAME_IsAddSeparator = "IsAddSeparator";
+
+	/** Set Add Separator	  */
+	public void setIsAddSeparator (boolean IsAddSeparator);
+
+	/** Get Add Separator	  */
+	public boolean isAddSeparator();
+
+    /** Column name IsAdvancedButton */
+    public static final String COLUMNNAME_IsAdvancedButton = "IsAdvancedButton";
+
+	/** Set Advanced Button.
+	  * This Button contains advanced Functionality
+	  */
+	public void setIsAdvancedButton (boolean IsAdvancedButton);
+
+	/** Get Advanced Button.
+	  * This Button contains advanced Functionality
+	  */
+	public boolean isAdvancedButton();
 
     /** Column name IsCustomization */
     public static final String COLUMNNAME_IsCustomization = "IsCustomization";
