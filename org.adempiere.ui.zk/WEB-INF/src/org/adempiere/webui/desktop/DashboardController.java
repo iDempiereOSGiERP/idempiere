@@ -23,20 +23,28 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.logging.Level;
 
+import org.adempiere.base.Service;
+import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.webui.apps.AEnv;
+import org.adempiere.webui.apps.graph.IChartRendererService;
 import org.adempiere.webui.apps.graph.WGraph;
 import org.adempiere.webui.apps.graph.WPerformanceDetail;
+import org.adempiere.webui.apps.graph.model.ChartModel;
 import org.adempiere.webui.component.ToolBarButton;
 import org.adempiere.webui.dashboard.DashboardPanel;
 import org.adempiere.webui.dashboard.DashboardRunnable;
+import org.adempiere.webui.factory.IDashboardGadgetFactory;
 import org.adempiere.webui.report.HTMLExtension;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.theme.ThemeManager;
 import org.adempiere.webui.window.ZkReportViewerProvider;
 import org.compiere.model.I_AD_Menu;
+import org.compiere.model.MChart;
 import org.compiere.model.MDashboardContent;
+import org.compiere.model.MDashboardContentAccess;
 import org.compiere.model.MDashboardPreference;
 import org.compiere.model.MGoal;
 import org.compiere.model.MMenu;
@@ -55,6 +63,7 @@ import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.Desktop;
 import org.zkoss.zk.ui.Executions;
 import org.zkoss.zk.ui.Page;
+import org.zkoss.zk.ui.event.AfterSizeEvent;
 import org.zkoss.zk.ui.event.DropEvent;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
@@ -63,6 +72,7 @@ import org.zkoss.zk.ui.event.MaximizeEvent;
 import org.zkoss.zul.Anchorchildren;
 import org.zkoss.zul.Anchorlayout;
 import org.zkoss.zul.Caption;
+import org.zkoss.zul.Div;
 import org.zkoss.zul.Html;
 import org.zkoss.zul.Iframe;
 import org.zkoss.zul.Include;
@@ -95,7 +105,7 @@ public class DashboardController implements EventListener<Event> {
 	
 	public DashboardController() {
 		dashboardLayout = new Anchorlayout();
-        dashboardLayout.setSclass("dashboard-layout");
+        dashboardLayout.setSclass("dashboard-layout slimScroll");
         dashboardLayout.setVflex("1");
         dashboardLayout.setHflex("1");
         
@@ -105,10 +115,9 @@ public class DashboardController implements EventListener<Event> {
 	}
 	
 	public void render(Component parent, IDesktop desktopImpl, boolean isShowInDashboard) {
-        parent.appendChild(dashboardLayout);
-        dashboardLayout.setSclass("slimScroll");
+		parent.appendChild(dashboardLayout);
+		dashboardLayout.getChildren().clear();
         
-
         if (!dashboardLayout.getDesktop().isServerPushEnabled())
         	dashboardLayout.getDesktop().enableServerPush(true);
         
@@ -127,17 +136,30 @@ public class DashboardController implements EventListener<Event> {
         	int AD_Role_ID = Env.getAD_Role_ID(Env.getCtx());
         	
         	MDashboardPreference[] dps = MDashboardPreference.getForSession(AD_User_ID, AD_Role_ID);
-        	if (dps.length == 0)
-        		createDashboardPreference();
+        	MDashboardContent [] dcs =  MDashboardContentAccess.get(Env.getCtx(), AD_Role_ID, AD_User_ID, null);
         	
-        	dps = MDashboardPreference.getForSession(isShowInDashboard, AD_User_ID, AD_Role_ID); // based on user and role       	
+        	if(dps.length == 0){
+        	    createDashboardPreference(AD_User_ID, AD_Role_ID);
+        	    dps = MDashboardPreference.getForSession(AD_User_ID, AD_Role_ID);
+        	}else{
+        		if(updatePreferences(dps, dcs,Env.getCtx())){        			
+        			dps = MDashboardPreference.getForSession(AD_User_ID, AD_Role_ID);
+        		}
+        	}
+        	               
         	noOfCols = MDashboardPreference.getForSessionColumnCount(isShowInDashboard, AD_User_ID, AD_Role_ID);
             
         	int dashboardWidth = isShowInDashboard ? DEFAULT_DASHBOARD_WIDTH : 100;
             width = noOfCols <= 0 ? dashboardWidth : dashboardWidth / noOfCols;
             int extraWidth = 100 - (noOfCols <= 0 ? dashboardWidth : width * noOfCols) - (100 - dashboardWidth - 1);
-            for (final MDashboardPreference dp : dps)
-			{            	            	
+            for (final MDashboardPreference dp : dps)            	
+			{            	            	            	
+            	if(!dp.isActive())
+            		continue;
+            	
+            	if (dp.isShowInDashboard() != isShowInDashboard)
+            		continue;
+            	
             	MDashboardContent dc = new MDashboardContent(dp.getCtx(), dp.getPA_DashboardContent_ID(), dp.get_TrxName());
             	
 	        	int columnNo = dp.getColumnNo();
@@ -234,12 +256,14 @@ public class DashboardController implements EventListener<Event> {
 	        	if(AD_Window_ID > 0)
 	        	{
 		        	int AD_Menu_ID = dc.getAD_Menu_ID();
+		        	Div div = new Div();
 					ToolBarButton btn = new ToolBarButton(String.valueOf(AD_Menu_ID));
 					I_AD_Menu menu = dc.getAD_Menu();
 					btn.setLabel(menu.getName());
 					btn.setAttribute("AD_Menu_ID", AD_Menu_ID);
 					btn.addEventListener(Events.ON_CLICK, this);
-					content.appendChild(btn);
+					div.appendChild(btn);
+					content.appendChild(div);
 					panelEmpty = false;
 	        	}
 	        	
@@ -285,6 +309,7 @@ public class DashboardController implements EventListener<Event> {
 	        	if(PA_Goal_ID > 0)
 	        	{
 	        		//link to open performance detail
+	        		Div div = new Div();
 	        		Toolbarbutton link = new Toolbarbutton();
 		            link.setImage(ThemeManager.getThemeResource("images/Zoom16.png"));
 		            link.setAttribute("PA_Goal_ID", PA_Goal_ID);
@@ -295,7 +320,8 @@ public class DashboardController implements EventListener<Event> {
 							new WPerformanceDetail(goal);
 						}
 		            });
-		            content.appendChild(link);
+		            div.appendChild(link);
+		            content.appendChild(div);
 
 		            String goalDisplay = dc.getGoalDisplay();
 		            MGoal goal = new MGoal(Env.getCtx(), PA_Goal_ID, null);
@@ -311,8 +337,16 @@ public class DashboardController implements EventListener<Event> {
 	        	if(url != null)
 	        	{
 		        	try {
-		                Component component = Executions.createComponents(url, content, null);
-		                if(component != null)
+		        		
+		                Component component = null;
+		                List<IDashboardGadgetFactory> f = Service.locator().list(IDashboardGadgetFactory.class).getServices();
+                        for (IDashboardGadgetFactory factory : f) {
+                                component = factory.getGadget(url.toString(),content);
+                                if(component != null)
+                                        break;
+                        }
+		                
+                        if(component != null)
 		                {
 		                	if (component instanceof Include)
 		                		component = component.getFirstChild();
@@ -334,11 +368,42 @@ public class DashboardController implements EventListener<Event> {
 		                }
 					} catch (Exception e) {
 						logger.log(Level.WARNING, "Failed to create components. zul="+url, e);
+						throw new AdempiereException(e);
 					}
 	        	}
 
+	        	//chart
+	        	final int AD_Chart_ID = dc.getAD_Chart_ID();
+	        	if (AD_Chart_ID > 0) {
+	        		final Div chartPanel = new Div();	        	
+	        		chartPanel.setSclass("chart-gadget");
+	        		final MChart chartModel = new MChart(Env.getCtx(), AD_Chart_ID, null);
+	        		content.appendChild(chartPanel);
+	        		panelEmpty = false;	        		
+	        		chartPanel.addEventListener(Events.ON_AFTER_SIZE, new EventListener<AfterSizeEvent>() {
+						@Override
+						public void onEvent(AfterSizeEvent event) throws Exception {
+			        		int width = event.getWidth()*90/100;
+			        		int height = event.getHeight();
+			        		//set normal height
+			        		if (height == 0) {
+			        			height = width * 85 / 100;
+			        			chartPanel.setHeight(height+"px");
+			        		}
+			        		chartPanel.getChildren().clear();
+			        		ChartModel model = new ChartModel();
+			        		model.chart = chartModel;
+			        		List<IChartRendererService> list = Service.locator().list(IChartRendererService.class).getServices();
+			        		for (IChartRendererService renderer : list) {
+			        			if (renderer.renderChart(chartPanel, width, height, model))
+			        				break;
+			        		}
+						}
+					});
+	        	}
+	        	
 	        	if (panelEmpty)
-	        		panel.detach();
+	        		panel.detach();	        	
 	        }
             
             if (dps.length == 0)
@@ -508,15 +573,15 @@ public class DashboardController implements EventListener<Event> {
 		}
 	}
 	
-	private void createDashboardPreference()
+	private void createDashboardPreference(int AD_User_ID, int AD_Role_ID)
 	{
-		MDashboardContent[] dcs = MDashboardContent.getForSession(0, 0);
+		MDashboardContent[] dcs = MDashboardContentAccess.get(Env.getCtx(),AD_Role_ID, AD_User_ID, null);
 		for (MDashboardContent dc : dcs)
 		{
 			MDashboardPreference preference = new MDashboardPreference(Env.getCtx(), 0, null);
-			preference.setAD_Org_ID(Env.getAD_Org_ID(Env.getCtx()));
-			preference.setAD_Role_ID(Env.getAD_Role_ID(Env.getCtx()));
-			preference.set_ValueNoCheck("AD_User_ID", Env.getAD_User_ID(Env.getCtx()));
+			preference.setAD_Org_ID(0);
+			preference.setAD_Role_ID(AD_Role_ID);
+			preference.set_ValueNoCheck("AD_User_ID", AD_User_ID);
 			preference.setColumnNo(dc.getColumnNo());
 			preference.setIsCollapsedByDefault(dc.isCollapsedByDefault());
 			preference.setIsShowInDashboard(dc.isShowInDashboard());
@@ -526,6 +591,47 @@ public class DashboardController implements EventListener<Event> {
 			if (!preference.save())
 				logger.log(Level.SEVERE, "Failed to create dashboard preference " + preference.toString());
 		}
+	}
+	
+	
+	private boolean updatePreferences(MDashboardPreference[] dps,MDashboardContent[] dcs, Properties ctx) {
+		boolean change = false;
+		for (int i = 0; i < dcs.length; i++) {
+			
+			boolean isNew = true;
+			for (int j = 0; j < dps.length; j++) {
+				if (dps[j].getPA_DashboardContent_ID() == dcs[i].getPA_DashboardContent_ID()) {
+					isNew = false;
+				}
+			}
+			if (isNew) {
+				MDashboardPreference preference = new MDashboardPreference(ctx,0, null);
+				preference.setAD_Org_ID(0);
+				preference.setAD_Role_ID(Env.getAD_Role_ID(ctx));
+				preference.set_ValueNoCheck("AD_User_ID",Env.getAD_User_ID(ctx));
+				preference.setColumnNo(dcs[i].getColumnNo());
+				preference.setIsCollapsedByDefault(dcs[i].isCollapsedByDefault());
+				preference.setIsShowInDashboard(dcs[i].isShowInDashboard());
+				preference.setLine(dcs[i].getLine());
+				preference.setPA_DashboardContent_ID(dcs[i].getPA_DashboardContent_ID());
+
+				preference.saveEx();
+				if (!change) change = true;
+			}
+		}
+		for (int i = 0; i < dps.length; i++) {
+			boolean found = false;
+			for (int j = 0; j < dcs.length; j++) {
+				if (dcs[j].getPA_DashboardContent_ID() == dps[i].getPA_DashboardContent_ID()) {
+					found = true;
+				}
+			}
+			if (!found) {
+				dps[i].deleteEx(true);
+				if (!change) change = true;
+			}
+		}
+		return change;
 	}
 	
 	private void saveDashboardPreference(Vlayout layout)

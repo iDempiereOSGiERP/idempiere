@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_Scheduler_Para
  *  @author iDempiere (generated) 
- *  @version Release 1.0c
+ *  @version Release 2.0
  */
 public interface I_AD_Scheduler_Para 
 {
@@ -151,6 +151,19 @@ public interface I_AD_Scheduler_Para
 	  * Default value of the parameter
 	  */
 	public String getParameterDefault();
+
+    /** Column name ParameterToDefault */
+    public static final String COLUMNNAME_ParameterToDefault = "ParameterToDefault";
+
+	/** Set Default To Parameter.
+	  * Default value of the to parameter
+	  */
+	public void setParameterToDefault (String ParameterToDefault);
+
+	/** Get Default To Parameter.
+	  * Default value of the to parameter
+	  */
+	public String getParameterToDefault();
 
     /** Column name Updated */
     public static final String COLUMNNAME_Updated = "Updated";

@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for M_InventoryLineMA
  *  @author iDempiere (generated) 
- *  @version Release 1.0c
+ *  @version Release 2.0
  */
 public interface I_M_InventoryLineMA 
 {
@@ -77,6 +77,19 @@ public interface I_M_InventoryLineMA
 	  * User who created this records
 	  */
 	public int getCreatedBy();
+
+    /** Column name DateMaterialPolicy */
+    public static final String COLUMNNAME_DateMaterialPolicy = "DateMaterialPolicy";
+
+	/** Set Date  Material Policy.
+	  * Time used for LIFO and FIFO Material Policy
+	  */
+	public void setDateMaterialPolicy (Timestamp DateMaterialPolicy);
+
+	/** Get Date  Material Policy.
+	  * Time used for LIFO and FIFO Material Policy
+	  */
+	public Timestamp getDateMaterialPolicy();
 
     /** Column name IsActive */
     public static final String COLUMNNAME_IsActive = "IsActive";
