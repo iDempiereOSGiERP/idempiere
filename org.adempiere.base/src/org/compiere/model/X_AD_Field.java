@@ -25,14 +25,14 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Model for AD_Field
  *  @author iDempiere (generated) 
- *  @version Release 1.0c - $Id$ */
+ *  @version Release 2.0 - $Id$ */
 public class X_AD_Field extends PO implements I_AD_Field, I_Persistent 
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20130801L;
+	private static final long serialVersionUID = 20131031L;
 
     /** Standard Constructor */
     public X_AD_Field (Properties ctx, int AD_Field_ID, String trxName)
@@ -47,6 +47,8 @@ public class X_AD_Field extends PO implements I_AD_Field, I_Persistent
 // U
 			setIsCentrallyMaintained (true);
 // Y
+			setIsDefaultFocus (false);
+// N
 			setIsDisplayed (true);
 // Y
 			setIsEncrypted (false);
@@ -449,15 +451,15 @@ public class X_AD_Field extends PO implements I_AD_Field, I_Persistent
 		return ii.intValue();
 	}
 
-	/** Set IsAdvancedField.
-		@param IsAdvancedField IsAdvancedField	  */
+	/** Set Advanced Field.
+		@param IsAdvancedField Advanced Field	  */
 	public void setIsAdvancedField (boolean IsAdvancedField)
 	{
 		set_Value (COLUMNNAME_IsAdvancedField, Boolean.valueOf(IsAdvancedField));
 	}
 
-	/** Get IsAdvancedField.
-		@return IsAdvancedField	  */
+	/** Get Advanced Field.
+		@return Advanced Field	  */
 	public boolean isAdvancedField () 
 	{
 		Object oo = get_Value(COLUMNNAME_IsAdvancedField);
@@ -533,6 +535,27 @@ public class X_AD_Field extends PO implements I_AD_Field, I_Persistent
 	public boolean isCentrallyMaintained () 
 	{
 		Object oo = get_Value(COLUMNNAME_IsCentrallyMaintained);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
+	/** Set Default Focus.
+		@param IsDefaultFocus Default Focus	  */
+	public void setIsDefaultFocus (boolean IsDefaultFocus)
+	{
+		set_Value (COLUMNNAME_IsDefaultFocus, Boolean.valueOf(IsDefaultFocus));
+	}
+
+	/** Get Default Focus.
+		@return Default Focus	  */
+	public boolean isDefaultFocus () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsDefaultFocus);
 		if (oo != null) 
 		{
 			 if (oo instanceof Boolean) 

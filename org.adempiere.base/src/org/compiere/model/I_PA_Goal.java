@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for PA_Goal
  *  @author iDempiere (generated) 
- *  @version Release 1.0c
+ *  @version Release 2.0
  */
 public interface I_PA_Goal 
 {
@@ -96,12 +96,12 @@ public interface I_PA_Goal
     public static final String COLUMNNAME_ChartType = "ChartType";
 
 	/** Set Chart Type.
-	  * Type fo chart to render
+	  * Type of chart to render
 	  */
 	public void setChartType (String ChartType);
 
 	/** Get Chart Type.
-	  * Type fo chart to render
+	  * Type of chart to render
 	  */
 	public String getChartType();
 
