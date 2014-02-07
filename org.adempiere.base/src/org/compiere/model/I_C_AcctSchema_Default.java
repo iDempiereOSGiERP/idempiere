@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for C_AcctSchema_Default
  *  @author iDempiere (generated) 
- *  @version Release 1.0c
+ *  @version Release 2.0
  */
 public interface I_C_AcctSchema_Default 
 {
@@ -519,6 +519,21 @@ public interface I_C_AcctSchema_Default
 	public int getPJ_WIP_Acct();
 
 	public I_C_ValidCombination getPJ_WIP_A() throws RuntimeException;
+
+    /** Column name P_LandedCostClearing_Acct */
+    public static final String COLUMNNAME_P_LandedCostClearing_Acct = "P_LandedCostClearing_Acct";
+
+	/** Set Landed Cost Clearing.
+	  * Product Landed Cost Clearing Account
+	  */
+	public void setP_LandedCostClearing_Acct (int P_LandedCostClearing_Acct);
+
+	/** Get Landed Cost Clearing.
+	  * Product Landed Cost Clearing Account
+	  */
+	public int getP_LandedCostClearing_Acct();
+
+	public I_C_ValidCombination getP_LandedCostClearing_A() throws RuntimeException;
 
     /** Column name P_PurchasePriceVariance_Acct */
     public static final String COLUMNNAME_P_PurchasePriceVariance_Acct = "P_PurchasePriceVariance_Acct";

@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_Field
  *  @author iDempiere (generated) 
- *  @version Release 1.0c
+ *  @version Release 2.0
  */
 public interface I_AD_Field 
 {
@@ -316,10 +316,10 @@ public interface I_AD_Field
     /** Column name IsAdvancedField */
     public static final String COLUMNNAME_IsAdvancedField = "IsAdvancedField";
 
-	/** Set IsAdvancedField	  */
+	/** Set Advanced Field	  */
 	public void setIsAdvancedField (boolean IsAdvancedField);
 
-	/** Get IsAdvancedField	  */
+	/** Get Advanced Field	  */
 	public boolean isAdvancedField();
 
     /** Column name IsAllowCopy */
@@ -360,6 +360,15 @@ public interface I_AD_Field
 	  * Information maintained in System Element table
 	  */
 	public boolean isCentrallyMaintained();
+
+    /** Column name IsDefaultFocus */
+    public static final String COLUMNNAME_IsDefaultFocus = "IsDefaultFocus";
+
+	/** Set Default Focus	  */
+	public void setIsDefaultFocus (boolean IsDefaultFocus);
+
+	/** Get Default Focus	  */
+	public boolean isDefaultFocus();
 
     /** Column name IsDisplayed */
     public static final String COLUMNNAME_IsDisplayed = "IsDisplayed";

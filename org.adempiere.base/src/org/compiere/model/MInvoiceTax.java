@@ -70,7 +70,8 @@ public class MInvoiceTax extends X_C_InvoiceTax
 		}
 		if (C_Tax_ID == 0)
 		{
-			s_log.warning("C_Tax_ID=0");
+			if (!line.isDescription())
+				s_log.warning("C_Tax_ID=0");
 			return null;
 		}
 		
