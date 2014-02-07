@@ -23,14 +23,14 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Model for AD_ToolBarButton
  *  @author iDempiere (generated) 
- *  @version Release 1.0c - $Id$ */
+ *  @version Release 2.0 - $Id$ */
 public class X_AD_ToolBarButton extends PO implements I_AD_ToolBarButton, I_Persistent 
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20130626L;
+	private static final long serialVersionUID = 20131216L;
 
     /** Standard Constructor */
     public X_AD_ToolBarButton (Properties ctx, int AD_ToolBarButton_ID, String trxName)
@@ -42,6 +42,10 @@ public class X_AD_ToolBarButton extends PO implements I_AD_ToolBarButton, I_Pers
 // W
 			setAD_ToolBarButton_ID (0);
 			setComponentName (null);
+			setIsAddSeparator (false);
+// N
+			setIsAdvancedButton (false);
+// N
 			setIsCustomization (false);
 // N
 			setName (null);
@@ -265,6 +269,51 @@ public class X_AD_ToolBarButton extends PO implements I_AD_ToolBarButton, I_Pers
 	public String getDisplayLogic () 
 	{
 		return (String)get_Value(COLUMNNAME_DisplayLogic);
+	}
+
+	/** Set Add Separator.
+		@param IsAddSeparator Add Separator	  */
+	public void setIsAddSeparator (boolean IsAddSeparator)
+	{
+		set_Value (COLUMNNAME_IsAddSeparator, Boolean.valueOf(IsAddSeparator));
+	}
+
+	/** Get Add Separator.
+		@return Add Separator	  */
+	public boolean isAddSeparator () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsAddSeparator);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
+	/** Set Advanced Button.
+		@param IsAdvancedButton 
+		This Button contains advanced Functionality
+	  */
+	public void setIsAdvancedButton (boolean IsAdvancedButton)
+	{
+		set_Value (COLUMNNAME_IsAdvancedButton, Boolean.valueOf(IsAdvancedButton));
+	}
+
+	/** Get Advanced Button.
+		@return This Button contains advanced Functionality
+	  */
+	public boolean isAdvancedButton () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsAdvancedButton);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
 	}
 
 	/** Set Customization.

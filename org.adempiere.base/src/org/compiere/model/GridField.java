@@ -81,7 +81,7 @@ public class GridField
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -4907605626586089308L;
+	private static final long serialVersionUID = -9086333125844297957L;
 
 	/**
 	 *  Field Constructor.
@@ -1042,6 +1042,16 @@ public class GridField
 	{
 		return m_vo.AD_Window_ID;
 	}
+	
+	/** get AD_Chart_ID
+	 * @return chart id
+	 */
+	public int getAD_Chart_ID()
+	{
+		return m_vo.AD_Chart_ID;
+	}
+	
+	
 	/**
 	 * 	Get Window No
 	 *	@return window no
@@ -1414,6 +1424,15 @@ public class GridField
 	{
 		return m_vo;
 	}
+
+	/**
+	 * 	Default Focus
+	 *	@return focus
+	 */
+	public boolean isDefaultFocus()
+	{
+		return m_vo.IsDefaultFocus;
+	}	//	isDefaultFocus
 
 	/**
 	 *  Is this a long (string/text) field (over 60/2=30 characters)
