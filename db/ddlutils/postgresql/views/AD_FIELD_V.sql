@@ -16,7 +16,7 @@ CREATE OR REPLACE VIEW ad_field_v AS
  COALESCE(f.infofactoryclass, c.infofactoryclass) AS infofactoryclass, c.isautocomplete, 
  COALESCE(f.isallowcopy, c.isallowcopy) AS isallowcopy, f.isdisplayedgrid, f.seqnogrid, c.seqnoselection, 
  f.xposition, f.columnspan, f.numlines, COALESCE(f.istoolbarbutton, c.istoolbarbutton) AS istoolbarbutton, 
- c.formatpattern, f.isadvancedfield
+ c.formatpattern, f.isadvancedfield, f.IsDefaultFocus, c.AD_Chart_ID
    FROM ad_field f
    JOIN ad_tab t ON f.ad_tab_id = t.ad_tab_id
    LEFT JOIN ad_fieldgroup fg ON f.ad_fieldgroup_id = fg.ad_fieldgroup_id
@@ -24,3 +24,4 @@ CREATE OR REPLACE VIEW ad_field_v AS
    JOIN ad_table tbl ON c.ad_table_id = tbl.ad_table_id
    LEFT JOIN ad_val_rule vr ON vr.ad_val_rule_id = COALESCE(f.ad_val_rule_id, c.ad_val_rule_id)
   WHERE f.isactive = 'Y'::bpchar AND c.isactive = 'Y'::bpchar;
+  

@@ -23,14 +23,14 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Model for C_Location
  *  @author iDempiere (generated) 
- *  @version Release 1.0c - $Id$ */
+ *  @version Release 2.0 - $Id$ */
 public class X_C_Location extends PO implements I_C_Location, I_Persistent 
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20130626L;
+	private static final long serialVersionUID = 20131031L;
 
     /** Standard Constructor */
     public X_C_Location (Properties ctx, int C_Location_ID, String trxName)
@@ -137,6 +137,31 @@ public class X_C_Location extends PO implements I_C_Location, I_Persistent
 	public String getAddress4 () 
 	{
 		return (String)get_Value(COLUMNNAME_Address4);
+	}
+
+	public org.compiere.model.I_C_AddressValidation getC_AddressValidation() throws RuntimeException
+    {
+		return (org.compiere.model.I_C_AddressValidation)MTable.get(getCtx(), org.compiere.model.I_C_AddressValidation.Table_Name)
+			.getPO(getC_AddressValidation_ID(), get_TrxName());	}
+
+	/** Set Address Validation.
+		@param C_AddressValidation_ID Address Validation	  */
+	public void setC_AddressValidation_ID (int C_AddressValidation_ID)
+	{
+		if (C_AddressValidation_ID < 1) 
+			set_ValueNoCheck (COLUMNNAME_C_AddressValidation_ID, null);
+		else 
+			set_ValueNoCheck (COLUMNNAME_C_AddressValidation_ID, Integer.valueOf(C_AddressValidation_ID));
+	}
+
+	/** Get Address Validation.
+		@return Address Validation	  */
+	public int getC_AddressValidation_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_C_AddressValidation_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
 	}
 
 	public org.compiere.model.I_C_City getC_City() throws RuntimeException
@@ -285,6 +310,30 @@ public class X_C_Location extends PO implements I_C_Location, I_Persistent
 		return ii.intValue();
 	}
 
+	/** Set Valid.
+		@param IsValid 
+		Element is valid
+	  */
+	public void setIsValid (boolean IsValid)
+	{
+		set_ValueNoCheck (COLUMNNAME_IsValid, Boolean.valueOf(IsValid));
+	}
+
+	/** Get Valid.
+		@return Element is valid
+	  */
+	public boolean isValid () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsValid);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
 	/** Set ZIP.
 		@param Postal 
 		Postal code
@@ -334,5 +383,36 @@ public class X_C_Location extends PO implements I_C_Location, I_Persistent
 	public String getRegionName () 
 	{
 		return (String)get_Value(COLUMNNAME_RegionName);
+	}
+
+	/** Set Result.
+		@param Result 
+		Result of the action taken
+	  */
+	public void setResult (String Result)
+	{
+		set_ValueNoCheck (COLUMNNAME_Result, Result);
+	}
+
+	/** Get Result.
+		@return Result of the action taken
+	  */
+	public String getResult () 
+	{
+		return (String)get_Value(COLUMNNAME_Result);
+	}
+
+	/** Set Validate Address.
+		@param ValidateAddress Validate Address	  */
+	public void setValidateAddress (String ValidateAddress)
+	{
+		set_Value (COLUMNNAME_ValidateAddress, ValidateAddress);
+	}
+
+	/** Get Validate Address.
+		@return Validate Address	  */
+	public String getValidateAddress () 
+	{
+		return (String)get_Value(COLUMNNAME_ValidateAddress);
 	}
 }
