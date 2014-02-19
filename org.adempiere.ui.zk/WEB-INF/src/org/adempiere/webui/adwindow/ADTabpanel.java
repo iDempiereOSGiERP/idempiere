@@ -120,6 +120,12 @@ import org.zkoss.zul.impl.XulElement;
 public class ADTabpanel extends Div implements Evaluatee, EventListener<Event>,
 DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 {
+
+	/**
+	 * generated serial id
+	 */
+	private static final long serialVersionUID = -6748431395547118246L;
+
 	private static final String ON_SAVE_OPEN_PREFERENCE_EVENT = "onSaveOpenPreference";
 
 	public static final String ON_POST_INIT_EVENT = "onPostInit";
@@ -127,11 +133,6 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 	public static final String ON_SWITCH_VIEW_EVENT = "onSwitchView";
 
 	public static final String ON_DYNAMIC_DISPLAY_EVENT = "onDynamicDisplay";
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = -6082680802978974909L;
-
 	private static final String ON_DEFER_SET_SELECTED_NODE = "onDeferSetSelectedNode";
 	
 	private static final String ON_DEFER_SET_SELECTED_NODE_ATTR = "onDeferSetSelectedNode.Event.Posted";
@@ -189,6 +190,9 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 	private boolean detailPaneMode;
 
 	private int tabNo;
+	
+	/** DefaultFocusField		*/
+	private WEditor	defaultFocusField = null;
 
 	public static final String ON_TOGGLE_EVENT = "onToggle";
 	
@@ -549,6 +553,10 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
         			{
         				editor.addValueChangeListener(dataBinder);
         			}
+        			
+        			//	Default Focus
+        			if (defaultFocusField == null && field.isDefaultFocus())
+        				defaultFocusField = editor;
 
         			//stretch component to fill grid cell
         			editor.fillHorizontal();
@@ -607,17 +615,14 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
         if (gridTab.isTreeTab() && treePanel != null) {
         	int AD_Tree_ID = Env.getContextAsInt (Env.getCtx(), getWindowNo(), "AD_Tree_ID", true);
         	int AD_Tree_ID_Default = MTree.getDefaultAD_Tree_ID (Env.getAD_Client_ID(Env.getCtx()), gridTab.getKeyColumnName());
-        	if (gridTab.getRecord_ID() >= 0) {
-        		if (AD_Tree_ID != 0) {
-        			treePanel.initTree(AD_Tree_ID, windowNo);
-        			Events.echoEvent(ON_DEFER_SET_SELECTED_NODE, this, null);
-        		} else if (AD_Tree_ID_Default != 0) {
-        			treePanel.initTree(AD_Tree_ID_Default, windowNo);
-        			Events.echoEvent(ON_DEFER_SET_SELECTED_NODE, this, null);
-        		}
-        	} else {
-        		treePanel.getTree().clear();
-        	}
+        	
+    		if (AD_Tree_ID != 0) {
+    			treePanel.initTree(AD_Tree_ID, windowNo);
+    			Events.echoEvent(ON_DEFER_SET_SELECTED_NODE, this, null);
+    		} else if (AD_Tree_ID_Default != 0) {
+    			treePanel.initTree(AD_Tree_ID_Default, windowNo);
+    			Events.echoEvent(ON_DEFER_SET_SELECTED_NODE, this, null);
+    		}        	
         }
 
         if (!gridTab.isSingleRow() && !isGridView())
@@ -993,11 +998,20 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
      */
     public void focusToFirstEditor(boolean checkCurrent) {
 		WEditor toFocus = null;
-		for (WEditor editor : editors) {
-			if (editor.isVisible() && editor.isReadWrite() && editor.getComponent().getParent() != null
-				&& !(editor instanceof WImageEditor)) {
-				toFocus = editor;
-				break;
+		
+		if (defaultFocusField != null 
+				&& defaultFocusField.isVisible() && defaultFocusField.isReadWrite() && defaultFocusField.getComponent().getParent() != null
+				&& !(defaultFocusField instanceof WImageEditor)) {
+			toFocus = defaultFocusField;
+		}
+		else
+		{		
+			for (WEditor editor : editors) {
+				if (editor.isVisible() && editor.isReadWrite() && editor.getComponent().getParent() != null
+					&& !(editor instanceof WImageEditor)) {
+					toFocus = editor;
+					break;
+				}
 			}
 		}
 		if (toFocus != null) {
@@ -1216,26 +1230,21 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
         		if (refresh)
         		{
         			int AD_Tree_ID = Env.getContextAsInt (Env.getCtx(), getWindowNo(), "AD_Tree_ID", true);
-        			if (gridTab.getRecord_ID()>=0) 
-        			{
-        				if (AD_Tree_ID != 0)
-        				{
-                			if (treePanel.initTree(AD_Tree_ID, windowNo))
-                				echoDeferSetSelectedNodeEvent();
-                			else
-                				setSelectedNode(gridTab.getRecord_ID());
-                			
-                		}   
-        				else
-        				{
-        					AD_Tree_ID = MTree.getDefaultAD_Tree_ID (Env.getAD_Client_ID(Env.getCtx()), gridTab.getKeyColumnName());
-        					treePanel.initTree(AD_Tree_ID, windowNo);
-        				}
-					}
-        			else
-        			{	
-    					treePanel.getTree().clear();
-        			}	
+        		
+    				if (AD_Tree_ID != 0)
+    				{
+            			if (treePanel.initTree(AD_Tree_ID, windowNo))
+            				echoDeferSetSelectedNodeEvent();
+            			else
+            				setSelectedNode(gridTab.getRecord_ID());
+            			
+            		}   
+    				else
+    				{
+    					AD_Tree_ID = MTree.getDefaultAD_Tree_ID (Env.getAD_Client_ID(Env.getCtx()), gridTab.getKeyColumnName());
+    					treePanel.initTree(AD_Tree_ID, windowNo);
+    				}
+					
 				}    
         		
         	}else if(e.isInserting() && gridTab.getRecord_ID() < 0 && gridTab.getTabLevel() > 0 )
@@ -1398,7 +1407,7 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 
 	@Override
 	public void focus() {
-		if (formContainer.isVisible())
+		if (form.isVisible())
 			this.focusToFirstEditor(true);
 		else
 			listPanel.focus();

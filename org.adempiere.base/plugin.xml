@@ -9,6 +9,8 @@
    <extension-point id="org.compiere.model.PaymentProcessor" name="Payment Processor" schema="schema/org.compiere.model.PaymentProcessor.exsd"/>
    <extension-point id="org.compiere.model.Callout" name="Callout" schema="schema/org.compiere.model.Callout.exsd"/>
    <extension-point id="org.adempiere.model.IShipmentProcessor" name="Shipment Processor" schema="schema/org.adempiere.model.IShipmentProcessor.exsd"/>
+   <extension-point id="org.adempiere.model.IAddressValidation" name="Address Validation" schema="schema/org.adempiere.model.IAddressValidation.exsd"/>
+   <extension-point id="org.adempiere.model.ITaxProvider" name="Tax Provider" schema="schema/org.adempiere.model.ITaxProvider.exsd"/>
    <extension
          id="org.adempiere.impexp.GridTabXlsExporter"
          name="Grid data excel exporter"
@@ -93,6 +95,15 @@
       </callout>
    </extension>
    <extension
+         id="org.compiere.model.StandardTaxProvider"
+         name="Standard Tax Provider"
+         point="org.adempiere.model.ITaxProvider">
+      <provider
+            class="org.compiere.model.StandardTaxProvider"
+            priority="0">
+      </provider>
+   </extension>
+   <extension
          id="org.adempiere.base.SignDatabaseBuildApplication"
          name="Sign Database Build"
          point="org.eclipse.core.runtime.applications">
@@ -105,5 +116,4 @@
          </run>
       </application>
    </extension>
-
 </plugin>
