@@ -23,14 +23,14 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Model for M_AttributeSet
  *  @author iDempiere (generated) 
- *  @version Release 1.0c - $Id$ */
+ *  @version Release 2.0 - $Id$ */
 public class X_M_AttributeSet extends PO implements I_M_AttributeSet, I_Persistent 
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20130626L;
+	private static final long serialVersionUID = 20131031L;
 
     /** Standard Constructor */
     public X_M_AttributeSet (Properties ctx, int M_AttributeSet_ID, String trxName)
@@ -494,5 +494,26 @@ public class X_M_AttributeSet extends PO implements I_M_AttributeSet, I_Persiste
 	public String getSerNoCharSOverwrite () 
 	{
 		return (String)get_Value(COLUMNNAME_SerNoCharSOverwrite);
+	}
+
+	/** Set Use Guarantee Date for Material Policy.
+		@param UseGuaranteeDateForMPolicy Use Guarantee Date for Material Policy	  */
+	public void setUseGuaranteeDateForMPolicy (boolean UseGuaranteeDateForMPolicy)
+	{
+		set_Value (COLUMNNAME_UseGuaranteeDateForMPolicy, Boolean.valueOf(UseGuaranteeDateForMPolicy));
+	}
+
+	/** Get Use Guarantee Date for Material Policy.
+		@return Use Guarantee Date for Material Policy	  */
+	public boolean isUseGuaranteeDateForMPolicy () 
+	{
+		Object oo = get_Value(COLUMNNAME_UseGuaranteeDateForMPolicy);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
 	}
 }
