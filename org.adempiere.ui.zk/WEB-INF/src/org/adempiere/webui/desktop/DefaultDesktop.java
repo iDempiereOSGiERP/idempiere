@@ -55,6 +55,7 @@ import org.adempiere.webui.util.UserPreference;
 import org.adempiere.webui.window.FDialog;
 import org.compiere.Adempiere;
 import org.compiere.model.GridField;
+import org.compiere.model.GridTab;
 import org.compiere.model.MQuery;
 import org.compiere.model.MRole;
 import org.compiere.model.MTable;
@@ -103,7 +104,7 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -3578277408025379219L;
+	private static final long serialVersionUID = -7495898481342426458L;
 
 	private static final String IMAGES_UPARROW_PNG = "images/collapse-header.png";
 
@@ -594,6 +595,11 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 	@Override
 	public void updateHelpTooltip(GridField gridField) {
 		helpController.renderToolTip(gridField);
+	}
+
+	@Override
+	public void updateHelpQuickInfo(GridTab gridTab) {
+		helpController.renderQuickInfo(gridTab);
 	}
 
 	@Override
