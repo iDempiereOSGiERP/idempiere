@@ -58,6 +58,7 @@ import org.compiere.model.DataStatusEvent;
 import org.compiere.model.DataStatusListener;
 import org.compiere.model.GridField;
 import org.compiere.model.GridTab;
+import org.compiere.model.GridTable;
 import org.compiere.model.GridWindow;
 import org.compiere.model.I_AD_Preference;
 import org.compiere.model.MLookup;
@@ -1276,6 +1277,10 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
         if (listPanel.isVisible()) {
         	listPanel.updateListIndex();
         	listPanel.dynamicDisplay(col);
+        	if (GridTable.DATA_REFRESH_MESSAGE.equals(e.getAD_Message()) || 
+        		"Sorted".equals(e.getAD_Message())) {
+        		Clients.resize(listPanel.getListbox());
+        	}
         }
     }
 
@@ -1395,6 +1400,7 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 		if (listPanel.isVisible()) {
 			listPanel.refresh(gridTab);
 			listPanel.scrollToCurrentRow();
+			Clients.resize(listPanel.getListbox());
 		} else {
 			listPanel.deactivate();
 		}
