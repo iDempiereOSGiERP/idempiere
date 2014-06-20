@@ -113,7 +113,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -4152187193662318491L;
+	private static final long serialVersionUID = 1583164211079643636L;
 
 	public static final String DEFAULT_STATUS_MESSAGE = "NavigateOrUpdate";
 
@@ -1671,6 +1671,15 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	}   //  isTreeTab
 
 	/**
+	 * Where the tree should be shown
+	 * @return master, detail or both
+	 */
+	public String getTreeDisplayedOn()
+	{
+		return m_vo.TreeDisplayedOn;
+	}   //  getTreeDisplayedOn
+
+	/**
 	 *	Get Tab ID
 	 *  @return Tab ID
 	 */
@@ -1803,6 +1812,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	 *	Transaction support.
 	 *	Depending on Table returns transaction info
 	 *  @return info
+	 *  @deprecated use getStatusLine and configure Status Line instead
 	 */
 	public String getTrxInfo()
 	{
@@ -2037,6 +2047,45 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		//	Default - No Trx Info
 		return null;
 	}	//	getTrxInfo
+
+	/**************************************************************************
+	 *	Status Line support
+	 *	Depending on Window/Tab returns transaction info
+	 *  @return info
+	 */
+	public String getStatusLine()
+	{
+		MStatusLine sl = MStatusLine.getSL(getAD_Window_ID(), getAD_Tab_ID(), getAD_Table_ID());
+		if (sl != null)
+		{
+			String line = sl.parseLine(getWindowNo());
+			return line;
+		}
+
+		return null;
+	}	// getStatusLine
+
+	/**************************************************************************
+	 *	Widget support
+	 *	Depending on Window/Tab returns widget lines info
+	 *  @return info
+	 */
+	public String getStatusLinesWidget() {
+		MStatusLine[] wls = MStatusLine.getStatusLinesWidget(getAD_Window_ID(), getAD_Tab_ID(), getAD_Table_ID());
+		if (wls != null && wls.length > 0)
+		{
+			StringBuilder lines = new StringBuilder();
+			for (MStatusLine wl : wls) {
+				String line = wl.parseLine(getWindowNo());
+				if (line != null) {
+					lines.append(line).append("<br>");
+				}
+			}
+			if (lines.length() > 0)
+				return lines.toString();
+		}
+		return null;
+	} // getWidgetLines
 
 	/**
 	 *  Load Dependent Information
@@ -3290,4 +3339,5 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	{
 		selection.clear();
 	}
+
 }	//	GridTab
