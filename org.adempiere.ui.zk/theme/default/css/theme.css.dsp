@@ -121,6 +121,19 @@ html,body {
 	font-size: 10px;
 }
 
+.desktop-header-popup {
+	width: 800px;
+	border-radius: 3px;
+	border: 1px solid #d5d5d5;
+	border-right: 2px solid #d5d5d5;
+	border-bottom-width: 2px;
+	right: 1px;
+}
+
+.desktop-header-popup .desktop-header {
+	border: none;
+}
+
 .menu-href {
 	font-size: 11px;
 	font-weight: normal;
@@ -856,6 +869,23 @@ div.wc-modal, div.wc-modal-none, div.wc-highlighted, div.wc-highlighted-none {
 	background-color: #D3D3D3;
 }
 
+.adwindow-detailpane-adtab-grid-south {
+	background-color: transparent; 
+	position: absolute; 
+	right: 0px; 
+	top: 0px; 
+	height: 24px;
+}
+
+.adwindow-detailpane-adtab-grid-south .z-paging {
+	padding: 0px !important;
+}
+
+.adwindow-detailpane-adtab-grid-south .z-paging .z-paging-inp {
+	height: 16px;
+	line-height: 16px;
+}
+
 .adwindow-gridview-detail {
 	height: 200px;
 }
@@ -954,6 +984,10 @@ div.wc-modal, div.wc-modal-none, div.wc-highlighted, div.wc-highlighted-none {
 .z-grid tbody tr.highlight td.row-indicator {
 	background-color: transparent !important;
 	background-image: none !important; 
+}
+
+div.z-column-cnt, div.z-grid-header div.z-auxheader-cnt {
+	padding: 4px 2px 3px;
 }
 
 .form-label 
