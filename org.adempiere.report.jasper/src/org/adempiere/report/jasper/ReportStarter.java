@@ -11,7 +11,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.                     *
  * For the text or an alternative of this public license, you may reach us    *
  *****************************************************************************/
-package org.compiere.report;
+package org.adempiere.report.jasper;
 
 import java.awt.print.PrinterJob;
 import java.io.ByteArrayOutputStream;
@@ -626,7 +626,7 @@ public class ReportStarter implements ProcessCall, ClientProcess
 
                 if (!processInfo.isExport())
                 {
-	                if (reportData.isDirectPrint())
+	                if (reportData.isDirectPrint() || processInfo.isBatch())
 	                {
 	                    if (log.isLoggable(Level.INFO)) log.info( "ReportStarter.startProcess print report -" + jasperPrint.getName());
 	                    //RF 1906632
@@ -666,8 +666,6 @@ public class ReportStarter implements ProcessCall, ClientProcess
 	                    }
 	                    else
 	                    {
-	                    	// You can use JasperPrint to create PDF
-	                    	// Used For the PH
 	                    	try
 	                    	{
 	                    		File PDF = File.createTempFile(makePrefix(jasperPrint.getName()), ".pdf");
@@ -684,10 +682,7 @@ public class ReportStarter implements ProcessCall, ClientProcess
 	                    	{
 	                    		log.severe("ReportStarter.startProcess: Can not make PDF File - "+ e.getMessage());
 	                    	}
-	                    }
-	
-	                    // You can use JasperPrint to create PDF
-	//                        JasperExportManager.exportReportToPdfFile(jasperPrint, "BasicReport.pdf");
+	                    }	
 	                } else {
 	                    if (log.isLoggable(Level.INFO)) log.info( "ReportStarter.startProcess run report -"+jasperPrint.getName());
 	                    JRViewerProvider viewerLauncher = Service.locator().locate(JRViewerProvider.class).getService();

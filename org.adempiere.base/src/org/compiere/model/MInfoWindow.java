@@ -16,12 +16,20 @@
  *****************************************************************************/
 package org.compiere.model;
 
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
+import java.util.logging.Level;
 
+import org.adempiere.model.MInfoProcess;
+import org.adempiere.model.MInfoRelated;
 import org.compiere.model.AccessSqlParser.TableInfo;
+import org.compiere.util.DB;
 import org.compiere.util.Env;
+import org.compiere.util.Msg;
 
 /**
  * 	Info Window Model
@@ -34,7 +42,7 @@ public class MInfoWindow extends X_AD_InfoWindow
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -8062633099053363108L;
+	private static final long serialVersionUID = -3099366897275960300L;
 
 	/**
 	 * 	Standard Constructor
@@ -77,6 +85,99 @@ public class MInfoWindow extends X_AD_InfoWindow
 		return null;
 	}
 
+	/**
+	 * @author xolali
+	 * @param AD_InfoWindow_ID
+	 * @return
+	 */
+	public static MInfoWindow getInfoWindow(int AD_InfoWindow_ID) {
+
+		if (AD_InfoWindow_ID != 0) {
+
+			MInfoWindow infoWin =  (MInfoWindow)new Query(Env.getCtx(), Table_Name, "AD_InfoWindow_ID=?", null)
+				.setParameters(AD_InfoWindow_ID)
+				.first();
+
+			if (infoWin != null)
+				return infoWin;
+		}
+
+		return null;
+	}
+
+	/**
+	 * @author xolali
+	 * @param requery
+	 * @return
+	 */
+	private MInfoRelated[] m_infoRelated;
+
+	/**
+	 * IDEMPIERE-1334
+	 * cache list process button info
+	 */
+	private MInfoProcess[]  m_infoProcess;
+
+	public MInfoRelated[] getInfoRelated(boolean requery) {
+		if ((this.m_infoRelated != null) && (!requery)) {
+			set_TrxName(this.m_infoRelated, get_TrxName());
+			return this.m_infoRelated;
+		}
+
+		List<MInfoRelated> list = new Query(getCtx(), MInfoRelated.Table_Name, "AD_InfoWindow_ID=?", get_TrxName())
+			.setParameters(getAD_InfoWindow_ID())
+			.setOnlyActiveRecords(true)
+			.setOrderBy("SeqNo")
+			.list();
+
+		m_infoRelated =  list.toArray(new MInfoRelated[list.size()]);
+
+		return m_infoRelated;
+	}
+
+	/**
+	 * IDEMPIERE-1334
+	 * Get list {@link MInfoProcess} of this infoWindow
+	 * @param requery true get from db, false try get from cache
+	 * @return empty array when not exists Info Process
+	 */
+	public MInfoProcess [] getInfoProcess(boolean requery) {
+		// try from cache
+		if ((this.m_infoProcess != null) && (!requery)) {
+			set_TrxName(this.m_infoProcess, get_TrxName());
+			return this.m_infoProcess;
+		}
+		
+		// get list info process from db, order by seqNo
+		List<MInfoProcess> list = new Query(getCtx(), MInfoProcess.Table_Name, "AD_InfoWindow_ID=?", get_TrxName())
+			.setParameters(getAD_InfoWindow_ID())
+			.setOnlyActiveRecords(true)
+			.setOrderBy("SeqNo")
+			.list();
+
+		checkProcessRight(list);
+		m_infoProcess =  list.toArray(new MInfoProcess[list.size()]);
+
+		return m_infoProcess;
+	}
+	
+
+    /**
+     * if user haven't right to run a process, set infoProcess to null 
+     * @param lsInfoProcess
+     */
+	protected void checkProcessRight (List<MInfoProcess> lsInfoProcess) {
+		Iterator<MInfoProcess> iterator = lsInfoProcess.iterator();
+		while (iterator.hasNext()){
+			MInfoProcess testInfoProcess = iterator.next();
+			// need more review
+			if (MRole.getDefault().getProcessAccess(testInfoProcess.getAD_Process_ID()) == null){
+				iterator.remove();
+			}
+		}
+		
+	}
+
 	public MInfoColumn[] getInfoColumns(TableInfo[] tableInfos) {
 		Query query = new Query(getCtx(), MTable.get(getCtx(), I_AD_InfoColumn.Table_ID), I_AD_InfoColumn.COLUMNNAME_AD_InfoWindow_ID+"=?", get_TrxName());
 		List<MInfoColumn> list = query.setParameters(getAD_InfoWindow_ID())
@@ -99,6 +200,103 @@ public class MInfoWindow extends X_AD_InfoWindow
 				.list();
 		return list.toArray(new MInfoColumn[0]);
 	}
+
+	/**
+	 * @author xolali
+	 */
+	private MInfoColumn[] m_infocolumns = null;
+
+	public MInfoColumn[] getInfoColumns(boolean requery, boolean checkDisplay) {
+		if ((this.m_infocolumns != null) && (!requery)) {
+			set_TrxName(this.m_infocolumns, get_TrxName());
+			return this.m_infocolumns;
+		}
+		if (checkDisplay) {
+			List<MInfoColumn> list = new Query(getCtx(), MInfoColumn.Table_Name, "AD_InfoWindow_ID=? AND IsDisplayed='Y'", get_TrxName())
+				.setParameters(get_ID())
+				.setOrderBy("SeqNo")
+				.list();
+			this.m_infocolumns = list.toArray(new MInfoColumn[list.size()]);
+		} else {
+			List<MInfoColumn> list = new Query(getCtx(), MInfoColumn.Table_Name, "AD_InfoWindow_ID=?", get_TrxName())
+				.setParameters(get_ID())
+				.setOrderBy("SeqNo")
+				.list();
+			this.m_infocolumns = list.toArray(new MInfoColumn[list.size()]);
+		}
+
+		return this.m_infocolumns;
+	}
+
+	/**
+	 * @author xolali
+	 * @return
+	 */
+	public String getSql(){
+
+		String fromsql = getFromClause();
+		String oclause = getOtherClause();
+		if (oclause == null)
+			oclause=" ";
+
+		//boolean success = true;
+		MInfoColumn[] mColumns = getInfoColumns(true,true);
+		StringBuilder sql = new StringBuilder("SELECT ");
+		int size = mColumns.length;//get_ColumnCount();
+		for (int i = 0; i < size; i++)
+		{
+			if (i != 0) // can also use if i>0
+				sql.append(",");
+			sql.append(mColumns[i].getSelectClause());//getColumnSQL());	//	Normal and Virtual Column
+		}
+		sql.append(" FROM ").append(fromsql)//getTableName())
+		//.append(" WHERE ")
+		//.append(getWhereClause(false))
+		.append(oclause);
+		//.append("ORDER BY SeqNo"); //.append(get_WhereClause(false));
+
+		//
+		//	int index = -1;
+		//if (CLogMgt.isLevelFinest())
+		//log.finest(getWhereClause(true));
+		log.info("Generated SQL -- getSql: "+ sql.toString());
+
+		return sql.toString();
+	}
+
+	public boolean validateSql(){
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;
+		String sql = getSql();
+		try
+		{
+			String countSql = Msg.parseTranslation(Env.getCtx(), sql.toString());	//	Variables
+			countSql = MRole.getDefault().addAccessSQL(countSql, MTable.getTableName(Env.getCtx(), getAD_Table_ID()),// getTableName(), 
+					MRole.SQL_FULLYQUALIFIED, MRole.SQL_RO);
+
+			pstmt = DB.prepareStatement(countSql, null);
+			//	pstmt.setString(1, p_tableName);
+			rs = pstmt.executeQuery();
+			while (rs.next())
+			{
+				break;
+			}
+		}
+		catch (SQLException e)
+		{
+			//ADialog.error(WindowNo, c, AD_Message)
+			//Env.getUi().showError(0, null, sql.toString() + "<br> " + e.getMessage());
+			log.log(Level.SEVERE, sql, e);
+			// String error = e.toString();
+			// show error to user and return: TODO
+			return false;
+		}
+		finally {
+			DB.close(rs, pstmt);
+			rs = null; pstmt = null;
+		}
+		return true;
+	}  // validate sql
 
 	@Override
 	protected boolean beforeSave(boolean newRecord) {
