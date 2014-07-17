@@ -61,28 +61,14 @@
          unpack="false"/>
 
    <plugin
-         id="com.springsource.javax.xml.stream"
+         id="org.apache.catalina"
          download-size="0"
          install-size="0"
          version="0.0.0"
          unpack="false"/>
 
    <plugin
-         id="com.springsource.org.aopalliance"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
-
-   <plugin
-         id="com.springsource.org.apache.catalina"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
-
-   <plugin
-         id="com.springsource.org.apache.coyote"
+         id="org.apache.coyote"
          download-size="0"
          install-size="0"
          version="0.0.0"
@@ -90,21 +76,21 @@
          unpack="false"/>
 
    <plugin
-         id="com.springsource.org.apache.el"
+         id="org.apache.el"
          download-size="0"
          install-size="0"
          version="0.0.0"
          unpack="false"/>
 
    <plugin
-         id="com.springsource.org.eclipse.jdt.core.compiler.batch"
+         id="org.eclipse.jdt.core.compiler.batch"
          download-size="0"
          install-size="0"
          version="0.0.0"
          unpack="false"/>
 
    <plugin
-         id="com.springsource.org.apache.jasper"
+         id="org.apache.jasper"
          download-size="0"
          install-size="0"
          version="0.0.0"
@@ -112,7 +98,7 @@
          unpack="false"/>
 
    <plugin
-         id="com.springsource.org.apache.juli.extras"
+         id="org.apache.juli.extras"
          download-size="0"
          install-size="0"
          version="0.0.0"
@@ -126,7 +112,7 @@
          unpack="false"/>
 
    <plugin
-         id="com.springsource.slf4j.api"
+         id="org.slf4j.api"
          download-size="0"
          install-size="0"
          version="0.0.0"
@@ -196,55 +182,6 @@
          unpack="false"/>
 
    <plugin
-         id="org.springframework.aop"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
-
-   <plugin
-         id="org.springframework.beans"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
-
-   <plugin
-         id="org.springframework.context"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
-
-   <plugin
-         id="org.springframework.core"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
-
-   <plugin
-         id="org.springframework.osgi.core"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
-
-   <plugin
-         id="org.springframework.osgi.io"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
-
-   <plugin
-         id="com.springsource.javax.xml.bind"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
-
-   <plugin
          id="javax.annotation"
          download-size="0"
          install-size="0"
@@ -252,14 +189,21 @@
          unpack="false"/>
 
    <plugin
-         id="com.springsource.javax.persistence"
+         id="javax.persistence"
          download-size="0"
          install-size="0"
          version="0.0.0"
          unpack="false"/>
 
    <plugin
-         id="com.springsource.slf4j.jcl"
+         id="org.slf4j.jcl"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
+         id="org.apache.catalina.ha"
          download-size="0"
          install-size="0"
          version="0.0.0"
@@ -267,15 +211,7 @@
          unpack="false"/>
 
    <plugin
-         id="com.springsource.org.apache.catalina.ha"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         fragment="true"
-         unpack="false"/>
-
-   <plugin
-         id="com.springsource.org.apache.catalina.tribes"
+         id="org.apache.catalina.tribes"
          download-size="0"
          install-size="0"
          version="0.0.0"
@@ -324,10 +260,10 @@
          unpack="false"/>
 
    <plugin
-         id="com.springsource.javax.mail"
+         id="com.sun.mail.javax.mail"
          download-size="0"
          install-size="0"
-         version="1.4.5"
+         version="0.0.0"
          unpack="false"/>
 
    <plugin
