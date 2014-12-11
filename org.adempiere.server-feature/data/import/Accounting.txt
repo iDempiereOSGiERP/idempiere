@@ -1,0 +1,8 @@
+Accounting.txt
+--------------
+
+This directory contains example natural account structure. 
+Note that iDempiere only maintains and validates AccountingUS.xls/csv and AccountingDefaultsOnly.csv
+
+You can find localized (country) versions of the Chart of Accounts at the wiki page:
+http://wiki.idempiere.org/en/Localizations
