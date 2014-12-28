@@ -1,0 +1,26 @@
+-- Sep 30, 2013 9:31:17 PM COT
+-- IDEMPIERE-1411 Delete unused roles
+DELETE FROM AD_Window_Access WHERE AD_Role_ID IN (50001,50002)
+;
+
+DELETE FROM AD_Process_Access WHERE AD_Role_ID IN (50001,50002)
+;
+
+DELETE FROM AD_Form_Access WHERE AD_Role_ID IN (50001,50002)
+;
+
+DELETE FROM AD_WorkFlow_Access WHERE AD_Role_ID IN (50001,50002)
+;
+
+DELETE FROM AD_Document_Action_Access WHERE AD_Role_ID IN (50001,50002)
+;
+
+DELETE FROM AD_InfoWindow_Access WHERE AD_Role_ID IN (50001,50002)
+;
+
+DELETE FROM AD_Role WHERE AD_Role_ID IN (50001,50002)
+;
+
+SELECT register_migration_script('201309302132_IDEMPIERE-1411.sql') FROM dual
+;
+
