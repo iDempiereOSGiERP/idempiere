@@ -16,17 +16,22 @@ package org.adempiere.webui.component;
 
 import java.text.SimpleDateFormat;
 
+import org.adempiere.webui.ISupportMask;
+import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.apps.AEnv;
+import org.adempiere.webui.event.DialogEvents;
 import org.adempiere.webui.factory.ButtonFactory;
+import org.compiere.process.ProcessInfo;
 import org.compiere.process.ProcessInfoLog;
+import org.compiere.process.ProcessInfoUtil;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.zkoss.zhtml.Text;
+import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
-import org.zkoss.zul.A;
 import org.zkoss.zul.Hbox;
 import org.zkoss.zul.Image;
 import org.zkoss.zul.Separator;
@@ -37,7 +42,11 @@ import org.zkoss.zul.Separator;
  * @author Deepak Pansheriya
  */
 public class ProcessInfoDialog extends Window implements EventListener<Event> {
-	private static final long serialVersionUID = -4957498533838144942L;
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 4479446865514015847L;
+
 	private static final String MESSAGE_PANEL_STYLE = "text-align:left; word-break: break-all; overflow: auto; max-height: 250pt; min-width: 230pt; max-width: 450pt;";
 
 	private Text lblMsg = new Text();
@@ -92,13 +101,8 @@ public class ProcessInfoDialog extends Window implements EventListener<Event> {
 
 				if (log.getAD_Table_ID() > 0
 						&& log.getRecord_ID() > 0) {
-					A recordLink = new A();
-					recordLink.setLabel(sb.toString());
-					recordLink.setAttribute("Record_ID",
-							String.valueOf(log.getRecord_ID()));
-					recordLink.setAttribute("AD_Table_ID",
-							String.valueOf(log.getAD_Table_ID()));
-					recordLink.addEventListener(Events.ON_CLICK, this);
+					DocumentLink recordLink = new DocumentLink(sb.toString(), log.getAD_Table_ID(), log.getRecord_ID());
+																				
 					pnlMessage.appendChild(recordLink);
 				} else {
 					Text recordText = new Text(sb.toString());
@@ -147,19 +151,36 @@ public class ProcessInfoDialog extends Window implements EventListener<Event> {
 	public void onEvent(Event event) throws Exception {
 		if (event == null)
 			return;
-		if (event.getTarget() instanceof A) {
-			int Record_ID = 0;
-			int AD_Table_ID = 0;
-			Record_ID = Integer.valueOf((String) event.getTarget()
-					.getAttribute("Record_ID"));
-			AD_Table_ID = Integer.valueOf((String) event.getTarget()
-					.getAttribute("AD_Table_ID"));
-
-			if (Record_ID > 0 && AD_Table_ID > 0) {
-				AEnv.zoom(AD_Table_ID, Record_ID);
-			}
-		} else if (event.getTarget() == btnOk) {
+		if (event.getTarget() == btnOk) {
 			this.detach();
 		}
+	}
+	
+	/**
+	 * after run a process, call this function to show result in a dialog 
+	 * @param pi
+	 * @param windowNo
+	 * @param comp
+	 * @param needFillLogFromDb if ProcessInfoUtil.setLogFromDB(pi) is called by outer function, 
+	 * just pass false, other pass true to avoid duplicate message 
+	 */
+	public static void showProcessInfo (ProcessInfo pi, int windowNo, final Component comp, boolean needFillLogFromDb) {						
+		//		Get Log Info
+		if (needFillLogFromDb)
+			ProcessInfoUtil.setLogFromDB(pi);
+		ProcessInfoLog m_logs[] = pi.getLogs();
+		
+		if (m_logs != null && m_logs.length > 0) {
+			ProcessInfoDialog dialog = new ProcessInfoDialog(AEnv.getDialogHeader(Env.getCtx(), windowNo),AEnv.getDialogHeader(Env.getCtx(), windowNo), m_logs);
+			final ISupportMask supportMask = LayoutUtils.showWindowWithMask(dialog, comp, LayoutUtils.OVERLAP_PARENT);;
+			dialog.addEventListener(DialogEvents.ON_WINDOW_CLOSE, new EventListener<Event>() {
+				@Override
+				public void onEvent(Event event) throws Exception {
+					supportMask.hideMask();
+				}
+			});			
+			
+		}
+		
 	}
 }

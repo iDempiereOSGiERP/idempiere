@@ -20,11 +20,10 @@ import org.zkoss.zul.Div;
  *
  */
 public class Mask extends Div {
-
 	/**
-	 * generated serial
+	 * 
 	 */
-	private static final long serialVersionUID = -9068605816183445421L;
+	private static final long serialVersionUID = 7462166722064971644L;
 
 	/**
 	 * default constructor
@@ -32,6 +31,13 @@ public class Mask extends Div {
 	public Mask() {
 		setStyle("position: absolute; width: 100%; height: 100%; border: none; margin: 0; background-color: #e4e4e4; " +
 			"padding: 0; z-index:999; opacity:0.6; top: 0px; left: 0px;");
+	}
+		
+	public void hideMask() {
+		if (this.getParent() != null){
+			this.detach();
+		}
+		
 	}
 
 }
