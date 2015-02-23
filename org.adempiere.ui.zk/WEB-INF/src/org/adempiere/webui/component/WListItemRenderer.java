@@ -507,6 +507,7 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 
 	            header.setStyle("min-width: " + width + "px");
         	}
+            header.setHflex("min");
             m_headers.add(header);
         }
         else
