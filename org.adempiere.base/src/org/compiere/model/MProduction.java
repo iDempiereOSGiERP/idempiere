@@ -26,7 +26,7 @@ public class MProduction extends X_M_Production implements DocAction {
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 2222265936552140706L;
+	private static final long serialVersionUID = 8047044372956625013L;
 
 	/**
 	 * 
@@ -54,6 +54,35 @@ public class MProduction extends X_M_Production implements DocAction {
 		setAD_Client_ID(line.getAD_Client_ID());
 		setAD_Org_ID(line.getAD_Org_ID());
 		setMovementDate( line.getDatePromised() );
+	}
+
+	public MProduction( MProjectLine line ) {
+		super( line.getCtx(), 0, line.get_TrxName());
+		MProject project = new MProject(line.getCtx(), line.getC_Project_ID(), line.get_TrxName());
+		MWarehouse wh = new MWarehouse(line.getCtx(), project.getM_Warehouse_ID(), line.get_TrxName());
+		
+		MLocator M_Locator = null;
+		int M_Locator_ID = 0;
+
+		if (wh != null)
+		{
+			M_Locator = wh.getDefaultLocator();
+			M_Locator_ID = M_Locator.getM_Locator_ID();
+		}
+		setAD_Client_ID(line.getAD_Client_ID());
+		setAD_Org_ID(line.getAD_Org_ID());
+		setM_Product_ID(line.getM_Product_ID());
+		setProductionQty(line.getPlannedQty());
+		setM_Locator_ID(M_Locator_ID);
+		setDescription(project.getValue()+"_"+project.getName()+" Line: "+line.getLine()+" (project)");
+		setC_Project_ID(line.getC_Project_ID());
+		setC_BPartner_ID(project.getC_BPartner_ID());
+		setC_Campaign_ID(project.getC_Campaign_ID());
+		setAD_OrgTrx_ID(project.getAD_OrgTrx_ID());
+		setC_Activity_ID(project.getC_Activity_ID());
+		setC_ProjectPhase_ID(line.getC_ProjectPhase_ID());
+		setC_ProjectTask_ID(line.getC_ProjectTask_ID());
+		setMovementDate( Env.getContextAsDate(p_ctx, "#Date"));
 	}
 
 	@Override

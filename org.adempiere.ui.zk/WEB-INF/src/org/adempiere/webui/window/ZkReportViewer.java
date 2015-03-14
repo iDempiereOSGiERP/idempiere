@@ -248,7 +248,7 @@ public class ZkReportViewer extends Window implements EventListener<Event>, ITab
 		this.appendChild(layout);
 		this.setStyle("width: 100%; height: 100%; position: absolute; border:none; padding:none; margin:none;");
 
-		toolBar.setHeight("26px");
+		toolBar.setHeight("32px");
 		toolBar.setWidth("100%");
 		
 		previewType.setMold("select");
@@ -357,12 +357,15 @@ public class ZkReportViewer extends Window implements EventListener<Event>, ITab
 		North north = new North();
 		layout.appendChild(north);
 		north.appendChild(toolBar);
+		north.setVflex("min");
 		
 		Center center = new Center();
 		layout.appendChild(center);
 		iframe = new Iframe();
-		iframe.setHflex("true");
-		iframe.setVflex("true");
+		//iframe.setHflex("true");
+		//iframe.setVflex("true");
+		iframe.setWidth("100%");
+		iframe.setHeight("100%");
 		iframe.setId("reportFrame");
 		center.appendChild(iframe);
 		
@@ -383,8 +386,7 @@ public class ZkReportViewer extends Window implements EventListener<Event>, ITab
 		updateToolbarAccess(AD_Window_ID, AD_Process_ID);
 		
 		postRenderReportEvent();
-				
-		iframe.setAutohide(true);
+		//iframe.setAutohide(true);
 
 		this.setBorder("normal");
 		
