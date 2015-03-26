@@ -25,9 +25,9 @@ import java.util.Calendar;
 import java.util.Vector;
 import java.util.logging.Level;
 
-import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.component.Button;
 import org.adempiere.webui.component.Checkbox;
+import org.adempiere.webui.component.DocumentLink;
 import org.adempiere.webui.component.Grid;
 import org.adempiere.webui.component.GridFactory;
 import org.adempiere.webui.component.Label;
@@ -59,11 +59,8 @@ import org.compiere.util.Msg;
 import org.compiere.util.Trx;
 import org.compiere.util.TrxRunnable;
 import org.compiere.util.Util;
-import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
-import org.zkoss.zk.ui.event.Events;
-import org.zkoss.zul.A;
 import org.zkoss.zul.Borderlayout;
 import org.zkoss.zul.Center;
 import org.zkoss.zul.Hbox;
@@ -376,23 +373,7 @@ public class WAllocation extends Allocation
 			allocateButton.setEnabled(true);
 			if (allocation != null) 
 			{
-				A link = new A(allocation.getDocumentNo());
-				link.setAttribute("Record_ID", allocation.get_ID());
-				link.setAttribute("AD_Table_ID", allocation.get_Table_ID());
-				link.addEventListener(Events.ON_CLICK, new EventListener<Event>() 
-						{
-					@Override
-					public void onEvent(Event event) throws Exception 
-					{
-						Component comp = event.getTarget();
-						Integer Record_ID = (Integer) comp.getAttribute("Record_ID");
-						Integer AD_Table_ID = (Integer) comp.getAttribute("AD_Table_ID");
-						if (Record_ID != null && Record_ID > 0 && AD_Table_ID != null && AD_Table_ID > 0)
-						{
-							AEnv.zoom(AD_Table_ID, Record_ID);
-						}
-					}
-				});
+				DocumentLink link = new DocumentLink(allocation.getDocumentNo(), allocation.get_Table_ID(), allocation.get_ID());				
 				statusBar.appendChild(link);
 			}					
 		}

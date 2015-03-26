@@ -30,6 +30,7 @@ import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.component.Button;
 import org.adempiere.webui.component.Combobox;
 import org.adempiere.webui.component.ConfirmPanel;
+import org.adempiere.webui.component.DocumentLink;
 import org.adempiere.webui.component.Grid;
 import org.adempiere.webui.component.GridFactory;
 import org.adempiere.webui.component.Mask;
@@ -99,13 +100,13 @@ import com.lowagie.text.pdf.PdfWriter;
  */
 public class ProcessDialog extends AbstractProcessDialog implements EventListener<Event>, IHelpContext
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1320565116095846687L;
+
 	public static final String ON_INITIAL_FOCUS_EVENT = "onInitialFocus";
 
-	/**
-	 * generate serial version ID
-	 */
-	private static final long serialVersionUID = 3329046204196602797L;
-	
 	private static final String MESSAGE_DIV_STYLE = "max-height: 150pt; overflow: auto; margin: 10px;";	
 	
 	/**	Logger			*/
@@ -545,13 +546,7 @@ public class ProcessDialog extends AbstractProcessDialog implements EventListene
 				Td td = new Td();
 				if (log.getP_Msg() != null) {
 					if (log.getAD_Table_ID() > 0 && log.getRecord_ID() > 0) {
-						A recordLink = new A();
-						recordLink.setLabel(log.getP_Msg());
-						recordLink.setAttribute("Record_ID",
-								String.valueOf(log.getRecord_ID()));
-						recordLink.setAttribute("AD_Table_ID",
-								String.valueOf(log.getAD_Table_ID()));
-						recordLink.addEventListener(Events.ON_CLICK, this);
+						DocumentLink recordLink = new DocumentLink(log.getP_Msg(), log.getAD_Table_ID(), log.getRecord_ID());																								
 						td.appendChild(recordLink);
 					} else {
 						Text t = new Text();
