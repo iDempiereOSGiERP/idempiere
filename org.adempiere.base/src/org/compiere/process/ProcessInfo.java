@@ -144,6 +144,36 @@ public class ProcessInfo implements Serializable
 
 	private transient PO m_po = null;
 	
+	private String reportType = null;
+	
+	private boolean isSummary = false;
+	
+	private int languageID = 0;
+	
+	public int getLanguageID() {
+		return languageID;
+	}
+
+	public void setLanguageID(int languageID) {
+		this.languageID = languageID;
+	}
+
+	public String getReportType() {
+		return reportType;
+	}
+
+	public void setReportType(String reportType) {
+		this.reportType = reportType;
+	}
+	
+	public void setIsSummary(boolean isSummary) {
+		this.isSummary = isSummary;
+	}
+	
+	public boolean isSummary() {
+		return this.isSummary;
+	}
+
 	/**
 	 *  String representation
 	 *  @return String representation

@@ -19,11 +19,8 @@ package org.adempiere.webui.apps;
 import java.util.logging.Level;
 
 import org.adempiere.webui.LayoutUtils;
-import org.adempiere.webui.component.Button;
-import org.adempiere.webui.component.ConfirmPanel;
 import org.adempiere.webui.component.Window;
 import org.adempiere.webui.event.DialogEvents;
-import org.adempiere.webui.factory.ButtonFactory;
 import org.adempiere.webui.session.SessionManager;
 import org.compiere.process.ProcessInfo;
 import org.compiere.util.CLogger;
@@ -31,11 +28,6 @@ import org.compiere.util.Env;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
-import org.zkoss.zk.ui.event.Events;
-import org.zkoss.zul.Div;
-import org.zkoss.zul.Hlayout;
-import org.zkoss.zul.Layout;
-import org.zkoss.zul.Vlayout;
 
 /**
  *
@@ -89,8 +81,9 @@ public class ProcessModalDialog extends AbstractProcessDialog implements EventLi
 		log.info("Process=" + pi.getAD_Process_ID());
 		try
 		{
-			initComponents();
-			init(Env.getCtx(), WindowNo, pi.getAD_Process_ID(), pi, "100%", autoStart, true);
+			init(Env.getCtx(), WindowNo, pi.getAD_Process_ID(), pi, autoStart, true);
+			mainParameterLayout.setStyle("max-height:" + (SessionManager.getAppDesktop().getClientInfo().desktopHeight - 150) + "px");
+			this.setSclass("popup-dialog");
 		}
 		catch(Exception ex)
 		{
@@ -134,50 +127,6 @@ public class ProcessModalDialog extends AbstractProcessDialog implements EventLi
 	{
 		this(WindowNo, AD_Process_ID, tableId, recordId, autoStart);
 	}	//	ProcessDialog
-
-	private void initComponents() {
-		this.setBorder("normal");
-		Layout dialogBody = new Vlayout();
-		dialogBody.setHflex("1");
-		dialogBody.setStyle(dialogBody.getStyle() + ";max-height:" + (SessionManager.getAppDesktop().getClientInfo().desktopHeight - 100) + "px");
-		
-		
-		Vlayout dialogContent = new Vlayout();
-		dialogContent.setHflex("1");
-		dialogContent.setVflex("1");
-		dialogContent.setSclass("dialog-content");
-		dialogContent.setStyle("overflow-y: auto;");
-		dialogBody.appendChild(dialogContent);
-		// description
-		Div div = new Div();
-		div.setId("message");
-		div.appendChild(getMessage());
-		div.setStyle("max-height: 150pt; overflow: auto;");
-		dialogContent.appendChild(div);
-		
-		dialogContent.appendChild(getCenterPanel());
-		// button panel
-		Layout hbox = new Hlayout();
-		hbox.setStyle("bottom:0;text-align:right");
-		dialogBody.appendChild(hbox);
-		hbox.setWidth("100%");
-		hbox.setSclass("dialog-footer");
-		
-		Button btn = ButtonFactory.createNamedButton(ConfirmPanel.A_OK);
-		btn.setId("Ok");
-		btn.addEventListener(Events.ON_CLICK, this);
-		hbox.appendChild(btn);
-
-		btn = ButtonFactory.createNamedButton(ConfirmPanel.A_CANCEL);
-		btn.setId("Cancel");
-		btn.addEventListener(Events.ON_CLICK, this);
-		hbox.appendChild(btn);
-		dialogBody.appendChild(hbox);
-		this.appendChild(dialogBody);
-		
-		this.setSclass("popup-dialog");
-
-	}
 
 	/**
 	 * 	Set Visible
@@ -232,13 +181,13 @@ public class ProcessModalDialog extends AbstractProcessDialog implements EventLi
 	 */
 	public void onEvent(Event event) {		
 		Component component = event.getTarget();
-		if (component instanceof Button) {
-			Button element = (Button)component;
-			if ("Ok".equalsIgnoreCase(element.getId()))
-				startProcess();
-			else if ("Cancel".equalsIgnoreCase(element.getId()))
-				cancelProcess();
-		} else {
+		if (component.equals(bOK)) {
+			super.onEvent(event);
+			startProcess();
+		} else if (component.equals(bCancel)) {
+			super.onEvent(event);
+			cancelProcess();
+		}else {
 			super.onEvent(event);
 		}
 	}		
