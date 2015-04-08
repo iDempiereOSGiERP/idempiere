@@ -28,6 +28,7 @@ import org.adempiere.webui.apps.WProcessCtl;
 import org.adempiere.webui.component.Button;
 import org.adempiere.webui.component.ConfirmPanel;
 import org.adempiere.webui.component.DesktopTabpanel;
+import org.adempiere.webui.component.DocumentLink;
 import org.adempiere.webui.component.Grid;
 import org.adempiere.webui.component.GridFactory;
 import org.adempiere.webui.component.ListboxFactory;
@@ -66,14 +67,13 @@ import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.util.Clients;
-import org.zkoss.zul.A;
 import org.zkoss.zul.Borderlayout;
 import org.zkoss.zul.Center;
+import org.zkoss.zul.Div;
+import org.zkoss.zul.Html;
 import org.zkoss.zul.Label;
 import org.zkoss.zul.North;
 import org.zkoss.zul.South;
-import org.zkoss.zul.Div;
-import org.zkoss.zul.Html;
 
 /**
  * Generate custom form window
@@ -84,7 +84,7 @@ public class WGenForm extends ADForm implements EventListener<Event>, WTableMode
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -8669256486969882958L;
+	private static final long serialVersionUID = 4240430312911412710L;
 
 	private GenForm genForm;
 	
@@ -252,11 +252,7 @@ public class WGenForm extends ADForm implements EventListener<Event>, WTableMode
 	{
 		log.info("Cmd=" + e.getTarget().getId());
 		//
-		if(e.getTarget() instanceof A &&  e.getName().equals(Events.ON_CLICK)){
-			doOnClick((A)e.getTarget());
-			return;
-		}
-		else if (e.getTarget().getId().equals(ConfirmPanel.A_CANCEL))
+		if (e.getTarget().getId().equals(ConfirmPanel.A_CANCEL))
 		{
 			dispose();
 			return;
@@ -564,13 +560,8 @@ public class WGenForm extends ADForm implements EventListener<Event>, WTableMode
 				Td td = new Td();
 				if (log.getP_Msg() != null) {
 					if (log.getAD_Table_ID() > 0 && log.getRecord_ID() > 0) {
-						A recordLink = new A();
-						recordLink.setLabel(log.getP_Msg());
-						recordLink.setAttribute("Record_ID",
-								String.valueOf(log.getRecord_ID()));
-						recordLink.setAttribute("AD_Table_ID",
-								String.valueOf(log.getAD_Table_ID()));
-						recordLink.addEventListener(Events.ON_CLICK, this);
+						DocumentLink recordLink = new DocumentLink(log.getP_Msg(), log.getAD_Table_ID(), log.getRecord_ID());
+												
 						td.appendChild(recordLink);
 					} else {
 						Text t = new Text();
@@ -584,25 +575,4 @@ public class WGenForm extends ADForm implements EventListener<Event>, WTableMode
 		}
     	messageDiv.appendChild(logMessageTable);
 	}
-	/**
-	 * Handling Anchor link on end of process
-	 * Open document window
-	 * @param btn
-	 */
-	private void doOnClick(A btn) {
-		int Record_ID = 0;
-		int AD_Table_ID =0;
-		try
-		{
-			Record_ID = Integer.valueOf((String)btn.getAttribute("Record_ID"));            		
-			AD_Table_ID= Integer.valueOf((String)btn.getAttribute("AD_Table_ID"));            		
 		}
-		catch (Exception e) {
-		}
-
-		if (Record_ID > 0 && AD_Table_ID > 0) {
-			
-			AEnv.zoom(AD_Table_ID, Record_ID);
-		}		
-	}
-}

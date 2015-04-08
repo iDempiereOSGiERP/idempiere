@@ -234,4 +234,8 @@ public class AtmosphereServerPush implements ServerPush {
 			return "[" + thread + ',' + nActive + ']';
 		}
 	}
+
+	@Override
+	public void resume() {
+	}
 }
