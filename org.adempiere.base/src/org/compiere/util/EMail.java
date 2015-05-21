@@ -72,7 +72,7 @@ public final class EMail implements Serializable
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -5857825644737211294L;
+	private static final long serialVersionUID = 955264336741872361L;
 
 	//use in server bean
 	public final static String HTML_MAIL_MARKER = "ContentType=text/html;";
@@ -184,6 +184,10 @@ public final class EMail implements Serializable
 		m_smtpPort = smtpPort;
 	}
 
+	public void setAcknoledgmentReceipt(boolean ar) {
+		m_acknowledgementReceipt = ar;
+	}
+
 	/**	From Address				*/
 	private InternetAddress     m_from;
 	/** To Address					*/
@@ -204,7 +208,7 @@ public final class EMail implements Serializable
 	private String  			m_smtpHost;
 	private int					m_smtpPort;
 	private boolean				m_secureSmtp;
-
+	private boolean				m_acknowledgementReceipt;
 	
 	/**	Attachments					*/
 	private ArrayList<DataSource>	m_attachments;
@@ -335,6 +339,8 @@ public final class EMail implements Serializable
 			//
 			m_msg.setSentDate(new java.util.Date());
 			m_msg.setHeader("Comments", "iDempiereMail");
+			if (m_acknowledgementReceipt)
+				m_msg.setHeader("Disposition-Notification-To", m_from.getAddress());
 		//	m_msg.setDescription("Description");
 			//	SMTP specifics
 			//m_msg.setAllow8bitMIME(true);
@@ -354,7 +360,13 @@ public final class EMail implements Serializable
 			t.connect();
 		//	t.connect(m_smtpHost, user, password);
 		//	log.fine("transport connected");
-			Transport.send(m_msg);
+			ClassLoader tcl = Thread.currentThread().getContextClassLoader();
+			try {
+				Thread.currentThread().setContextClassLoader(javax.mail.Session.class.getClassLoader());
+				Transport.send(m_msg);
+			} finally {
+				Thread.currentThread().setContextClassLoader(tcl);
+			}
 		//	t.sendMessage(msg, msg.getAllRecipients());
 			if (log.isLoggable(Level.FINE)) log.fine("Success - MessageID=" + m_msg.getMessageID());
 		}

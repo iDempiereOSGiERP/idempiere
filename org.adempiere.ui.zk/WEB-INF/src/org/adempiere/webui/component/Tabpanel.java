@@ -17,7 +17,10 @@
 
 package org.adempiere.webui.component;
 
+import org.adempiere.webui.ISupportMask; 
+import org.adempiere.webui.ShowMaskWrapper;
 import org.adempiere.webui.panel.ITabOnCloseHandler;
+import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.IdSpace;
 import org.zkoss.zul.Tab;
 
@@ -27,12 +30,12 @@ import org.zkoss.zul.Tab;
  * @date    Feb 25, 2007
  * @version $Revision: 0.10 $
  */
-public class Tabpanel extends org.zkoss.zul.Tabpanel implements IdSpace
+public class Tabpanel extends org.zkoss.zul.Tabpanel implements IdSpace, ISupportMask
 {
-    /**
+	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -3392752891445762516L;
+	private static final long serialVersionUID = -1057250877531248907L;
 
 	private ITabOnCloseHandler onCloseHandler = null;
     
@@ -40,6 +43,8 @@ public class Tabpanel extends org.zkoss.zul.Tabpanel implements IdSpace
 
 	private int tabLevel;
 
+	protected ShowMaskWrapper showMaskWrapper = new ShowMaskWrapper(this);
+	
     public boolean isEnabled()
     {
         return enabled;
@@ -84,5 +89,37 @@ public class Tabpanel extends org.zkoss.zul.Tabpanel implements IdSpace
 	
 	public void setOnCloseHandler(ITabOnCloseHandler handler) {
 		this.onCloseHandler = handler;
+	}
+	
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void showMask() {
+		showMaskWrapper.showMask();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void hideMask() {
+		showMaskWrapper.hideMask();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Mask getMaskObj() {
+		return showMaskWrapper.getMaskObj();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Component getMaskComponent() {		
+		return showMaskWrapper.getMaskComponent();
 	}
 }
