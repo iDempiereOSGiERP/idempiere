@@ -18,7 +18,7 @@
 package org.adempiere.webui.adwindow;
 
 import org.adempiere.webui.LayoutUtils;
-import org.adempiere.webui.apps.AEnv;
+import org.adempiere.webui.component.DocumentLink;
 import org.adempiere.webui.component.Label;
 import org.adempiere.webui.component.Panel;
 import org.adempiere.webui.component.Tabpanel;
@@ -32,7 +32,6 @@ import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.util.Clients;
-import org.zkoss.zul.A;
 import org.zkoss.zul.Caption;
 import org.zkoss.zul.Div;
 import org.zkoss.zul.Hlayout;
@@ -49,12 +48,12 @@ import org.zkoss.zul.Space;
  */
 public class StatusBar extends Panel implements EventListener<Event> 
 {
-	/**
-	 *
+    /**
+	 * 
 	 */
-	private static final long serialVersionUID = -3262889055635240201L;
+	private static final long serialVersionUID = 1519490416637936553L;
 
-    private Label infoLine;
+	private Label infoLine;
 
 	private Div west;
 	
@@ -172,9 +171,7 @@ public class StatusBar extends Panel implements EventListener<Event>
 				if (m_logs[i].getP_Msg() != null) {
 					if (m_logs[i].getAD_Table_ID() > 0
 							&& m_logs[i].getRecord_ID() > 0) {
-						RecordLink recordLink = new RecordLink(m_logs[i].getAD_Table_ID(), m_logs[i].getRecord_ID());
-						recordLink.setLabel(m_logs[i].getP_Msg());
-						recordLink.addEventListener(Events.ON_CLICK, this);
+						DocumentLink recordLink = new DocumentLink(m_logs[i].getP_Msg(), m_logs[i].getAD_Table_ID(), m_logs[i].getRecord_ID());												
 						if (!div.getChildren().isEmpty())
 							div.appendChild(new Separator("horizontal"));
 						div.appendChild(recordLink);						
@@ -245,9 +242,7 @@ public class StatusBar extends Panel implements EventListener<Event>
 
 	@Override
 	public void onEvent(Event event) throws Exception {
-		if(event.getTarget() instanceof RecordLink){
-			doZoom((RecordLink)event.getTarget());
- 		} else if (event.getTarget() instanceof Label) {
+		if (event.getTarget() instanceof Label) {
  			showPopup();
  		}
 	}
@@ -257,16 +252,6 @@ public class StatusBar extends Panel implements EventListener<Event>
 		LayoutUtils.openOverlappedWindow(messageContainer, msgPopup, "overlap_end");
 	}
 	
-	private void doZoom(RecordLink link) {
-		int Record_ID = 0;
-		int AD_Table_ID = 0;
-		Record_ID = link.recordId;
-		AD_Table_ID = link.tableId;
-		if (Record_ID > 0 && AD_Table_ID > 0) {
-			AEnv.zoom(AD_Table_ID, Record_ID);
-		}
-	}
-
 	/**
 	 * 
 	 * @return process logs
@@ -304,16 +289,4 @@ public class StatusBar extends Panel implements EventListener<Event>
         msgPopup.appendChild(msgPopupCaption);        
 	}
 
-	class RecordLink extends A {
-		private static final long serialVersionUID = 3793489614175751401L;
-		
-		protected int recordId;
-		protected int tableId;
-
-		protected RecordLink(int AD_Table_ID, int Record_ID) {
-			super();
-			tableId = AD_Table_ID;
-			recordId = Record_ID;
 		}
-	}
-}
