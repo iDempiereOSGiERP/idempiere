@@ -24,38 +24,40 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 import org.adempiere.exceptions.AdempiereException;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
+import org.idempiere.util.HistoryRuleSupportHash;
+import org.passay.AlphabeticalCharacterRule;
+import org.passay.AlphabeticalSequenceRule;
+import org.passay.CharacterCharacteristicsRule;
+import org.passay.DictionarySubstringRule;
+import org.passay.DigitCharacterRule;
+import org.passay.LengthRule;
+import org.passay.LowercaseCharacterRule;
+import org.passay.MessageResolver;
+import org.passay.NumericalSequenceRule;
+import org.passay.PasswordData;
+import org.passay.PasswordGenerator;
+import org.passay.PasswordValidator;
+import org.passay.PropertiesMessageResolver;
+import org.passay.QwertySequenceRule;
+import org.passay.RepeatCharacterRegexRule;
+import org.passay.Rule;
+import org.passay.RuleResult;
+import org.passay.SpecialCharacterRule;
+import org.passay.UppercaseCharacterRule;
+import org.passay.UsernameRule;
+import org.passay.WhitespaceRule;
+import org.passay.dictionary.ArrayWordList;
+import org.passay.dictionary.WordListDictionary;
+import org.passay.dictionary.WordLists;
+import org.passay.dictionary.sort.ArraysSort;
 
-import edu.vt.middleware.dictionary.ArrayWordList;
-import edu.vt.middleware.dictionary.WordListDictionary;
-import edu.vt.middleware.dictionary.WordLists;
-import edu.vt.middleware.dictionary.sort.ArraysSort;
-import edu.vt.middleware.password.AlphabeticalCharacterRule;
-import edu.vt.middleware.password.AlphabeticalSequenceRule;
-import edu.vt.middleware.password.CharacterCharacteristicsRule;
-import edu.vt.middleware.password.DictionarySubstringRule;
-import edu.vt.middleware.password.DigitCharacterRule;
-import edu.vt.middleware.password.LengthRule;
-import edu.vt.middleware.password.LowercaseCharacterRule;
-import edu.vt.middleware.password.MessageResolver;
-import edu.vt.middleware.password.NonAlphanumericCharacterRule;
-import edu.vt.middleware.password.NumericalSequenceRule;
-import edu.vt.middleware.password.Password;
-import edu.vt.middleware.password.PasswordData;
-import edu.vt.middleware.password.PasswordGenerator;
-import edu.vt.middleware.password.PasswordValidator;
-import edu.vt.middleware.password.QwertySequenceRule;
-import edu.vt.middleware.password.RepeatCharacterRegexRule;
-import edu.vt.middleware.password.Rule;
-import edu.vt.middleware.password.RuleResult;
-import edu.vt.middleware.password.UppercaseCharacterRule;
-import edu.vt.middleware.password.UsernameRule;
-import edu.vt.middleware.password.WhitespaceRule;
 
 /**
  * @author juliana
@@ -103,11 +105,6 @@ public class MPasswordRule extends X_AD_PasswordRule {
 			if (Util.isEmpty(getPathDictionary())) {
 				msg.append(Msg.getElement(getCtx(), COLUMNNAME_PathDictionary));
 			}
-			if (getDictWordLength() <= 0) {
-				if (msg.length() > 0)
-					msg.append(", ");
-				msg.append(Msg.getElement(getCtx(), COLUMNNAME_DictWordLength));
-			}
 			if (msg.length() > 0) {
 				log.saveError("FillMandatory", msg.toString());
 				return false;
@@ -116,7 +113,7 @@ public class MPasswordRule extends X_AD_PasswordRule {
 		return true;
 	}
 
-	public void validate(String username, String newPassword) throws AdempiereException {
+	public void validate(String username, String newPassword, List<MPasswordHistory> passwordHistorys) throws AdempiereException {
 
 		ArrayList<Rule> ruleList =  new ArrayList<Rule>();
 
@@ -144,7 +141,7 @@ public class MPasswordRule extends X_AD_PasswordRule {
 		if (getNonAlphaNumericCharacter() > 0) {
 			// require at least n non-alphanumeric char
 			numValidations++;
-			charRule.getRules().add(new NonAlphanumericCharacterRule(getNonAlphaNumericCharacter()));
+			charRule.getRules().add(new SpecialCharacterRule(getNonAlphaNumericCharacter()));
 		}
 		if (getUppercaseCharacter() > 0) {
 			numValidations++;
@@ -193,11 +190,11 @@ public class MPasswordRule extends X_AD_PasswordRule {
 					WordListDictionary dict = new WordListDictionary(awl);
 					DictionarySubstringRule dictRule = new DictionarySubstringRule(dict);
 
-					if (getDictWordLength() > 0) {
+					/*if (getDictWordLength() > 0) {//when update library to passay. this method is miss 
 						dictRule.setWordLength(getDictWordLength()); // size of words to check in the password						
 					} else{
 						dictRule.setWordLength(DictionarySubstringRule.DEFAULT_WORD_LENGTH);
-					}
+					}*/
 
 					if (isDictMatchBackwards()) {
 						dictRule.setMatchBackwards(true); // match dictionary words backwards
@@ -213,10 +210,18 @@ public class MPasswordRule extends X_AD_PasswordRule {
 			}
 		}
 
+		// history password check
+		List<PasswordData.Reference> historyData = new ArrayList<PasswordData.Reference>();
+		for (MPasswordHistory passwordHistory : passwordHistorys){
+			historyData.add(new PasswordData.HistoricalReference(passwordHistory.getSalt(), passwordHistory.getPassword()));
+		}
+		HistoryRuleSupportHash historyRule = new HistoryRuleSupportHash();
+		ruleList.add(historyRule);
+		
+		// validator all rule
 		if (!ruleList.isEmpty()) {
 			PasswordValidator validator = new PasswordValidator(getCustomResolver(), ruleList);
-			PasswordData passwordData = new PasswordData(new Password(newPassword));
-			passwordData.setUsername(username);
+			PasswordData passwordData =  PasswordData.newInstance(newPassword, username, historyData);
 			RuleResult result = validator.validate(passwordData);
 			if (!result.isValid()) {
 				StringBuilder error = new StringBuilder(Msg.getMsg(getCtx(), "PasswordErrors"));
@@ -253,9 +258,9 @@ public class MPasswordRule extends X_AD_PasswordRule {
 			}
 		}
 		if (props == null)
-			return new MessageResolver();
+			return new PropertiesMessageResolver();
 		else
-			return new MessageResolver(props);
+			return new PropertiesMessageResolver(props);
 	}
 
 	public String generate() {
@@ -269,7 +274,7 @@ public class MPasswordRule extends X_AD_PasswordRule {
 		if (getNonAlphaNumericCharacter() > 0) {
 			// require at least n non-alphanumeric char
 			numValidations++;
-			charRule.getRules().add(new NonAlphanumericCharacterRule(getNonAlphaNumericCharacter()));
+			charRule.getRules().add(new SpecialCharacterRule(getNonAlphaNumericCharacter()));
 		}
 		if (getUppercaseCharacter() > 0) {
 			numValidations++;
