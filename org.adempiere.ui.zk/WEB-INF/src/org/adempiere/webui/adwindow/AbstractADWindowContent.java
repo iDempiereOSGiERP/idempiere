@@ -2430,7 +2430,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 
 					final ProcessModalDialog dialog = new ProcessModalDialog(AbstractADWindowContent.this, getWindowNo(), AD_Process_ID,table_ID, record_ID, true);
 					if (dialog.isValid()) {
-						dialog.setWidth("500px");
+						//dialog.setWidth("500px");
 						dialog.setBorder("normal");						
 						getComponent().getParent().appendChild(dialog);
 						showBusyMask(dialog);
@@ -2938,7 +2938,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 
 			if (dialog.isValid())
 			{
-				dialog.setWidth("500px");
+				//dialog.setWidth("500px");
 				dialog.setBorder("normal");				
 				getComponent().getParent().appendChild(dialog);
 				showBusyMask(dialog);
@@ -3082,17 +3082,9 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 		ProcessInfoUtil.setLogFromDB(pi);
 		ProcessInfoLog m_logs[] = pi.getLogs();
 		statusBar.setStatusLine(pi.getSummary(), pi.isError(),m_logs);
-		if (m_logs != null) {
-			ProcessInfoDialog dialog = new ProcessInfoDialog(AEnv.getDialogHeader(ctx, curWindowNo),AEnv.getDialogHeader(ctx, curWindowNo), m_logs);
-			dialog.addEventListener(DialogEvents.ON_WINDOW_CLOSE, new EventListener<Event>() {
-				@Override
-				public void onEvent(Event event) throws Exception {
-					hideBusyMask();
-				}
-			});			
-			getComponent().getParent().appendChild(dialog);
-			showBusyMask(dialog);
-			LayoutUtils.openOverlappedWindow(this.getComponent(),dialog,"middle_center");
+		
+		if (m_logs != null && m_logs.length > 0) {
+			ProcessInfoDialog.showProcessInfo(pi, curWindowNo, getComponent(), false);
 		}
 		
 	}

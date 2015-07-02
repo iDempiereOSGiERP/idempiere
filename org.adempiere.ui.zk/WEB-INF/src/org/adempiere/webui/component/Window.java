@@ -17,7 +17,10 @@
 
 package org.adempiere.webui.component;
 
+import org.adempiere.webui.ISupportMask;
+import org.adempiere.webui.ShowMaskWrapper;
 import org.adempiere.webui.event.DialogEvents;
+import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.Executions;
 import org.zkoss.zk.ui.Page;
 import org.zkoss.zk.ui.event.Event;
@@ -29,12 +32,14 @@ import org.zkoss.zk.ui.event.Events;
  * @date    Feb 25, 2007
  * @version $Revision: 0.10 $
  */
-public class Window extends org.zkoss.zul.Window
+public class Window extends org.zkoss.zul.Window implements ISupportMask
 {
-    /**
+	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -977158068979292880L;
+	private static final long serialVersionUID = -8249071775776387012L;
+
+	protected ShowMaskWrapper showMaskWrapper = new ShowMaskWrapper(this);
 	/*** Show as modal window ***/
     public static final String MODE_MODAL = "modal";
     /*** Show as popup window ***/
@@ -58,7 +63,6 @@ public class Window extends org.zkoss.zul.Window
     public Window()
     {
         super();
-        setShadow(false);
     }
     
     /**
@@ -105,5 +109,39 @@ public class Window extends org.zkoss.zul.Window
 		} else {
 			return Mode.HIGHLIGHTED;
 		}
+	}
+	
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void showMask() {
+		showMaskWrapper.showMask();
+
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void hideMask() {
+		showMaskWrapper.hideMask();
+		
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Mask getMaskObj() {
+		return showMaskWrapper.getMaskObj();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Component getMaskComponent() {		
+		return showMaskWrapper.getMaskComponent();
 	}
 }
