@@ -18,8 +18,8 @@ goto START
 
 :START
 @REM Setup idempiere.properties and idempiereEnv.properties
-FOR %%c in (plugins\org.eclipse.osgi_3.7.*.jar) DO set JARFILE=%%c
-@"%JAVA%" -Dosgi.noShutdown=false -Dosgi.compatibility.bootdelegation=true -Dosgi.install.area=setup -jar %JARFILE% -application org.adempiere.install.console-application
+FOR %%c in (plugins\org.eclipse.equinox.launcher_1.*.jar) DO set JARFILE=%%c
+@"%JAVA%" -jar %JARFILE% -install setup -configuration setup/configuration -application org.adempiere.install.console-application
 
 @Echo ErrorLevel = %ERRORLEVEL%
 @IF NOT ERRORLEVEL = 1 GOTO NEXT
@@ -30,8 +30,8 @@ FOR %%c in (plugins\org.eclipse.osgi_3.7.*.jar) DO set JARFILE=%%c
 @Exit
 
 :NEXT
-@REM setup tomcat
-@"%JAVA%" -Dosgi.noShutdown=false -Dosgi.compatibility.bootdelegation=true -Dosgi.install.area=setup -jar %JARFILE% -application org.eclipse.ant.core.antRunner -buildfile build.xml
+@REM setup jetty
+@"%JAVA%" -jar %JARFILE% -install setup -configuration setup/configuration -application org.eclipse.ant.core.antRunner -buildfile build.xml
 
 @Echo .
 @Echo For problems, check log file in base directory

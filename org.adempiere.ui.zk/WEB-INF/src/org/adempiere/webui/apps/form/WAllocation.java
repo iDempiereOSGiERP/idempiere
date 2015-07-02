@@ -25,9 +25,9 @@ import java.util.Calendar;
 import java.util.Vector;
 import java.util.logging.Level;
 
-import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.component.Button;
 import org.adempiere.webui.component.Checkbox;
+import org.adempiere.webui.component.DocumentLink;
 import org.adempiere.webui.component.Grid;
 import org.adempiere.webui.component.GridFactory;
 import org.adempiere.webui.component.Label;
@@ -59,11 +59,8 @@ import org.compiere.util.Msg;
 import org.compiere.util.Trx;
 import org.compiere.util.TrxRunnable;
 import org.compiere.util.Util;
-import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
-import org.zkoss.zk.ui.event.Events;
-import org.zkoss.zul.A;
 import org.zkoss.zul.Borderlayout;
 import org.zkoss.zul.Center;
 import org.zkoss.zul.Hbox;
@@ -138,6 +135,8 @@ public class WAllocation extends Allocation
 	private Checkbox multiCurrency = new Checkbox();
 	private Label chargeLabel = new Label();
 	private WTableDirEditor chargePick = null;
+	private Label DocTypeLabel = new Label();
+	private WTableDirEditor DocTypePick = null;
 	private Label allocCurrencyLabel = new Label();
 	private Hlayout statusBar = new Hlayout();
 	private Label dateLabel = new Label();
@@ -173,6 +172,7 @@ public class WAllocation extends Allocation
 		invoiceInfo.setText(".");
 		paymentInfo.setText(".");
 		chargeLabel.setText(" " + Msg.translate(Env.getCtx(), "C_Charge_ID"));
+		DocTypeLabel.setText(" " + Msg.translate(Env.getCtx(), "C_DocType_ID"));	
 		differenceLabel.setText(Msg.getMsg(Env.getCtx(), "Difference"));
 		differenceField.setText("0");
 		differenceField.setReadonly(true);
@@ -235,6 +235,9 @@ public class WAllocation extends Allocation
 		row.appendCellChild(chargeLabel.rightAlign());
 		chargePick.getComponent().setHflex("true");
 		row.appendCellChild(chargePick.getComponent());
+		row.appendCellChild(DocTypeLabel.rightAlign());
+		DocTypePick.getComponent().setHflex("true");
+		row.appendCellChild(DocTypePick.getComponent());
 		allocateButton.setHflex("true");
 		row.appendCellChild(allocateButton);
 		row.appendCellChild(refreshButton);
@@ -354,6 +357,14 @@ public class WAllocation extends Allocation
 		chargePick = new WTableDirEditor("C_Charge_ID", false, false, true, lookupCharge);
 		chargePick.setValue(new Integer(m_C_Charge_ID));
 		chargePick.addValueChangeListener(this);
+		
+	//  Charge
+			AD_Column_ID = 212213;    //  C_AllocationLine.C_Charge_ID
+			MLookup lookupDocType = MLookupFactory.get (Env.getCtx(), form.getWindowNo(), 0, AD_Column_ID, DisplayType.TableDir);
+			DocTypePick = new WTableDirEditor("C_DocType_ID", false, false, true, lookupDocType);
+			DocTypePick.setValue(new Integer(m_C_DocType_ID));
+			DocTypePick.addValueChangeListener(this);
+			
 	}   //  dynInit
 	
 	/**************************************************************************
@@ -376,23 +387,7 @@ public class WAllocation extends Allocation
 			allocateButton.setEnabled(true);
 			if (allocation != null) 
 			{
-				A link = new A(allocation.getDocumentNo());
-				link.setAttribute("Record_ID", allocation.get_ID());
-				link.setAttribute("AD_Table_ID", allocation.get_Table_ID());
-				link.addEventListener(Events.ON_CLICK, new EventListener<Event>() 
-						{
-					@Override
-					public void onEvent(Event event) throws Exception 
-					{
-						Component comp = event.getTarget();
-						Integer Record_ID = (Integer) comp.getAttribute("Record_ID");
-						Integer AD_Table_ID = (Integer) comp.getAttribute("AD_Table_ID");
-						if (Record_ID != null && Record_ID > 0 && AD_Table_ID != null && AD_Table_ID > 0)
-						{
-							AEnv.zoom(AD_Table_ID, Record_ID);
-						}
-					}
-				});
+				DocumentLink link = new DocumentLink(allocation.getDocumentNo(), allocation.get_Table_ID(), allocation.get_ID());				
 				statusBar.appendChild(link);
 			}					
 		}
@@ -450,7 +445,7 @@ public class WAllocation extends Allocation
 		String name = e.getPropertyName();
 		Object value = e.getNewValue();
 		if (log.isLoggable(Level.CONFIG)) log.config(name + "=" + value);
-		if (value == null && !name.equals("C_Charge_ID"))
+		if (value == null && (!name.equals("C_Charge_ID")||!name.equals("C_DocType_ID") ))
 			return;
 		
 		// Organization
@@ -466,6 +461,12 @@ public class WAllocation extends Allocation
 			m_C_Charge_ID = value!=null? ((Integer) value).intValue() : 0;
 			
 			setAllocateButton();
+		}
+
+		else if (name.equals("C_DocType_ID") )
+		{
+			m_C_DocType_ID = value!=null? ((Integer) value).intValue() : 0;
+			
 		}
 
 		//  BPartner
