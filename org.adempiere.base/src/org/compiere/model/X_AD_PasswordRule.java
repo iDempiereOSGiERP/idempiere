@@ -30,7 +30,7 @@ public class X_AD_PasswordRule extends PO implements I_AD_PasswordRule, I_Persis
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20141030L;
+	private static final long serialVersionUID = 20150406L;
 
     /** Standard Constructor */
     public X_AD_PasswordRule (Properties ctx, int AD_PasswordRule_ID, String trxName)
@@ -153,18 +153,21 @@ public class X_AD_PasswordRule extends PO implements I_AD_PasswordRule, I_Persis
 		return ii.intValue();
 	}
 
-	/** Set Word Length Dictionary.
-		@param DictWordLength Word Length Dictionary	  */
-	public void setDictWordLength (int DictWordLength)
+	/** Set Days Reuse Password.
+		@param Days_Reuse_Password 
+		Define number of day can reuser password
+	  */
+	public void setDays_Reuse_Password (int Days_Reuse_Password)
 	{
-		set_Value (COLUMNNAME_DictWordLength, Integer.valueOf(DictWordLength));
+		set_Value (COLUMNNAME_Days_Reuse_Password, Integer.valueOf(Days_Reuse_Password));
 	}
 
-	/** Get Word Length Dictionary.
-		@return Word Length Dictionary	  */
-	public int getDictWordLength () 
+	/** Get Days Reuse Password.
+		@return Define number of day can reuser password
+	  */
+	public int getDays_Reuse_Password () 
 	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_DictWordLength);
+		Integer ii = (Integer)get_Value(COLUMNNAME_Days_Reuse_Password);
 		if (ii == null)
 			 return 0;
 		return ii.intValue();

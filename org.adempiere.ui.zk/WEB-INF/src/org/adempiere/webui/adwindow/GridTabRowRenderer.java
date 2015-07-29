@@ -53,6 +53,7 @@ import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zul.Cell;
 import org.zkoss.zul.Grid;
+import org.zkoss.zul.Html;
 import org.zkoss.zul.Label;
 import org.zkoss.zul.Paging;
 import org.zkoss.zul.RendererCtrl;
@@ -72,7 +73,7 @@ import org.zkoss.zul.impl.XulElement;
 public class GridTabRowRenderer implements RowRenderer<Object[]>, RowRendererExt, RendererCtrl, EventListener<Event> {
 
 	public static final String GRID_ROW_INDEX_ATTR = "grid.row.index";
-	private static final String CELL_DIV_STYLE = "border: none; height: 100%; cursor: pointer; ";
+	private static final String CELL_DIV_STYLE = "height: 100%; cursor: pointer; ";
 	private static final String CELL_DIV_STYLE_ALIGN_CENTER = CELL_DIV_STYLE + "text-align:center; ";
 	private static final String CELL_DIV_STYLE_ALIGN_RIGHT = CELL_DIV_STYLE + "text-align:right; ";
 	
@@ -236,11 +237,19 @@ public class GridTabRowRenderer implements RowRenderer<Object[]>, RowRendererExt
 			component = editor.getComponent();
 		} else {
 			String text = getDisplayText(value, gridField, rowIndex, isForceGetValue);
-
-			Label label = new Label();
-			setLabelText(text, label);
-
-			component = label;
+			WEditor editor = getEditorCell(gridField);
+			if (editor.getDisplayComponent() == null){
+				Label label = new Label();
+				setLabelText(text, label);
+				component = label;
+			}else{
+				component = editor.getDisplayComponent();
+				if (component instanceof Html){
+					((Html)component).setContent(text);
+				}else{
+					throw new UnsupportedOperationException("neet a componet has setvalue function");
+				}
+			}
 		}
 		return component;
 	}
@@ -316,6 +325,8 @@ public class GridTabRowRenderer implements RowRenderer<Object[]>, RowRendererExt
 							checkBox.setChecked(true);
 						else
 							checkBox.setChecked(false);
+					} else if (component instanceof Html){
+						((Html)component).setContent(getDisplayText(entry.getValue().getValue(), entry.getValue().getGridField(), -1));
 					}
 				}
 				if (row == null)
@@ -400,12 +411,11 @@ public class GridTabRowRenderer implements RowRenderer<Object[]>, RowRendererExt
 		}
 
 		Cell cell = new Cell();
-		cell.setWidth("28px");
 		cell.setTooltiptext(Msg.getMsg(Env.getCtx(), "Select"));
 		Checkbox selection = new Checkbox();
 		selection.setAttribute(GRID_ROW_INDEX_ATTR, rowIndex);
 		selection.setChecked(gridTab.isSelected(rowIndex));
-		cell.setStyle("background-color: transparent !important;");
+		cell.setStyle("border: none;");
 		selection.addEventListener(Events.ON_CHECK, this);
 		
 		if (!selection.isChecked()) {
@@ -418,8 +428,8 @@ public class GridTabRowRenderer implements RowRenderer<Object[]>, RowRendererExt
 		row.appendChild(cell);
 		
 		cell = new Cell();
-		cell.setWidth("18px");
 		cell.addEventListener(Events.ON_CLICK, this);
+		cell.setStyle("border: none;");
 		cell.setTooltiptext(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "EditRecord")));
 		
 		row.appendChild(cell);
@@ -500,6 +510,7 @@ public class GridTabRowRenderer implements RowRenderer<Object[]>, RowRendererExt
 		row.setStyle("cursor:pointer");
 		row.addEventListener(Events.ON_CLICK, rowListener);
 		row.addEventListener(Events.ON_OK, rowListener);
+		row.setTooltiptext("Row " + (rowIndex+1));
 		
 		if (isActive == null) {
 			Object isActiveValue = gridTab.getValue(rowIndex, "IsActive");
@@ -514,6 +525,7 @@ public class GridTabRowRenderer implements RowRenderer<Object[]>, RowRendererExt
 		if (isActive != null && !isActive.booleanValue()) {
 			LayoutUtils.addSclass("grid-inactive-row", row);
 		}
+
 	}
 
 	/**
@@ -523,14 +535,13 @@ public class GridTabRowRenderer implements RowRenderer<Object[]>, RowRendererExt
 		if (currentRow != null && currentRow.getParent() != null && currentRow != row) {
 			Cell cell = (Cell) currentRow.getChildren().get(1);
 			if (cell != null) {
-				cell.setStyle("background-color: transparent");
 				cell.setSclass("row-indicator");
 			}
 		}
 		currentRow = row;
 		Cell cell = (Cell) currentRow.getChildren().get(1);
 		if (cell != null) {
-			cell.setSclass("row-indicator-seld");
+			cell.setSclass("row-indicator-selected");
 		}
 		currentRowIndex = gridTab.getCurrentRow();
 		
@@ -823,7 +834,7 @@ public class GridTabRowRenderer implements RowRenderer<Object[]>, RowRendererExt
 	public void onEvent(Event event) throws Exception {
 		if (event.getTarget() instanceof Cell) {
 			Cell cell = (Cell) event.getTarget();
-			if (cell.getSclass() != null && cell.getSclass().indexOf("row-indicator-seld") >= 0)
+			if (cell.getSclass() != null && cell.getSclass().indexOf("row-indicator-selected") >= 0)
 				Events.sendEvent(gridPanel, new Event(DetailPane.ON_EDIT_EVENT, gridPanel));
 			else
 				Events.sendEvent(event.getTarget().getParent(), event);
