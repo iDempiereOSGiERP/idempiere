@@ -60,7 +60,7 @@ BEGIN
 		WHEN OTHERS THEN
 			RETURN 0;
 	END;
-	--	Unimited capacity if no item
+	--	Unlimited capacity if no item
 	IF (IsBOM='N' AND (ProductType<>'I' OR IsStocked='N')) THEN
 		RETURN Quantity;
 	--	Stocked item
@@ -68,16 +68,15 @@ BEGIN
 		--	Get ProductQty
 		SELECT 	NVL(SUM(QtyOnHand), 0)
 		  INTO	ProductQty
-		FROM 	M_STORAGE s
-		WHERE M_Product_ID=Product_ID
-		  AND EXISTS (SELECT * FROM M_LOCATOR l WHERE s.M_Locator_ID=l.M_Locator_ID
-		  	AND l.M_Warehouse_ID=myWarehouse_ID);
+		FROM 	M_Storageonhand s
+		  JOIN M_Locator l ON (s.M_Locator_ID=l.M_Locator_ID)
+		WHERE s.M_Product_ID=Product_ID AND l.M_Warehouse_ID=myWarehouse_ID;
 		--
 	--	DBMS_OUTPUT.PUT_LINE('Qty=' || ProductQty);
 		RETURN ProductQty;
 	END IF;
 
-	--	Go though BOM
+	--	Go through BOM
 --	DBMS_OUTPUT.PUT_LINE('BOM');
 	FOR bom IN CUR_BOM LOOP
 		--	Stocked Items "leaf node"
@@ -85,10 +84,9 @@ BEGIN
 			--	Get ProductQty
 			SELECT 	NVL(SUM(QtyOnHand), 0)
 			  INTO	ProductQty
-			FROM 	M_STORAGE s
-			WHERE M_Product_ID=bom.M_ProductBOM_ID
-			  AND EXISTS (SELECT * FROM M_LOCATOR l WHERE s.M_Locator_ID=l.M_Locator_ID
-			  	AND l.M_Warehouse_ID=myWarehouse_ID);
+			FROM 	M_Storageonhand s
+			  JOIN M_Locator l ON (s.M_Locator_ID=l.M_Locator_ID)
+			WHERE s.M_Product_ID=bom.M_ProductBOM_ID AND l.M_Warehouse_ID=myWarehouse_ID;
 			--	Get Rounding Precision
 			SELECT 	NVL(MAX(u.StdPrecision), 0)
 			  INTO	StdPrecision

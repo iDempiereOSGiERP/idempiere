@@ -36,7 +36,7 @@ public class MProject extends X_C_Project
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -6103964836289951325L;
+	private static final long serialVersionUID = 8631795136761641303L;
 
 	/**
 	 * 	Create new Project by copying
@@ -213,6 +213,23 @@ public class MProject extends X_C_Project
 		list.toArray(retValue);
 		return retValue;
 	}	//	getLines
+
+	/**************************************************************************
+	 * 	Get Project Lines from a Phase
+	 *	@return Array of lines from a Phase
+	 */
+	public MProjectLine[] getPhaseLines(int phase)
+	{
+		final String whereClause = "C_Project_ID=? and C_ProjectPhase_ID=?";
+		List <MProjectLine> list = new Query(getCtx(), I_C_ProjectLine.Table_Name, whereClause, get_TrxName())
+			.setParameters(getC_Project_ID(), phase)
+			.setOrderBy("Line")
+			.list();
+		//
+		MProjectLine[] retValue = new MProjectLine[list.size()];
+		list.toArray(retValue);
+		return retValue;
+	}	//	getPhaseLines
 
 	/**
 	 * 	Get Project Issues

@@ -19,6 +19,7 @@ package org.compiere.install;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.security.Key;
 import java.security.KeyStore;
@@ -33,8 +34,6 @@ import javax.swing.JFrame;
 import org.compiere.Adempiere;
 import org.compiere.util.CLogMgt;
 import org.compiere.util.CLogger;
-
-import sun.security.tools.KeyTool;
 
 /**
  *	Class to manage SSL KeyStore
@@ -73,19 +72,16 @@ public class KeyStoreMgt
 	
 	
 	/**	Directory below IDEMPIERE_HOME	*/
-	public static String		KEYSTORE_DIRECTORY = "keystore";
+	public static String		KEYSTORE_DIRECTORY = "jettyhome/etc";
 	/** Name of KeyStore				*/
-	public static String		KEYSTORE_NAME = "myKeystore";
-	/** Certificate Alias				*/
-	public static String		CERTIFICATE_ALIAS = "idempiere";
-	
+	public static String		KEYSTORE_NAME = "keystore";	
 
 	/**
 	 * 	Verify/Create Key Store
 	 * 	@param parent frame
 	 *	@return null or error message
 	 */
-	public String verify (JFrame parent)
+	public String verify (JFrame parent, String alias)
 	{
 		KeyStore ks = null;
 		try
@@ -100,7 +96,7 @@ public class KeyStoreMgt
 		//	No KeyStore
 		if (ks == null)
 		{
-			createCertificate(CERTIFICATE_ALIAS, parent);
+			createCertificate(alias, parent);
 			try
 			{
 				ks = getKeyStore();
@@ -120,7 +116,7 @@ public class KeyStoreMgt
 		Certificate cert = null;
 		try
 		{
-			cert = getCertificate(CERTIFICATE_ALIAS);
+			cert = getCertificate(alias);
 		}
 		catch (Exception e)
 		{
@@ -226,7 +222,7 @@ public class KeyStoreMgt
 		{
 			File dir = m_file.getParentFile();
 			if (!dir.exists())
-				dir.mkdir();
+				dir.mkdirs();
 		}
 		catch (Exception e)
 		{
@@ -463,7 +459,16 @@ public class KeyStoreMgt
                 //vpj-cd add support java 6
 		try
         {
-			KeyTool.main(args);
+			Class<?> keyTool = null;
+			try{
+				// java 7 
+				keyTool = Class.forName("sun.security.tools.KeyTool");
+			}catch (ClassNotFoundException ex){
+				// java 8 
+				keyTool = Class.forName("sun.security.tools.keytool.Main");
+			}
+			Method mainMethod = keyTool.getDeclaredMethod("main", String[].class);
+			mainMethod.invoke(null, new Object[]{args});
         }
         catch (Exception e)
         {
@@ -496,7 +501,7 @@ public class KeyStoreMgt
 	{
 		Adempiere.startupEnvironment(true);
 		System.out.println(new KeyStoreMgt (
-			"C:/Adempiere/keystore/myKeystore2", "myPassword".toCharArray()).verify(null));
+			"C:/Adempiere/keystore/myKeystore2", "myPassword".toCharArray()).verify(null, "idempiere"));
 	}	//	main
 	
 }	//	MyKeyStore
