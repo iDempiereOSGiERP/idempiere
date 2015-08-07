@@ -660,12 +660,51 @@ public class GridField
 		}	//	Default value
 
 	  if (getAD_Process_ID_Of_Panel() > 0){
-		defStr = Env.getPreference (m_vo.ctx, getAD_Window_ID_Of_Panel(), getAD_Process_ID_Of_Panel(), m_vo.ColumnName);
-		if (!defStr.equals(""))
-		{
+		defStr = Env.getPreference (m_vo.ctx, getAD_Window_ID_Of_Panel(), getAD_Infowindow_ID(), getAD_Process_ID_Of_Panel(), m_vo.ColumnName);
+		
+		// when have no preference set for field, and field lie in process dialog call from infoWindow
+		if (defStr.equals("") && getAD_Infowindow_ID() > 0){
+			// try get preference for current infoWindow but all process
+			defStr = Env.getPreference (m_vo.ctx, Env.adWindowDummyID, getAD_Infowindow_ID(), 0, m_vo.ColumnName);
+			
+			if (defStr.equals("")){
+				// try get preference for current process but all infoWindow
+				defStr = Env.getPreference (m_vo.ctx, Env.adWindowDummyID, 0, getAD_Process_ID_Of_Panel(), m_vo.ColumnName);
+			}
+			
+			if (defStr.equals("")){
+				// try get preference for all infoWindow and all process
+				defStr = Env.getPreference (m_vo.ctx, Env.adWindowDummyID, 0, 0, m_vo.ColumnName);
+			}
+		}
+
+		if (defStr.equals("")){
+			// try get preference apply for all process and current window 
+			defStr = Env.getPreference (m_vo.ctx, getAD_Window_ID_Of_Panel(), 0, 0, m_vo.ColumnName);
+		}
+		
+		if (defStr.equals("")){
+			// try get preference apply for all window and this process
+			defStr = Env.getPreference (m_vo.ctx, 0, 0, getAD_Process_ID_Of_Panel(), m_vo.ColumnName);
+		}
+		
+		if (defStr.equals("")){
+			// try get preference apply for all process and all window 
+			defStr = Env.getPreference (m_vo.ctx, 0, 0, 0, m_vo.ColumnName);
+		}
+		
+		if (!defStr.equals("")){
 			if (log.isLoggable(Level.FINE)) log.fine("[Process Parameter Preference] " + m_vo.ColumnName + "=" + defStr);
 			return createDefault(defStr);
 		}
+		// <- End of suggested changes
+	  } else if (getAD_Infowindow_ID() > 0){
+		  defStr = Env.getPreference (m_vo.ctx, getAD_Window_ID_Of_Panel(), getAD_Infowindow_ID(), m_vo.ColumnName);
+		  if (!defStr.equals(""))
+		  {
+			  if (log.isLoggable(Level.FINE)) log.fine("[Process Parameter Preference] " + m_vo.ColumnName + "=" + defStr);
+			  return createDefault(defStr);
+		  } 
 	  } else {
 		/**
 		 *	(d) Preference (user) - P|
@@ -1125,6 +1164,10 @@ public class GridField
 	public int getAD_Window_ID_Of_Panel()
 	{
 		return m_vo.AD_Window_ID_Of_Panel > 0 ? m_vo.AD_Window_ID_Of_Panel : m_vo.AD_Window_ID;		
+	}
+	
+	public int getAD_Infowindow_ID(){
+		return m_vo.AD_Infowindow_ID;
 	}
 	
 	/** get AD_Chart_ID
@@ -1644,10 +1687,8 @@ public class GridField
 				Env.setContext(m_vo.ctx, m_vo.WindowNo, m_vo.ColumnName, 
 					((Boolean)m_value).booleanValue());
 			}
-			if (m_gridTab != null) {
-				Env.setContext(m_vo.ctx, m_vo.WindowNo, m_vo.TabNo, m_vo.ColumnName,
-						m_value==null ? null : (((Boolean)m_value) ? "Y" : "N"));
-			}
+			Env.setContext(m_vo.ctx, m_vo.WindowNo, m_vo.TabNo, m_vo.ColumnName, 
+					m_value==null ? null : (((Boolean)m_value) ? "Y" : "N"));
 		}
 		else if (m_value instanceof Timestamp)
 		{
@@ -1657,6 +1698,8 @@ public class GridField
 				Env.setContext(m_vo.ctx, m_vo.WindowNo, m_vo.ColumnName, (Timestamp)m_value);
 			}
 			// BUG:3075946 KTU - Fix Thai Date
+			//Env.setContext(m_vo.ctx, m_vo.WindowNo, m_vo.TabNo, m_vo.ColumnName, 
+			//		m_value==null ? null : m_value.toString().substring(0, m_value.toString().indexOf(".")));
 			String stringValue = null;
 			if (m_value != null && !m_value.toString().equals("")) {
 				Calendar c1 = Calendar.getInstance();
@@ -1664,9 +1707,7 @@ public class GridField
 				SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 				stringValue = sdf.format(c1.getTime());
 			}
-			if (m_gridTab != null) {
-				Env.setContext(m_vo.ctx, m_vo.WindowNo, m_vo.TabNo, m_vo.ColumnName, stringValue);
-			}
+			Env.setContext(m_vo.ctx, m_vo.WindowNo, m_vo.TabNo, m_vo.ColumnName, stringValue);
 			// KTU - Fix Thai Date		
 		}
 		else
@@ -1677,10 +1718,8 @@ public class GridField
 				Env.setContext(m_vo.ctx, m_vo.WindowNo, m_vo.ColumnName, 
 					m_value==null ? null : m_value.toString());
 			}
-			if (m_gridTab != null) {
-				Env.setContext(m_vo.ctx, m_vo.WindowNo, m_vo.TabNo, m_vo.ColumnName,
-						m_value==null ? null : m_value.toString());
-			}
+			Env.setContext(m_vo.ctx, m_vo.WindowNo, m_vo.TabNo, m_vo.ColumnName, 
+				m_value==null ? null : m_value.toString());
 		}		
 	}
 

@@ -10,9 +10,9 @@ import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zul.Cell;
 import org.zkoss.zul.Div;
-import org.zkoss.zul.Image;
 import org.zkoss.zul.Label;
 import org.zkoss.zul.Row;
+import org.zkoss.zul.Span;
 
 public class Group extends org.zkoss.zul.Group {
 	/**
@@ -87,7 +87,7 @@ public class Group extends org.zkoss.zul.Group {
 		 * 
 		 */
 		private static final long serialVersionUID = -4070011056533999557L;
-		private Image img;
+		private Span span;
 		private Label lbl;
 		
 		private String title;
@@ -109,10 +109,10 @@ public class Group extends org.zkoss.zul.Group {
 			div.setZclass("z-group-header-body");
 			appendChild(div);
 			
-			img = new Image();
-			img.setZclass("z-group-img");
-			div.appendChild(img);
-			img.addEventListener(Events.ON_CLICK, this);
+			span = new Span();
+			div.appendChild(span);
+			span.addEventListener(Events.ON_CLICK, this);
+			span.setZclass("z-group-icon");
 			
 			lbl = new Label();
 			lbl.setStyle("cursor: pointer");
@@ -135,7 +135,7 @@ public class Group extends org.zkoss.zul.Group {
 
 		public void setOpen(boolean open) {
 			this.open = open;
-			img.setSclass(this.open ? "z-group-img-open" : "z-group-img-close");
+			span.setSclass(this.open ? "z-group-icon-open" : "z-group-icon-close");
 		}
 
 		@Override

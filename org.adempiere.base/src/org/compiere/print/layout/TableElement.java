@@ -120,7 +120,7 @@ public class TableElement extends PrintElement
 		SerializableMatrix<Serializable> data, KeyNamePair[] pk, String pkColumnName,
 		int pageNoStart, Rectangle firstPage, Rectangle nextPages, int repeatedColumns, HashMap<Integer,Integer> additionalLines,
 		HashMap<Point,Font> rowColFont, HashMap<Point,Color> rowColColor, HashMap<Point,Color> rowColBackground,
-		MPrintTableFormat tFormat, ArrayList<Integer> pageBreak, boolean[] colSuppressRepeats)
+		MPrintTableFormat tFormat, ArrayList<Integer> pageBreak, Boolean[] colSuppressRepeats)
 	{
 		super();
 		if (log.isLoggable(Level.FINE))
@@ -212,7 +212,7 @@ public class TableElement extends PrintElement
 	/** Bounds of next Pages		*/
 	private Rectangle 			m_nextPages;
 	
-	private boolean[]			m_colSuppressRepeats;
+	private Boolean[]			m_colSuppressRepeats;
 
 	/** repeat first x columns on - X Axis follow pages	*/
 	private int					m_repeatedColumns;
@@ -1284,7 +1284,7 @@ public class TableElement extends PrintElement
 		float netWidth = colWidth - (2*H_GAP) - m_tFormat.getVLineStroke().floatValue();
 		if (leftVline)
 			netWidth -= m_tFormat.getVLineStroke().floatValue();
-		int rowHeight = m_headerHeight;
+		float rowHeight = m_headerHeight;
 		float netHeight = rowHeight - (4*m_tFormat.getLineStroke().floatValue()) + (2*V_GAP);
 
 		if (DEBUG_PRINT)
@@ -1406,7 +1406,7 @@ public class TableElement extends PrintElement
 		//	paint Data		***************************************************
 		for (int row = firstRow; row < nextPageRow; row++)
 		{
-			rowHeight = ((Float)m_rowHeights.get(row)).intValue();	//	includes 2*Gaps+Line
+			rowHeight = m_rowHeights.get(row);	//	includes 2*Gaps+Line
 			netHeight = rowHeight - (2*V_GAP) - m_tFormat.getLineStroke().floatValue();
 			int rowYstart = curY;
 
