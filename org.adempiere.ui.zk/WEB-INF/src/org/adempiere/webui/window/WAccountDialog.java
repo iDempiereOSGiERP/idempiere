@@ -16,6 +16,8 @@
  *****************************************************************************/
 package org.adempiere.webui.window;
 
+import static org.compiere.model.SystemIDs.WINDOW_ACCOUNTCOMBINATION;
+
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -50,7 +52,6 @@ import org.compiere.model.MAccountLookup;
 import org.compiere.model.MAcctSchema;
 import org.compiere.model.MAcctSchemaElement;
 import org.compiere.model.MQuery;
-import static org.compiere.model.SystemIDs.*;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -61,14 +62,14 @@ import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zul.Borderlayout;
+import org.zkoss.zul.Caption;
 import org.zkoss.zul.Cell;
 import org.zkoss.zul.Center;
-import org.zkoss.zul.North;
-import org.zkoss.zul.South;
-import org.zkoss.zul.Caption;
 import org.zkoss.zul.Div;
 import org.zkoss.zul.Groupbox;
 import org.zkoss.zul.Hbox;
+import org.zkoss.zul.North;
+import org.zkoss.zul.South;
 import org.zkoss.zul.Vbox;
 
 /**
@@ -79,8 +80,11 @@ import org.zkoss.zul.Vbox;
 public final class WAccountDialog extends Window
 	implements EventListener<Event>, DataStatusListener, ValueChangeListener
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 3041802296879719489L;
 
-	private static final long serialVersionUID = 7999516267209766287L;
 	private Callback<Integer> m_callback;
 
 	/**
@@ -143,6 +147,8 @@ public final class WAccountDialog extends Window
 	private int                 m_AD_Client_ID;
 	/** Where clause for combination search */
 	private MQuery				m_query;
+	/** Current combination */
+	private int IDvalue = 0;
 	/**	Logger			*/
 	private static CLogger log = CLogger.getCLogger(WAccountDialog.class);
 
@@ -171,6 +177,8 @@ public final class WAccountDialog extends Window
 	private ToolBarButton bIgnore = new ToolBarButton();
 	private Row m_row;
 	private Rows m_rows;
+
+
 
 	/**
 	 *	Static component init.
@@ -629,8 +637,54 @@ public final class WAccountDialog extends Window
 	public void onEvent(Event event) throws Exception {
 		if (event.getTarget().getId().equals("Ok"))
 		{
-			m_changed = true;
-			dispose();
+			// Compare all data to propose creation/update of combination
+			MAccount combiOrg = new MAccount(Env.getCtx(), IDvalue > 0 ? IDvalue : m_mAccount.C_ValidCombination_ID, null);
+			boolean needconfirm = false;
+			if (needConfirm(f_AD_Org_ID, combiOrg))
+				needconfirm = true;
+			else if (needConfirm(f_Account_ID, combiOrg))
+				needconfirm = true;
+			else if (needConfirm(f_SubAcct_ID, combiOrg))
+				needconfirm = true;
+			else if (needConfirm(f_C_BPartner_ID, combiOrg))
+				needconfirm = true;
+			else if (needConfirm(f_M_Product_ID, combiOrg))
+				needconfirm = true;
+			else if (needConfirm(f_C_Activity_ID, combiOrg))
+				needconfirm = true;
+			else if (needConfirm(f_C_LocFrom_ID, combiOrg))
+				needconfirm = true;
+			else if (needConfirm(f_C_LocTo_ID, combiOrg))
+				needconfirm = true;
+			else if (needConfirm(f_C_Campaign_ID, combiOrg))
+				needconfirm = true;
+			else if (needConfirm(f_AD_OrgTrx_ID, combiOrg))
+				needconfirm = true;
+			else if (needConfirm(f_C_Project_ID, combiOrg))
+				needconfirm = true;
+			else if (needConfirm(f_C_SalesRegion_ID, combiOrg))
+				needconfirm = true;
+			else if (needConfirm(f_User1_ID, combiOrg))
+				needconfirm = true;
+			else if (needConfirm(f_User2_ID, combiOrg))
+				needconfirm = true;
+
+			if (needconfirm) {
+				FDialog.ask(m_WindowNo, this, "CreateNewAccountCombination?", new Callback<Boolean>() {
+					public void onCallback(Boolean result) {
+						if (result) {
+							if (action_Save()) {
+								m_changed = true;
+								dispose();
+							}
+						}
+					}
+				});
+			} else {
+				m_changed = true;
+				dispose();
+			}
+			
 		}
 		else if (event.getTarget().getId().equals("Cancel"))
 		{
@@ -645,6 +699,22 @@ public final class WAccountDialog extends Window
 		//	all other
 		else
 			action_Find (true);
+	}
+
+	boolean needConfirm(WEditor editor, MAccount combiOrg)
+	{
+		if (editor != null ) {
+			String columnName = editor.getColumnName();
+			String oldValue = combiOrg.get_ValueAsString(columnName);
+			String newValue = "";
+			if (editor.getValue() != null)
+				newValue = editor.getValue().toString();
+			if (log.isLoggable(Level.FINE)) log.fine("columnName : " + columnName + " : " + oldValue + " - " + newValue);
+
+			return ! oldValue.equals(newValue);
+		}
+
+		return false;
 	}
 
 	/**
@@ -745,7 +815,7 @@ public final class WAccountDialog extends Window
 	/**
 	 *	Create/Save Account
 	 */
-	private void action_Save()
+	private boolean action_Save()
 	{
 		log.info("");
 		/**
@@ -900,17 +970,17 @@ public final class WAccountDialog extends Window
 		if (sb.length() != 0)
 		{
 			FDialog.error(m_WindowNo, this, "FillMandatory", sb.substring(0, sb.length()-2));
-			return;
+			return false;
 		}
 		if (f_AD_Org_ID == null || f_AD_Org_ID.getValue() == null)
 		{
 			FDialog.error(m_WindowNo, this, "FillMandatory", Msg.getElement(Env.getCtx(), "AD_Org_ID"));
-			return;
+			return false;
 		}
 		if (f_Account_ID == null || f_Account_ID.getValue() == null)
 		{
 			FDialog.error(m_WindowNo, this, "FillMandatory", Msg.getElement(Env.getCtx(), "Account_ID"));
-			return;
+			return false;
 		}
 
 
@@ -919,7 +989,6 @@ public final class WAccountDialog extends Window
 		 */
 		sql.append("AD_Client_ID=? AND C_AcctSchema_ID=?");
 		if (log.isLoggable(Level.FINE)) log.fine("Check = " + sql.toString());
-		int IDvalue = 0;
 		String Alias = null;
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
@@ -987,7 +1056,7 @@ public final class WAccountDialog extends Window
 		{
 			loadInfo (IDvalue, s_AcctSchema.getC_AcctSchema_ID());
 			action_Find (false);
-			return;
+			return true;
 		}
 
 		log.config("New");
@@ -1055,7 +1124,9 @@ public final class WAccountDialog extends Window
 			}
 			loadInfo (acct.get_ID(), s_AcctSchema.getC_AcctSchema_ID());
 		}
+		IDvalue = acct.get_ID();
 		action_Find (false);
+		return true;
 	}	//	action_Save
 
 	private boolean isEmpty(Object value) {
