@@ -163,7 +163,7 @@ public class InfoProductWindow extends InfoWindow {
         String s_sqlFrom = " M_PRODUCT_STOCK_V ";
         /** Where Clause						*/
         String s_sqlWhere = "M_Product_ID = ?";
-        warehouseTbl = ListboxFactory.newDataTable();
+        warehouseTbl = ListboxFactory.newDataTableAutoSize();
         m_sqlWarehouse = warehouseTbl.prepareTable(s_layoutWarehouse, s_sqlFrom, s_sqlWhere, false, "M_PRODUCT_STOCK_V");
 		m_sqlWarehouse += " GROUP BY Warehouse";		
 		warehouseTbl.setMultiSelection(false);
@@ -184,7 +184,7 @@ public class InfoProductWindow extends InfoWindow {
   	        	new ColumnInfo(Msg.translate(Env.getCtx(), "PriceStd"), "PriceStd", Double.class)};
         s_sqlFrom = "M_PRODUCT_SUBSTITUTERELATED_V";
         s_sqlWhere = "M_Product_ID = ? AND M_PriceList_Version_ID = ? and RowType = 'S'";
-        substituteTbl = ListboxFactory.newDataTable();
+        substituteTbl = ListboxFactory.newDataTableAutoSize();
         m_sqlSubstitute = substituteTbl.prepareTable(s_layoutSubstitute, s_sqlFrom, s_sqlWhere, false, "M_PRODUCT_SUBSTITUTERELATED_V");        
         substituteTbl.setMultiSelection(false);
         substituteTbl.autoSize();
@@ -203,14 +203,14 @@ public class InfoProductWindow extends InfoWindow {
   	        	new ColumnInfo(Msg.translate(Env.getCtx(), "PriceStd"), "PriceStd", Double.class)};
         s_sqlFrom = "M_PRODUCT_SUBSTITUTERELATED_V";
         s_sqlWhere = "M_Product_ID = ? AND M_PriceList_Version_ID = ? and RowType = 'R'";
-        relatedTbl = ListboxFactory.newDataTable();
+        relatedTbl = ListboxFactory.newDataTableAutoSize();
         m_sqlRelated = relatedTbl.prepareTable(s_layoutRelated, s_sqlFrom, s_sqlWhere, false, "M_PRODUCT_SUBSTITUTERELATED_V");
         relatedTbl.setMultiSelection(false);
         relatedTbl.autoSize();
 //        relatedTbl.getModel().addTableModelListener(this);
 
         //Available to Promise Tab
-        m_tableAtp = ListboxFactory.newDataTable();
+        m_tableAtp = ListboxFactory.newDataTableAutoSize();
         m_tableAtp.setMultiSelection(false);
 
         //IDEMPIERE-337
@@ -229,7 +229,7 @@ public class InfoProductWindow extends InfoWindow {
         list.toArray(s_layoutProductPrice);
         s_sqlFrom = "M_ProductPrice pp INNER JOIN M_PriceList_Version plv ON (pp.M_PriceList_Version_ID = plv.M_PriceList_Version_ID)";
         s_sqlWhere = "pp.M_Product_ID = ? AND plv.IsActive = 'Y' AND pp.IsActive = 'Y'";
-        productpriceTbl = ListboxFactory.newDataTable();
+        productpriceTbl = ListboxFactory.newDataTableAutoSize();
         m_sqlProductprice = productpriceTbl.prepareTable(s_layoutProductPrice, s_sqlFrom, s_sqlWhere, false, "pp") + " ORDER BY plv.ValidFrom DESC";
         productpriceTbl.setMultiSelection(false);
         productpriceTbl.autoSize();
@@ -666,6 +666,7 @@ public class InfoProductWindow extends InfoWindow {
 		sql += " w.Name, l.Value "
 			+ "FROM M_Storage s"
 			+ " INNER JOIN M_Locator l ON (s.M_Locator_ID=l.M_Locator_ID)"
+			+ " LEFT JOIN M_LocatorType lt ON (l.M_LocatorType_ID=lt.M_LocatorType_ID)"
 			+ " INNER JOIN M_Warehouse w ON (l.M_Warehouse_ID=w.M_Warehouse_ID) "
 			+ "WHERE M_Product_ID=?";
 		if (m_M_Warehouse_ID != 0)
@@ -673,6 +674,7 @@ public class InfoProductWindow extends InfoWindow {
 		if (m_M_AttributeSetInstance_ID > 0)
 			sql += " AND s.M_AttributeSetInstance_ID=?";
 		sql += " AND (s.QtyOnHand<>0 OR s.QtyReserved<>0 OR s.QtyOrdered<>0)";
+		sql += " AND COALESCE(lt.IsAvailableForReservation,'Y')='Y'";
 		if (!showDetail)
 			sql += " GROUP BY productAttribute(s.M_AttributeSetInstance_ID), w.Name, l.Value";
 		sql += " ORDER BY l.Value";
