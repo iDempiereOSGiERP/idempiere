@@ -1,19 +1,25 @@
 package org.idempiere.adinterface;
 
-import java.io.ByteArrayOutputStream;
+import static org.compiere.model.SystemIDs.PROCESS_RPT_C_DUNNING;
+import static org.compiere.model.SystemIDs.PROCESS_RPT_C_INVOICE;
+import static org.compiere.model.SystemIDs.PROCESS_RPT_C_ORDER;
+import static org.compiere.model.SystemIDs.PROCESS_RPT_C_PAYMENT;
+import static org.compiere.model.SystemIDs.PROCESS_RPT_C_PROJECT;
+import static org.compiere.model.SystemIDs.PROCESS_RPT_C_RFQRESPONSE;
+import static org.compiere.model.SystemIDs.PROCESS_RPT_FINREPORT;
+import static org.compiere.model.SystemIDs.PROCESS_RPT_FINSTATEMENT;
+import static org.compiere.model.SystemIDs.PROCESS_RPT_M_INOUT;
+import static org.compiere.model.SystemIDs.PROCESS_RPT_M_INVENTORY;
+
 import java.io.CharArrayWriter;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 import java.util.logging.Level;
 
 import javax.xml.namespace.QName;
-
-import net.sf.compilo.report.ReportProcessor;
-import net.sf.jasperreports.engine.JasperPrint;
 
 import org.adempiere.util.ProcessUtil;
 import org.compiere.model.Lookup;
@@ -368,6 +374,7 @@ public class Process {
 		//	Report
 		if ((process.isReport() || jasperreport))
 		{
+			pi.setReportingProcess(true);
 			r.setIsReport(true);
 			ReportEngine re=null;
 			if (!jasperreport) 
@@ -407,11 +414,12 @@ public class Process {
 					}
 					else
 					{
-						JasperPrint jp = getJasperReportPrint( m_cs.getCtx(), pi);
-						ByteArrayOutputStream wr = new ByteArrayOutputStream();
-						net.sf.jasperreports.engine.JasperExportManager.exportReportToPdfStream(jp, wr); 
-						file_type ="pdf";							
-						r.setData(wr.toByteArray());	
+						Trx trx = trxName == null ? Trx.get(Trx.createTrxName("WebPrc"), true) : Trx.get(trxName, true);
+						pi.setPrintPreview (false);
+						pi.setIsBatch(true);
+						ProcessUtil.startJavaProcess(Env.getCtx(), pi, trx, true, null);
+						file_type ="pdf";				
+						r.setData(java.nio.file.Files.readAllBytes(pi.getPDFReport().toPath()));
 						r.setReportFormat(file_type);
 						ok = true;
 					}
@@ -663,32 +671,6 @@ public class Process {
 
 		return null;
 	}
-
-	private static JasperPrint getJasperReportPrint(Properties ctx, ProcessInfo pi)
-	{
-        try
-        {
-            JasperPrint jasperPrint;
-            
-            ReportProcessor rp = new ReportProcessor(ctx, pi);
-            jasperPrint = rp.runReport();
-            
-        	if(jasperPrint == null)		
-        	{
-        		log.finer("ReportStarter.startProcess Cannot process JasperPrint Object");
-        		return null;
-        	}
-        	else
-        		return jasperPrint;
-        }        
-        catch (Exception ex)
-		{
-        	log.saveError("ReportStarter.startProcess: Can not run report - ", ex);
-        	return null;
-        	// return ex.getMessage();
-		}
-	}
-
 	
 	static public ReportEngine start (ProcessInfo pi)
 	{
@@ -697,28 +679,30 @@ public class Process {
 		/**
 		 *	Order Print
 		 */
-		if (pi.getAD_Process_ID() == 110)			//	C_Order
+		if (pi.getAD_Process_ID() == PROCESS_RPT_C_ORDER)			//	C_Order
 			return startDocumentPrint(ReportEngine.ORDER, pi.getRecord_ID());
-		else if (pi.getAD_Process_ID() == 116)		//	C_Invoice
+		else if (pi.getAD_Process_ID() == PROCESS_RPT_C_INVOICE)		//	C_Invoice
 			return startDocumentPrint(ReportEngine.INVOICE, pi.getRecord_ID());
-		else if (pi.getAD_Process_ID() == 117)		//	M_InOut
+		else if (pi.getAD_Process_ID() == PROCESS_RPT_M_INOUT)		//	M_InOut
 			return startDocumentPrint(ReportEngine.SHIPMENT, pi.getRecord_ID());
-		else if (pi.getAD_Process_ID() == 217)		//	C_Project
+		else if (pi.getAD_Process_ID() == PROCESS_RPT_C_PROJECT)		//	C_Project
 			return startDocumentPrint(ReportEngine.PROJECT, pi.getRecord_ID());
-		else if (pi.getAD_Process_ID() == 276)		//	C_RfQResponse
+		else if (pi.getAD_Process_ID() == PROCESS_RPT_C_RFQRESPONSE)		//	C_RfQResponse
 			return startDocumentPrint(ReportEngine.RFQ, pi.getRecord_ID());
-		else if (pi.getAD_Process_ID() == 313)		//	C_Payment
+		else if (pi.getAD_Process_ID() == PROCESS_RPT_C_PAYMENT)		//	C_Payment
 			return startCheckPrint(pi.getRecord_ID());
+		else if (pi.getAD_Process_ID() == PROCESS_RPT_M_INVENTORY)		//	Physical Inventory
+			return startDocumentPrint(ReportEngine.INVENTORY, pi.getRecord_ID());
 		/**
 		else if (pi.AD_Process_ID == 9999999)	//	PaySelection
 			return startDocumentPrint(CHECK, pi, IsDirectPrint);
 		else if (pi.AD_Process_ID == 9999999)	//	PaySelection
 			return startDocumentPrint(REMITTANCE, pi, IsDirectPrint);
 		**/
-		else if (pi.getAD_Process_ID() == 159)		//	Dunning
+		else if (pi.getAD_Process_ID() == PROCESS_RPT_C_DUNNING)		//	Dunning
 			return startDocumentPrint(ReportEngine.DUNNING, pi.getRecord_ID());
-	   else if (pi.getAD_Process_ID() == 202			//	Financial Report
-			|| pi.getAD_Process_ID() == 204)			//	Financial Statement
+	   else if (pi.getAD_Process_ID() == PROCESS_RPT_FINREPORT			//	Financial Report
+			|| pi.getAD_Process_ID() == PROCESS_RPT_FINSTATEMENT)			//	Financial Statement
 		   return startFinReport (pi);
 		/********************
 		 *	Standard Report
