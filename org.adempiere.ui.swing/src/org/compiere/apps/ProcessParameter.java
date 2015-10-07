@@ -296,7 +296,7 @@ public class ProcessParameter extends CDialog
 	private void createField (ResultSet rs)
 	{
 		//  Create Field
-		GridFieldVO voF = GridFieldVO.createParameter(Env.getCtx(), m_WindowNo, m_processInfo.getAD_Process_ID(), m_AD_Window_ID, rs);
+		GridFieldVO voF = GridFieldVO.createParameter(Env.getCtx(), m_WindowNo, m_processInfo.getAD_Process_ID(), m_AD_Window_ID, 0, rs);
 		GridField mField = new GridField (voF);
 		m_mFields.add(mField);                      //  add to Fields
 
@@ -331,7 +331,7 @@ public class ProcessParameter extends CDialog
 		//  MField => VEditor - New Field value to be updated to editor
 		mField.addPropertyChangeListener(vEditor);
 		//  Set Default
-		Object defaultObject = mField.getDefault();
+		Object defaultObject = mField.getDefaultForPanel();
 		mField.setValue (defaultObject, true);
 		//
 		centerPanel.add ((Component)vEditor, gbc);
@@ -360,7 +360,7 @@ public class ProcessParameter extends CDialog
 			//  New Field value to be updated to editor
 			mField2.addPropertyChangeListener(vEditor2);
 			//  Set Default
-			Object defaultObject2 = mField2.getDefault();
+			Object defaultObject2 = mField2.getDefaultForPanel();
 			mField2.setValue (defaultObject2, true);
 			//
 			centerPanel.add ((Component)vEditor2, gbc);

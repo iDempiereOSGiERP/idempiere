@@ -63,17 +63,17 @@ public class WQuickEntry extends Window implements EventListener<Event>, ValueCh
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -949213040088881469L;
+	private static final long serialVersionUID = 6033101081045706748L;
 
 	public static final String QUICK_ENTRY_MODE = "_QUICK_ENTRY_MODE_";
 
 	private static CLogger log = CLogger.getCLogger(WQuickEntry.class);
 
-	private int m_WindowNo;
+	protected int m_WindowNo;
 	private int parent_WindowNo;
 
 	List<GridField> quickFields = new ArrayList<GridField>();
-	List<WEditor> quickEditors = new ArrayList<WEditor>();
+	protected List<WEditor> quickEditors = new ArrayList<WEditor>();
 	List<Object> initialValues = new ArrayList<Object>();
 	List<GridTab> quickTabs = new ArrayList<GridTab>();
 	List<PO> quickPOs = new ArrayList<PO>();
@@ -81,12 +81,13 @@ public class WQuickEntry extends Window implements EventListener<Event>, ValueCh
 	/** Read Only				*/
 	private boolean m_readOnly = false;
 
-	private Vlayout centerPanel = new Vlayout();
+	protected Vlayout centerPanel = new Vlayout();
 
 	private ConfirmPanel confirmPanel = new ConfirmPanel(true, false, false, false, false, false);
 
 	private int m_AD_Window_ID;
-
+	
+	private boolean isHasField = false;
 	/**
 	 *	Constructor.
 	 *	Requires call loadRecord
@@ -116,13 +117,23 @@ public class WQuickEntry extends Window implements EventListener<Event>, ValueCh
 		initPOs();
 
 	}	//	WQuickEntry
+	
+	public WQuickEntry(int AD_Window_ID)
+	{
+		super();
+		
+		m_AD_Window_ID = AD_Window_ID;
+		parent_WindowNo = 0;
+		m_WindowNo = 0;
+		log.info("R/O=" + m_readOnly);
+	}	//	WQuickEntry
 
 	/**
 	 *	Static Init
 	 * 	@throws Exception
 	 */
 
-	void jbInit() throws Exception
+	private void jbInit() throws Exception
 	{
 		this.setWidth("350px");
 		this.setBorder("normal");
@@ -138,7 +149,7 @@ public class WQuickEntry extends Window implements EventListener<Event>, ValueCh
 	/**
 	 *	Dynamic Init
 	 */
-	private void initPOs()
+	protected void initPOs()
 	{
 		GridWindow gridwindow = GridWindow.get(Env.getCtx(), m_WindowNo, m_AD_Window_ID);
 		this.setTitle(gridwindow.getName());
@@ -170,7 +181,7 @@ public class WQuickEntry extends Window implements EventListener<Event>, ValueCh
 					if (! quickTabs.contains(gridtab)) {
 						quickTabs.add(gridtab);
 					}
-
+					isHasField = true;
 					newTab = false;
 				}
 			}
@@ -206,7 +217,8 @@ public class WQuickEntry extends Window implements EventListener<Event>, ValueCh
 		layout.setHflex("10");
 
 		Span span = new Span();
-		span.setHflex("3");
+		if(parent_WindowNo!= 0)
+			span.setHflex("3");
 		layout.appendChild(span);
 		Label label = editor.getLabel();
 		span.appendChild(label);
@@ -214,10 +226,20 @@ public class WQuickEntry extends Window implements EventListener<Event>, ValueCh
 
 		layout.appendChild(field);
 		((HtmlBasedComponent)field).setHflex("7");
-
+		
+		//editor.setValue("Y");
 		centerPanel.appendChild(layout);
 	}
 
+	/**
+	 * check table is editable in quick entry
+	 * user must has write right and has at least a input field
+	 * @return
+	 */
+	public boolean isAvailableQuickEdit (){
+		return isHasField && !m_readOnly;
+	}
+	
 	/**
 	 *	Load Record_ID
 	 *  @param Record_ID - existing Record or 0 for new
@@ -319,7 +341,7 @@ public class WQuickEntry extends Window implements EventListener<Event>, ValueCh
 	 *	Save.
 	 * 	@return true if saved
 	 */
-	private boolean actionSave()
+	protected boolean actionSave()
 	{
 		log.config("");
 		boolean anyChange = false;
@@ -434,7 +456,7 @@ public class WQuickEntry extends Window implements EventListener<Event>, ValueCh
 
 	public int getRecord_ID()
 	{
-		if (quickPOs.get(0) == null)
+		if (quickPOs.isEmpty() || quickPOs.get(0) == null)
 			return 0;
 
 		return quickPOs.get(0).get_ID();
@@ -458,7 +480,8 @@ public class WQuickEntry extends Window implements EventListener<Event>, ValueCh
 	@Override
 	public void detach() {
 		super.detach();
-		SessionManager.getAppDesktop().unregisterWindow(m_WindowNo);
+		if(m_WindowNo!=0)
+			SessionManager.getAppDesktop().unregisterWindow(m_WindowNo);
 	}
 	
 	public void valueChange(ValueChangeEvent evt)

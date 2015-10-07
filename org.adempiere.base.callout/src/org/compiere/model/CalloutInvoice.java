@@ -133,7 +133,7 @@ public class CalloutInvoice extends CalloutEngine
 			+ " p.SO_Description,p.IsDiscountPrinted,"
 			+ " p.SO_CreditLimit, p.SO_CreditLimit-p.SO_CreditUsed AS CreditAvailable,"
 			+ " l.C_BPartner_Location_ID,c.AD_User_ID,"
-			+ " COALESCE(p.PO_PriceList_ID,g.PO_PriceList_ID) AS PO_PriceList_ID, p.PaymentRulePO,p.PO_PaymentTerm_ID " 
+			+ " COALESCE(p.PO_PriceList_ID,g.PO_PriceList_ID) AS PO_PriceList_ID, p.PaymentRulePO,p.PO_PaymentTerm_ID, p.SalesRep_ID " 
 			+ "FROM C_BPartner p"
 			+ " INNER JOIN C_BP_Group g ON (p.C_BP_Group_ID=g.C_BP_Group_ID)"			
 			+ " LEFT OUTER JOIN C_BPartner_Location l ON (p.C_BPartner_ID=l.C_BPartner_ID AND l.IsBillTo='Y' AND l.IsActive='Y')"
@@ -151,6 +151,13 @@ public class CalloutInvoice extends CalloutEngine
 			//
 			if (rs.next())
 			{
+				// Sales Rep - If BP has a default SalesRep then default it
+				Integer salesRep = rs.getInt("SalesRep_ID");
+				if (IsSOTrx && salesRep != 0 )
+				{
+					mTab.setValue("SalesRep_ID", salesRep);
+				}
+				
 				//	PriceList & IsTaxIncluded & Currency
 				Integer ii = new Integer(rs.getInt(IsSOTrx ? "M_PriceList_ID" : "PO_PriceList_ID"));
 				if (!rs.wasNull())
@@ -617,7 +624,7 @@ public class CalloutInvoice extends CalloutEngine
 		//	calculate Discount
 		else
 		{
-			if (PriceList.intValue() == 0)
+			if (PriceList.compareTo(Env.ZERO) == 0)
 				Discount = Env.ZERO;
 			else
 				Discount = new BigDecimal ((PriceList.doubleValue() - PriceActual.doubleValue()) / PriceList.doubleValue() * 100.0);
@@ -647,7 +654,7 @@ public class CalloutInvoice extends CalloutEngine
 			mTab.setValue ("PriceEntered", PriceEntered);
 			mTab.fireDataStatusEEvent ("UnderLimitPrice", "", false);
 			//	Repeat Discount calc
-			if (PriceList.intValue() != 0)
+			if (PriceList.compareTo(Env.ZERO) != 0)
 			{
 				Discount = BigDecimal.valueOf((PriceList.doubleValue () - PriceActual.doubleValue ()) / PriceList.doubleValue () * 100.0);
 				if (Discount.scale () > 2)

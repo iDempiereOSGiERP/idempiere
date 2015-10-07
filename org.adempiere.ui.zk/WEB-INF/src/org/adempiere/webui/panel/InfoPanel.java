@@ -30,10 +30,14 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Vector;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.AdempiereException;
+import org.adempiere.model.IInfoColumn;
 import org.adempiere.model.MInfoProcess;
+import org.adempiere.model.MInfoRelated;
 import org.adempiere.webui.AdempiereWebUI;
 import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.apps.AEnv;
@@ -44,6 +48,7 @@ import org.adempiere.webui.component.Button;
 import org.adempiere.webui.component.Combobox;
 import org.adempiere.webui.component.ConfirmPanel;
 import org.adempiere.webui.component.ListModelTable;
+import org.adempiere.webui.component.ProcessInfoDialog;
 import org.adempiere.webui.component.WListItemRenderer;
 import org.adempiere.webui.component.WListbox;
 import org.adempiere.webui.component.Window;
@@ -57,9 +62,9 @@ import org.adempiere.webui.factory.InfoManager;
 import org.adempiere.webui.part.ITabOnSelectHandler;
 import org.adempiere.webui.part.WindowContainer;
 import org.adempiere.webui.session.SessionManager;
-import org.adempiere.webui.window.FDialog;
 import org.compiere.minigrid.ColumnInfo;
 import org.compiere.minigrid.IDColumn;
+import org.compiere.model.GridField;
 import org.compiere.model.MInfoColumn;
 import org.compiere.model.MInfoWindow;
 import org.compiere.model.MPInstance;
@@ -91,6 +96,7 @@ import org.zkoss.zul.Listheader;
 import org.zkoss.zul.Listitem;
 import org.zkoss.zul.Menuitem;
 import org.zkoss.zul.Paging;
+import org.zkoss.zul.event.PagingEvent;
 import org.zkoss.zul.event.ZulEvents;
 import org.zkoss.zul.ext.Sortable;
 
@@ -111,9 +117,9 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 6027970576265023451L;
-
+	private static final long serialVersionUID = 3761627143274259211L;
 	private final static int DEFAULT_PAGE_SIZE = 100;
+	private final static int DEFAULT_PAGE_PRELOAD = 4;
 	protected List<Button> btProcessList = new ArrayList<Button>();
 	protected Map<String, WEditor> editorMap = new HashMap<String, WEditor>();
 	protected final static String PROCESS_ID_KEY = "processId";
@@ -121,6 +127,48 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	// attribute key of info process
 	protected final static String ATT_INFO_PROCESS_KEY = "INFO_PROCESS";
 	protected int pageSize;
+	protected MInfoRelated[] relatedInfoList;
+	// for test disable load all record when num of record < 1000
+	protected boolean isIgnoreCacheAll = true;
+	// Num of page preload, default is 2 page before current and 2 page after current 
+	protected int numPagePreLoad = MSysConfig.getIntValue(MSysConfig.ZK_INFO_NUM_PAGE_PRELOAD, DEFAULT_PAGE_PRELOAD);
+	// max end index is integer.max_value - 1, not integer.max_value.
+	protected int extra_max_row = 1;
+	/**
+	 * MInfoColumn has isKey = true, play as key column in case non column has
+	 * isKey = true, this column is null and we use {@link #p_keyColumn}
+	 */
+	protected MInfoColumn keyColumnOfView = null;
+	
+	/**
+	 * index of {@link #keyColumnOfView} in data model, set when prepare listbox
+	 */
+	protected int indexKeyOfView = -1;
+	
+	protected boolean isIDColumnKeyOfView = false;
+	protected boolean hasRightQuickEntry = true;
+	protected boolean isHasNextPage = false;
+	/**
+	 * store selected record info
+	 * key of map is value of column play as keyView
+	 * in case has no key coloumn of view, use value of {@link #p_keyColumn}
+	 * zk6.x listview don't provide event when click to checkbox select all, 
+	 * so we can't manage selectedRecord time by time. 
+	 * each time change page we will update this list with current
+	 * selected record of this page by call function
+	 * {@link #updateListSelected()} when move to zk7, just enough handle
+	 * onclick. because don't direct use recordSelectedData, call
+	 * {@link #getSelectedRowInfo()}
+	 */
+	protected Map<Integer, List<Object>> recordSelectedData = new HashMap<Integer, List<Object>>();
+	
+	/**
+	 * when requery but don't clear selected record (example after run process)
+	 * set flag to true to run sync selected record, also
+	 * {@link #syncSelectedAfterRequery()}
+	*/
+	protected boolean isRequeryByRunSuccessProcess = false;
+	
 	
     public static InfoPanel create (int WindowNo,
             String tableName, String keyColumn, String value,
@@ -143,7 +191,8 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	/** Window Width                */
 	static final int        INFO_WIDTH = 800;
 	protected boolean m_lookup;
-
+	protected int m_infoWindowID;
+	
 	/**************************************************
      *  Detail Constructor
      * @param WindowNo  WindowNo
@@ -158,6 +207,13 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		this(WindowNo, tableName, keyColumn, multipleSelection, whereClause, true);
 	}
 
+	protected InfoPanel (int WindowNo,
+			String tableName, String keyColumn,boolean multipleSelection,
+			 String whereClause, boolean lookup){
+		this(WindowNo, tableName, keyColumn, multipleSelection, whereClause,
+				lookup, 0);
+	}
+	
 	/**************************************************
      *  Detail Constructor
      * @param WindowNo  WindowNo
@@ -167,7 +223,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	 */
 	protected InfoPanel (int WindowNo,
 		String tableName, String keyColumn,boolean multipleSelection,
-		 String whereClause, boolean lookup)
+		 String whereClause, boolean lookup, int ADInfoWindowID)
 	{		
 		if (WindowNo <= 0) {
 			p_WindowNo = SessionManager.getAppDesktop().registerWindow(this);
@@ -177,11 +233,12 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		if (log.isLoggable(Level.INFO))
 			log.info("WinNo=" + WindowNo + " " + whereClause);
 		p_tableName = tableName;
+		this.m_infoWindowID = ADInfoWindowID;
 		p_keyColumn = keyColumn;
 		
         p_multipleSelection = multipleSelection;
         m_lookup = lookup;
-
+        loadInfoWindowData();
 		if (whereClause == null || whereClause.indexOf('@') == -1)
 			p_whereClause = whereClause == null ? "" : whereClause;
 		else
@@ -191,7 +248,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 				log.log(Level.SEVERE, "Cannot parse context= " + whereClause);
 		}
 		
-		pageSize = MSysConfig.getIntValue(MSysConfig.ZK_PAGING_SIZE, DEFAULT_PAGE_SIZE);
+		pageSize = MSysConfig.getIntValue(MSysConfig.ZK_PAGING_SIZE, DEFAULT_PAGE_SIZE, Env.getAD_Client_ID(Env.getCtx()));
 		
 		init();
 
@@ -203,7 +260,6 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		
 		setWidgetAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "infopanel");
 		
-        infoWindow = MInfoWindow.get(p_keyColumn.replace("_ID", ""), null);
 		addEventListener(WindowContainer.ON_WINDOW_CONTAINER_SELECTION_CHANGED_EVENT, this);
 		addEventListener(ON_RUN_PROCESS, this);
 		addEventListener(Events.ON_CLOSE, this);
@@ -233,6 +289,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		}
 
 		confirmPanel = new ConfirmPanel(true, true, true, true, true, true);  // Elaine 2008/12/16 
+		confirmPanel.addComponentsLeft(confirmPanel.createButton(ConfirmPanel.A_NEW));
         confirmPanel.addActionListener(Events.ON_CLICK, this);
         confirmPanel.setHflex("1");
 
@@ -240,6 +297,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		confirmPanel.getButton(ConfirmPanel.A_CUSTOMIZE).setVisible(hasCustomize());
 		confirmPanel.getButton(ConfirmPanel.A_HISTORY).setVisible(hasHistory());
 		confirmPanel.getButton(ConfirmPanel.A_ZOOM).setVisible(hasZoom());
+		confirmPanel.getButton(ConfirmPanel.A_NEW).setVisible(hasNew());
 		//
 		if (!isLookup())
 		{
@@ -299,7 +357,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	/**	PO Zoom Window						*/
 	private int					m_PO_Window_ID = -1;
 	
-	private MInfoWindow infoWindow;
+	protected MInfoWindow infoWindow;
 
 	/**	Logger			*/
 	protected CLogger log = CLogger.getCLogger(getClass());
@@ -312,7 +370,10 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	private int cacheEnd;
 	private boolean m_useDatabasePaging = false;
 	private BusyDialog progressWindow;
+	// in case double click to item. this store clicked item (maybe it's un-select item)
 	private Listitem m_lastOnSelectItem;
+	protected GridField m_gridfield;
+
 	/**
 	 * false, use saved where clause
 	 * IDEMPIERE-1979
@@ -353,15 +414,28 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	/**
 	* save selected id and viewID
 	*/
-	protected Map<Integer, List<String>> m_viewIDMap = new HashMap<Integer, List<String>>();
+	protected Collection<KeyNamePair> m_viewIDMap = new ArrayList <KeyNamePair>();
+	
 	/**
-	 * flag indicate have infoOProcess define ViewID 
+	 * store index of infoColumn have data append. each infoColumn just append only one time.
+	 * index increase from 0.
 	 */
-	protected boolean isHasViewID = false;
+	protected Map <Integer, Integer> columnDataIndex = new HashMap <Integer, Integer> ();
 	/**
-	 * number of infoProcess contain ViewID
+	 * after load first record, set it to false. 
+	 * when need update index of column data append to end of list {@link #columnDataIndex}, set it to true 
 	 */
-	protected int numOfViewID = 0;
+	protected boolean isMustUpdateColumnIndex = true;
+	/**
+	 * When start update index of column data append to end of list {@link #columnDataIndex}, reset it to 0,
+	 * each read data for new append column, increase it up 1
+	 */
+	protected int indexColumnCount = 0;
+	/**
+	 * to prevent append duplicate data, when begin read each record reset this list, 
+	 * when read a column store id of infoColumn to list to check duplicate
+	 */
+	protected List <Integer> lsReadedColumn = new ArrayList <Integer> ();
 	
 	/**
 	 * IDEMPIERE-1334
@@ -398,6 +472,38 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		statusBar.setStatusDB(text);
 	}	//	setStatusDB
 
+	/**
+	 *	Set Status DB
+	 *  @param text text
+	 */
+	public void setStatusSelected ()
+	{
+		if (!p_multipleSelection)
+			return;
+		
+		int selectedCount = recordSelectedData.size();
+		
+		for (int rowIndex = 0; rowIndex < contentPanel.getModel().getRowCount(); rowIndex++){			
+			Integer keyCandidate = getColumnValue(rowIndex);
+			
+			@SuppressWarnings("unchecked")
+			List<Object> candidateRecord = (List<Object>)contentPanel.getModel().get(rowIndex);
+						
+			if (contentPanel.getModel().isSelected(candidateRecord)){
+				if (!recordSelectedData.containsKey(keyCandidate)){
+					selectedCount++;
+				}
+			}else{
+				if (recordSelectedData.containsKey(keyCandidate)){// unselected record
+					selectedCount--;
+				}
+			}
+		}	
+		
+		String msg = Msg.getMsg(Env.getCtx(), "IWStatusSelected", new Object [] {String.valueOf(selectedCount)});
+		statusBar.setSelectedRowNumber(msg);
+	}	//	setStatusDB
+	
 	protected void prepareTable (ColumnInfo[] layout,
             String from,
             String where,
@@ -416,6 +522,10 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 			m_sqlOrder = " ORDER BY " + orderBy;
 	}   //  prepareTable
 
+	protected boolean isLoadPageNumber(){
+		return infoWindow == null || infoWindow.isLoadPageNum();
+	}
+	
 	/**************************************************************************
 	 *  Execute Query
 	 */
@@ -424,11 +534,14 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		line = new ArrayList<Object>();
 		setCacheStart(-1);
 		cacheEnd = -1;
-
-		testCount();
+		if (isLoadPageNumber())
+			testCount();
+		else
+			m_count = Integer.MAX_VALUE;
+		
 		if (m_count > 0)
 		{
-			m_useDatabasePaging = (m_count > 1000);
+			m_useDatabasePaging = isIgnoreCacheAll || (m_count > 1000);
 			if (m_useDatabasePaging)
 			{
 				return ;
@@ -443,6 +556,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	private void readData(ResultSet rs) throws SQLException {
 		int colOffset = 1;  //  columns start with 1
 		List<Object> data = new ArrayList<Object>();
+	
 		for (int col = 0; col < p_layout.length; col++)
 		{
 			Object value = null;
@@ -511,34 +625,98 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 			}
 			data.add(value);
 		}
+		
         line.add(data);
         
-        readViewID(rs, data);
+        appendDataForViewID(rs, data, lsReadedColumn);
+        
+        appendDataForParentLink(rs, data, lsReadedColumn);
+        
+        appendDataForKeyView (rs, data, lsReadedColumn);
 	}
 	
 	/**
-	 * save all viewID to end of data line
-	 * when override readData(ResultSet rs), consider call this method 
+	 * save data of all viewID column in infoProcessList to end of data line
+	 * when override {@link #readData(ResultSet)} consider call this method 
 	 * IDEMPIERE-1970
+	 * @param rs record set to read data
+	 * @param data data line to append
+	 * @param listReadedColumn list column is appended
+	 * @throws SQLException
 	 */
-	protected void readViewID(ResultSet rs, List<Object> data) throws SQLException {
-		if (infoProcessList == null || infoProcessList.length == 0) {
+	protected void appendDataForViewID(ResultSet rs, List<Object> data, List<Integer> listReadedColumn) throws SQLException {
+		appendInfoColumnData(rs, data, infoProcessList, listReadedColumn);
+	}
+	
+	/**
+	 * save data of all viewID column in infoProcessList to end of data line
+	 * when override {@link #readData(ResultSet)} consider call this method 
+	 * IDEMPIERE-2152
+	 * @param rs
+	 * @param data
+	 * @param listReadedColumn
+	 * @throws SQLException
+	 */
+	protected void appendDataForParentLink(ResultSet rs, List<Object> data, List<Integer> listReadedColumn) throws SQLException {
+		appendInfoColumnData(rs, data, relatedInfoList, listReadedColumn);
+	}
+	
+	/**
+	 * save data of all viewID column in infoProcessList to end of data line
+	 * when override {@link #readData(ResultSet)} consider call this method 
+	 * IDEMPIERE-1970
+	 * @param rs record set to read data
+	 * @param data data line to append
+	 * @param listReadedColumn list column is appended
+	 * @throws SQLException
+	 */
+	protected void appendDataForKeyView(ResultSet rs, List<Object> data, List<Integer> listReadedColumn) throws SQLException {
+		if (isNeedAppendKeyViewData())
+			appendInfoColumnData(rs, data, new IInfoColumn [] {keyColumnOfView}, listReadedColumn);
+	}
+	
+	/**
+	 * save data of all infoColumn in listModelHaveInfoColumn to end of data line
+	 * @param rs record set to read data
+	 * @param data data line to append
+	 * @param listModelHasInfoColumn
+	 * @param listReadedColumn list column is appended
+	 * @throws SQLException
+	 */
+	protected void appendInfoColumnData(ResultSet rs, List<Object> data, IInfoColumn [] listModelHasInfoColumn, List<Integer> listReadedColumn) throws SQLException {
+		if (listModelHasInfoColumn == null || listModelHasInfoColumn.length == 0) {
 			return;
 		}
-
-		// with each process have viewID, read it form resultSet by name
-		for (MInfoProcess infoProcess : infoProcessList){
-			if (infoProcess.getAD_InfoColumn_ID() <= 0)
+		
+		// get InfoColumn from each modelHaveInfoColumn, read it form resultSet by name and append to data line
+		for (IInfoColumn modelHasInfoColumn : listModelHasInfoColumn){
+			// have no InfoColumn or this column is readed, read next column
+			if (modelHasInfoColumn.getInfoColumnID() <= 0 || listReadedColumn.contains(modelHasInfoColumn.getInfoColumnID()))
 				continue;
 
-			MInfoColumn infocol = (MInfoColumn) infoProcess.getAD_InfoColumn();
-			String viewIDValue = rs.getString(infocol.getColumnName());
-			if (rs.wasNull()) {
-				data.add(null);
-			} else {
-				data.add(viewIDValue);
+			MInfoColumn infoColumnAppend = (MInfoColumn) modelHasInfoColumn.getAD_InfoColumn();
+			//TODO: improve read data to get data by data type of column.
+			String appendData = null;
+			try {
+				appendData = rs.getString(infoColumnAppend.getColumnName());
+			} catch (SQLException e) {
+				appendData = null;
 			}
+			if (rs.wasNull()) {
+				appendData = null;
+			}
+			data.add(appendData);
+			
+			// when need update append column index, just update it.
+			if (isMustUpdateColumnIndex && !columnDataIndex.containsKey(modelHasInfoColumn.getInfoColumnID())){
+				columnDataIndex.put(modelHasInfoColumn.getInfoColumnID(), indexColumnCount);
+				indexColumnCount++;
+			}
+			
+			// mark this column is readed
+			listReadedColumn.add(modelHasInfoColumn.getInfoColumnID());
 		}
+
 	}
 
     protected void renderItems()
@@ -599,13 +777,17 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
             model.setMultiple(p_multipleSelection);
             contentPanel.setData(model, null);
         }
-        int no = m_count;
-        setStatusLine(Integer.toString(no) + " " + Msg.getMsg(Env.getCtx(), "SearchRows_EnterQuery"), false);
-        setStatusDB(Integer.toString(no));
-
+        restoreSelectedInPage();
+        updateStatusBar (m_count);
+        setStatusSelected ();
         addDoubleClickListener();
     }
 
+    protected void updateStatusBar (int no){
+    	setStatusLine((no == Integer.MAX_VALUE?"?":Integer.toString(no)) + " " + Msg.getMsg(Env.getCtx(), "SearchRows_EnterQuery"), false);
+        setStatusDB(no == Integer.MAX_VALUE?"?":Integer.toString(no));
+    }
+    
     private List<Object> readLine(int start, int end) {
     	//cacheStart & cacheEnd - 1 based index, start & end - 0 based index
     	if (getCacheStart() >= 1 && cacheEnd > getCacheStart())
@@ -614,7 +796,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
     		{
     			if (start+1 >= getCacheStart() && end+1 <= cacheEnd)
     			{
-    				return end == -1 ? line : line.subList(start-getCacheStart()+1, end-getCacheStart()+2);
+    				return end == -1 ? line : getSubList(start-getCacheStart()+1, end-getCacheStart()+1, line);
     			}
     		}
     		else
@@ -623,11 +805,11 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
     			{
     				end = cacheEnd;
     			}
-    			return line.subList(start, end);
+    			return getSubList (start, end, line);
     		}
     	}
 
-    	setCacheStart(start + 1 - (pageSize * 4));
+    	setCacheStart(getOverIntValue((long)start + 1 - (pageSize * numPagePreLoad)));
     	if (getCacheStart() <= 0)
     		setCacheStart(1);
 
@@ -637,7 +819,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
     	}
     	else
     	{
-	    	cacheEnd = end + 1 + (pageSize * 4);
+	    	cacheEnd = getOverIntValue(end + 1 + (pageSize * numPagePreLoad));
 	    	if (cacheEnd > m_count)
 	    		cacheEnd = m_count;
     	}
@@ -652,6 +834,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 			//
 
         dataSql = buildDataSQL(start, end);
+        isHasNextPage = false;
         if (log.isLoggable(Level.FINER))
         	log.finer(dataSql);
 		try
@@ -675,13 +858,21 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 			}
 
 			int rowPointer = getCacheStart()-1;
+			
 			while (m_rs.next())
 			{
 				rowPointer++;
+				// reset list column readed to start new round
+				lsReadedColumn.clear();
+				
 				readData(m_rs);
+				// just set column index only one time.
+				isMustUpdateColumnIndex = false;
+				
 				//check now of rows loaded, break if we hit the suppose end
 				if (m_useDatabasePaging && rowPointer >= cacheEnd)
 				{
+					isHasNextPage = true;
 					break;
 				}
 			}
@@ -697,11 +888,12 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 			DB.close(m_rs, m_pstmt);
 		}
 
-		if (end >= cacheEnd || end <= 0)
+		if (end > cacheEnd || end <= 0)
 		{
-			end = cacheEnd-1;
+			end = cacheEnd;
 		}
-		
+		validateEndPage ();
+
 		if (end == -1) 
 		{
 			return line;
@@ -709,13 +901,93 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		else
 		{
 			int fromIndex = start-getCacheStart()+1;
-			int toIndex = end-getCacheStart()+2;
-			if (toIndex > line.size()) 
-				toIndex = line.size();
-			return line.subList(fromIndex, toIndex);
+			int toIndex = end-getCacheStart()+1;
+			return getSubList(fromIndex, toIndex, line);
 		}
 	}
 
+    /**
+     * after query from database, process validate.
+     * if end page include in cache, process calculate total record
+     * if current page is out of page (no record is query) process query count to detect end page
+     */
+    protected void validateEndPage (){
+    	if (paging == null || isLoadPageNumber())
+    		return;
+    	
+    	if (!isHasNextPage){
+    		int extraPage = ((line.size() % pageSize > 0)?1:0);
+    		int pageInCache = line.size() / pageSize + extraPage;
+    		
+    		if (pageInCache == 0 || pageInCache <= numPagePreLoad){
+    			// selected page is out of page
+    			testCount();
+    			extraPage = ((m_count  % pageSize > 0)?1:0);
+        		pageInCache = m_count  / pageSize + extraPage;    			
+    			// this one will set current page to end page
+    			paging.setTotalSize(m_count);
+    			Event pagingEvent = new PagingEvent("onPaging", paging, paging.getPageCount() - 1);
+    			Events.postEvent(pagingEvent);
+    		}else if (pageInCache > numPagePreLoad){
+    			// current page isn't end page. but page in cache has end page.
+    			int prePage = pageNo - numPagePreLoad;
+    			int readTotalRecord = (prePage > 0?prePage:0) * pageSize + line.size();
+    			paging.setTotalSize(readTotalRecord);
+    			m_count = readTotalRecord;
+    		}
+    		
+    		updateStatusBar (m_count);
+    	}
+    }
+    
+    /**
+     * fromIndex and toIndex calculate with assume always query record as {@link #testCount()}
+     * example after testCount we get calculate 6page.
+     * when user navigate to page 4. something change in system (a batch record change become don't match with search query) 
+     * let we just get 5 page with current parameter.
+     * so when user navigate to page 6. user will face with index issue. (out of index or start index > end index)
+     * this function is fix for it.
+     * @param fromIndex
+     * @param toIndex
+     * @param line
+     * @return
+     */
+    protected List<Object> getSubList (int fromIndex, int toIndex, List<Object> line){
+    	if (toIndex > line.size())
+    		toIndex = line.size();
+    	
+    	if (fromIndex >= line.size())
+    		fromIndex = line.size();
+    	
+    	// case line.size = 0
+    	if (fromIndex < 0)
+    		fromIndex = 0;
+    	
+    	return line.subList(fromIndex, toIndex);
+    }
+    
+    /**
+     * when calculator value at bound, sometime value is overflow by data type
+     * this function calculator at high type for avoid it
+     * @param overValue
+     * @return
+     */
+    protected int getOverIntValue (long overValue){
+    	return getOverIntValue (overValue, 0);
+    }
+    
+    /**
+     * see {@link #getOverIntValue(long)}. when value over max_value set it near max_value.
+     * @param overValue
+     * @param extra
+     * @return
+     */
+    protected int getOverIntValue (long overValue, int extra){
+    	if (overValue >= Integer.MAX_VALUE)
+    		overValue = Integer.MAX_VALUE - extra;
+    	
+    	return (int)overValue;
+    }
 	protected String buildDataSQL(int start, int end) {
 		String dataSql;
 		String dynWhere = getSQLWhere();
@@ -871,47 +1143,24 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 
 	/**
      *  Get the keys of selected row/s based on layout defined in prepareTable
+     *  @deprecated this function should deprecated and replace with {@link #getListKeyValueOfSelectedRow()} to support view at infoWindow
      *  @return IDs if selection present
      *  @author ashley
      */
     protected ArrayList<Integer> getSelectedRowKeys()
     {
         ArrayList<Integer> selectedDataList = new ArrayList<Integer>();
-
-        if (contentPanel.getKeyColumnIndex() == -1)
+        Collection<Integer> lsKeyValueOfSelectedRow = getSelectedRowInfo().keySet();
+        if (lsKeyValueOfSelectedRow.size() == 0)
         {
             return selectedDataList;
         }
 
         if (p_multipleSelection)
-        {
-        	int[] rows = contentPanel.getSelectedIndices();
-            for (int row = 0; row < rows.length; row++)
-            {
-                Object data = contentPanel.getModel().getValueAt(rows[row], contentPanel.getKeyColumnIndex());
-                if (data instanceof IDColumn)
-                {
-                    IDColumn dataColumn = (IDColumn)data;
-                    selectedDataList.add(dataColumn.getRecord_ID());
-                }
-                else
-                {
-                    log.severe("For multiple selection, IDColumn should be key column for selection");
-                }
-            }
-        }
-
-        if (selectedDataList.size() == 0)
-        {
-        	int row = contentPanel.getSelectedRow();
-    		if (row != -1 && contentPanel.getKeyColumnIndex() != -1)
-    		{
-    			Object data = contentPanel.getModel().getValueAt(row, contentPanel.getKeyColumnIndex());
-    			if (data instanceof IDColumn)
-    				selectedDataList.add(((IDColumn)data).getRecord_ID());
-    			if (data instanceof Integer)
-    				selectedDataList.add((Integer)data);
-    		}
+        {        	
+        	for (Integer key : lsKeyValueOfSelectedRow){        		
+        		selectedDataList.add(key);
+        	}
         }
 
         return selectedDataList;
@@ -934,51 +1183,30 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	/**
 	 * Save selected id, viewID of all process to map viewIDMap to save into T_Selection
 	 */
-	public Map<Integer, List<String>> getSaveKeys (){
+	public Collection<KeyNamePair> getSaveKeys (int infoCulumnId){
 		// clear result from prev time
 		m_viewIDMap.clear();
 		
 		if (p_multipleSelection)
         {
-        	int[] rows = contentPanel.getSelectedIndices();
-        	
-        	// this flag to just check key column in first record
-        	boolean isCheckedKeyType = false;
-        	
-            for (int row = 0; row < rows.length; row++)
+			Map <Integer, List<Object>> selectedRow = getSelectedRowInfo();
+			
+            for (Entry<Integer, List<Object>> selectedInfo : selectedRow.entrySet())
             {
             	// get key data column
-                Object keyData = contentPanel.getModel().getValueAt(rows[row], contentPanel.getKeyColumnIndex());
+                Integer keyData = selectedInfo.getKey();
                 
-                // check key data must is IDColumn
-                if (!isCheckedKeyType){
-                	if (keyData instanceof IDColumn){
-                		isCheckedKeyType = true;
-                	}else{
-                		log.severe("For multiple selection, IDColumn should be key column for selection");
-                		break;
-                	}
-                }
-                
-                IDColumn dataColumn = (IDColumn)keyData;
-
-                if (isHasViewID){
+                if (infoCulumnId > 0){
                 	// have viewID, get it
-                	List<String> viewIDValueList = new ArrayList <String> ();
-                	String viewIDValue = null;
-                	for (int viewIDIndex = 0; viewIDIndex < numOfViewID; viewIDIndex++){
-                		// get row data from model
-                		@SuppressWarnings("unchecked")
-						List<Object> selectedRowData = (List<Object>)contentPanel.getModel().get(rows[row]);
-                		// view data store at end of data line
-                		viewIDValue = (String)selectedRowData.get (contentPanel.getLayout().length + viewIDIndex);                		
-            			viewIDValueList.add(viewIDValue);
-                	}
+                	int dataIndex = columnDataIndex.get(infoCulumnId) + p_layout.length;
                 	
-                	m_viewIDMap.put(dataColumn.getRecord_ID(), viewIDValueList);
+            		// get row data from model
+					Object viewIDValue = selectedInfo.getValue().get(dataIndex);
+                	
+                	m_viewIDMap.add (new KeyNamePair(keyData, viewIDValue == null?null:viewIDValue.toString()));
                 }else{
-                	// hasn't viewID, set viewID value collection is null
-                	m_viewIDMap.put(dataColumn.getRecord_ID(), null);
+                	// hasn't viewID, set viewID value is null
+                	m_viewIDMap.add (new KeyNamePair(keyData, null));
                 }
                 
             }
@@ -990,7 +1218,176 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
         }
 
 	}
-
+	
+	/**
+	 * need overrider at infoWindow to check isDisplay
+	 * @return
+	 */
+	protected boolean isNeedAppendKeyViewData (){
+		return false;
+	}
+		
+	/**
+	 * Check type of object is IDColumn
+	 * @param keyData
+	 * @param isCheckNull when true, raise exception when data is null
+	 * @return
+	 */
+	protected boolean isIDColumn(Object keyData, boolean isCheckNull){
+		if (isCheckNull && keyData == null){
+			AdempiereException ex = getKeyNullException();
+			log.severe(ex.getMessage());
+			throw ex;
+		}
+		
+		if (keyData != null && keyData instanceof IDColumn){
+			return true;
+		}
+		
+		return false;
+	}
+	
+	/**
+	 * call {@link #isIDColumn(Object, boolean)} without check null value
+	 * @param keyData
+	 * @return
+	 */
+	protected boolean isIDColumn(Object keyData){
+		return isIDColumn(keyData, false);
+	}
+	
+	/**
+	 * get all selected record of current page and update to {@link #recordSelectedData}
+	 * remove unselected record and add new selected record
+	 * we maintain value of key, and extra value append by {@link #appendInfoColumnData(ResultSet, List, IInfoColumn[], List)} 
+	 */
+	protected void updateListSelected (){
+		for (int rowIndex = 0; rowIndex < contentPanel.getModel().getRowCount(); rowIndex++){			
+			Integer keyCandidate = getColumnValue(rowIndex);
+			
+			@SuppressWarnings("unchecked")
+			List<Object> candidateRecord = (List<Object>)contentPanel.getModel().get(rowIndex);
+					
+			if (contentPanel.getModel().isSelected(candidateRecord)){
+				recordSelectedData.put(keyCandidate, candidateRecord);// add or update selected record info				
+			}else{
+				if (recordSelectedData.containsKey(keyCandidate)){// unselected record
+					recordSelectedData.remove(keyCandidate);
+				}
+			}
+			
+		}		    
+	}
+	
+	/**
+	 * get data index of keyView
+	 * @return
+	 */
+	protected int getIndexKeyColumnOfView (){
+		if (keyColumnOfView == null){
+			return contentPanel.getKeyColumnIndex();
+		}else if (isNeedAppendKeyViewData()){
+			return columnDataIndex.get(keyColumnOfView.getInfoColumnID()) + p_layout.length;
+		}else{
+			return indexKeyOfView;
+		}
+	}	
+	
+	/**
+	 * go through all data record, in case key value is in {@link #recordSelectedData}, mark it as selected record
+	 */
+	protected void restoreSelectedInPage (){
+		if (!p_multipleSelection)
+			return;
+		
+		Collection<Object> lsSelectionRecord = new ArrayList<Object>();
+		for (int rowIndex = 0; rowIndex < contentPanel.getModel().getRowCount(); rowIndex++){
+			Integer keyViewValue = getColumnValue(rowIndex);
+			if (recordSelectedData.containsKey(keyViewValue)){
+				// TODO: maybe add logic to check value of current record (focus only to viewKeys value) is same as value save in lsSelectedKeyValue
+				// because record can change by other user
+				lsSelectionRecord.add(contentPanel.getModel().get(rowIndex));
+			}
+		}
+		
+		contentPanel.getModel().setSelection(lsSelectionRecord);
+	}
+	
+	
+	protected AdempiereException getKeyNullException (){
+		String errorMessage = String.format("has null value at column %1$s use as key of view in info window %2$s", 
+				keyColumnOfView == null ? p_keyColumn : keyColumnOfView, infoWindow.getName());
+		return new AdempiereException(errorMessage);
+	}
+	/**
+	 * get keyView value at rowIndex and clumnIndex
+	 * also check in case value is null will rise a exception
+	 * @param rowIndex
+	 * @param columnIndex
+	 * @return
+	 */
+	protected Integer getColumnValue (int rowIndex){
+		
+		int keyIndex = getIndexKeyColumnOfView();
+		Integer keyValue = null;
+    	// get row data from model
+		Object keyColumValue = contentPanel.getModel().getDataAt(rowIndex, keyIndex);
+		// throw exception when value is null
+		if (keyColumValue == null){
+			AdempiereException ex = getKeyNullException();
+			log.severe(ex.getMessage());
+			throw ex;
+		}
+		
+		// IDColumn is recreate after change page, because use value of IDColumn
+		if (keyColumValue != null && keyColumValue instanceof IDColumn){
+			keyColumValue = ((IDColumn)keyColumValue).getRecord_ID();
+		}
+		
+		if (keyColumValue instanceof Integer){
+			keyValue = (Integer)keyColumValue;
+		}else {
+			String msg = "column play keyView should is integer";
+			AdempiereException ex = new AdempiereException (msg);
+			log.severe(msg);
+			throw ex;
+		}
+		
+		return (Integer)keyValue;
+	}
+	
+	/**
+	 * in case requery data, but want store selected record (example when run success a process)
+	 * we must sync selected row, because some selected row maybe not at data list (process make it change not map with query)
+	 * current 1000 line cache 
+	 * because in case query get more 1000 record we can't sync or maintain selected record (ever maintain for current page will make user confuse).
+	 * just clear selection
+	 * in case < 1000 record is ok
+	 * TODO:rewrite
+	 */
+	protected void syncSelectedAfterRequery (){
+		if (isRequeryByRunSuccessProcess){
+			isRequeryByRunSuccessProcess = false;
+			//TODO:it's hard to ensure in case use keyViewId we can re-sync. some issue:
+			// + after RunSuccessProcess maybe key of record is change.
+			// + after RunSuccessProcess maybe value of viewID change.
+			// + after RunSuccessProcess maybe some record is out of query result
+			// + when load many page, sync at one time effect to performance
+			// maybe make two list, just sync for first page, old list use for reference, 
+			// when user change page will use it for restore selected record, synced record will copy to new list
+		}
+	}
+	
+	/**
+	 * update list column key value of selected record and return this list
+	 * @return {@link #recordSelectedData} after update 
+	 */
+	public Map<Integer, List<Object>> getSelectedRowInfo (){
+		updateListSelected();
+		return recordSelectedData;
+	}
+	
+	
 	/**
 	 *	Get selected Keys
 	 *  @return selected keys (Integers)
@@ -1060,7 +1457,10 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		return sb.toString();
 	}	//	getSelectedSQL;
 
-
+	/**
+	 * query ADInfoWindow from ADInfoWindowID
+	 */
+	protected void loadInfoWindowData (){}
 
 	/**
 	 *  Get Table name Synonym
@@ -1090,7 +1490,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	 * enable all control button or disable all rely to selected record 
 	 */
 	protected void enableButtons (){
-		boolean enable = (contentPanel.getSelectedCount() > 0);
+		boolean enable = (contentPanel.getSelectedCount() > 0 || getSelectedRowInfo().size() > 0);
 		enableButtons(enable);
 	}
 	
@@ -1112,7 +1512,6 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 			confirmPanel.getButton(ConfirmPanel.A_ZOOM).setEnabled(!enable?enable : (contentPanel.getSelectedCount() == 1) ); //red1 only zoom for single record
 		if (hasProcess())
 			confirmPanel.getButton(ConfirmPanel.A_PROCESS).setEnabled(enable);
-		
 		// IDEMPIERE-1334 start
 		for (Button btProcess : btProcessList){
 			btProcess.setEnabled(enable);
@@ -1186,8 +1585,17 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	 */
 	protected boolean hasZoom()					{return false;}
 	/**
+	 *  Has new function for create new record (false)
+	 *	To be overwritten by concrete classes 
+	 * @return
+	 */
+	protected boolean hasNew()					{return false;}
+	/**
 	 *  Save Selection Details
 	 *	To be overwritten by concrete classes
+	 *  this function call when close info window.
+	 *  default infoWindow will set value of all column of current selected record to environment variable with {@link Env.TAB_INF}
+	 *  class extends can do more by override it. 
 	 */
 	protected void saveSelectionDetail()          {}
 
@@ -1246,6 +1654,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
             }
             else if (event.getTarget() == contentPanel && event.getName().equals(Events.ON_SELECT))
             {
+            	setStatusSelected ();
             	m_lastOnSelectItem = null;
             	SelectEvent<?, ?> selectEvent = (SelectEvent<?, ?>) event;
             	if (selectEvent.getReference() != null && selectEvent.getReference() instanceof Listitem)
@@ -1260,8 +1669,15 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
             		return;
             	}
             	if (contentPanel.isMultiple()) {
-            		if (m_lastOnSelectItem != null)
-            			contentPanel.setSelectedItem(m_lastOnSelectItem);
+            		//un-select all selected column
+            		if (m_lastOnSelectItem != null){
+            			contentPanel.getModel().clearSelection();
+            			int clickItemIndex = contentPanel.getIndexOfItem(m_lastOnSelectItem);
+            			Object selectedItemModle = contentPanel.getModel().get(clickItemIndex);
+            			contentPanel.getModel().addToSelection(selectedItemModle);
+            		}
+            		// clean selected record in cache
+            		recordSelectedData.clear();
             	}
             	onDoubleClick();
             }
@@ -1301,6 +1717,9 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
                     if (isLookup())
                     	this.detach();
                 }
+            }else if (event.getTarget().equals(confirmPanel.getButton(ConfirmPanel.A_NEW)))
+            {
+            	newRecordAction ();
             }
         // IDEMPIERE-1334 handle event click into process button start
         else if (ON_RUN_PROCESS.equals(event.getName())){
@@ -1334,7 +1753,9 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
         // IDEMPIERE-1334 handle event click into process button end
             else if (event.getTarget() == paging)
             {
+            	updateListSelected();
             	int pgNo = paging.getActivePage();
+
             	if (pageNo != pgNo)
             	{
 
@@ -1342,7 +1763,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 
             		pageNo = pgNo;
             		int start = pageNo * pageSize;
-            		int end = start + pageSize;
+            		int end = getOverIntValue ((long)start + pageSize, extra_max_row);
             		if (end >= m_count)
             			end = m_count;
             		List<Object> subList = readLine(start, end);
@@ -1351,8 +1772,9 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
     	            model.addTableModelListener(this);
     	            model.setMultiple(p_multipleSelection);
     	            contentPanel.setData(model, null);
-
+    	            restoreSelectedInPage();
     				//contentPanel.setSelectedIndex(0);
+    	            
     			}
             }
             else if (event.getName().equals(Events.ON_CHANGE))
@@ -1430,6 +1852,11 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	protected void initParameters() {
 
 	}
+	
+	/**
+	 * Update relate info when selection in main info change
+	 */
+	protected void updateSubcontent (){};
 
 	/**
 	 * Reset parameter to default value or to empty value? implement at
@@ -1465,6 +1892,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		final int pInstanceID = instance.getAD_PInstance_ID();
 		// Execute Process
 		m_pi.setAD_PInstance_ID(pInstanceID);		
+		m_pi.setAD_InfoWindow_ID(infoWindow.getAD_InfoWindow_ID());
 		
 		//HengSin - to let process end with message and requery
 		WProcessCtl.process(p_WindowNo, m_pi, (Trx)null, new EventListener<Event>() {
@@ -1473,8 +1901,9 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 			public void onEvent(Event event) throws Exception {
 				ProcessModalDialog processModalDialog = (ProcessModalDialog)event.getTarget();
 				if (DialogEvents.ON_BEFORE_RUN_PROCESS.equals(event.getName())){
+					updateListSelected();
 					// store in T_Selection table selected rows for Execute Process that retrieves from T_Selection in code.
-					DB.createT_Selection(pInstanceID, getSaveKeys(), getProcessIndex(processModalDialog.getAD_Process_ID()), 
+					DB.createT_SelectionNew(pInstanceID, getSaveKeys(getInfoColumnIDFromProcess(processModalDialog.getAD_Process_ID())), 
 						null);					
 				}else if (ProcessModalDialog.ON_WINDOW_CLOSE.equals(event.getName())){ 
 					if (processModalDialog.isCancel()){
@@ -1483,14 +1912,13 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 						// enable or disable control button rely selected record status 
 						enableButtons();
 					}else if (m_pi.isError()){
-						// show error info
-						FDialog.error(p_WindowNo, m_pi.getSummary());
+						ProcessInfoDialog.showProcessInfo(m_pi, p_WindowNo, InfoPanel.this, true);
 						// enable or disable control button rely selected record status 
 						enableButtons();
-					}else if (!m_pi.isError() && m_pi.getSummary() != null && m_pi.getSummary().trim().length() > 0){
-						// when success, show summary if exists
-						FDialog.info(p_WindowNo, null, m_pi.getSummary());
-						Clients.response(new AuEcho(InfoPanel.this, "onQueryCallback", m_results));
+					}else if (!m_pi.isError()){
+						ProcessInfoDialog.showProcessInfo(m_pi, p_WindowNo, InfoPanel.this, true);	
+						isRequeryByRunSuccessProcess = true;
+						Clients.response(new AuEcho(InfoPanel.this, "onQueryCallback", null));
 					}
 					
 				}
@@ -1501,19 +1929,15 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
     }
    
     /**
-     * Get index of infoProcess have processId
+     * Get InfoColumnID of infoProcess have processID is processId
      * @param processId
-     * @return
+     * @return value InfoColumnID, -1 when has not any map
      */
-    protected int getProcessIndex (int processId){
-    	int index = 0;
+    protected int getInfoColumnIDFromProcess (int processId){
     	for (int i = 0; i < infoProcessList.length; i++){
     		if (infoProcessList[i].getAD_Process_ID() == processId){
-    			return index;
+    			return infoProcessList[i].getAD_InfoColumn_ID();
     		}
-    		// just increase index when process is have ViewID column
-    		if (infoProcessList[i].getAD_InfoColumn_ID() > 0)
-    			index++;
     	}
     	return -1;
     }
@@ -1547,19 +1971,21 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
     		}
     		m_sqlUserOrder="";
         	executeQuery();
-            renderItems();
-        	// IDEMPIERE-1334 after refresh, restore prev selected item start 
-        	if (event != null && event.getData() != null){
-            	@SuppressWarnings("unchecked")
-				List<Integer> lsSelectedKey = (List<Integer>)event.getData();
-            	contentPanel.setSelectedByKeys(lsSelectedKey);            	            	
-            	m_results.clear();            	
-            }
+            renderItems();            
+        	// IDEMPIERE-1334 after refresh, restore prev selected item start         	
         	// just evaluate display logic of process button when requery by use click requery button
         	if (isQueryByUser){
         		bindInfoProcess();
+        		// reset selected list
+                recordSelectedData.clear();
+                isRequeryByRunSuccessProcess = false;
+        	}
+        	if (isRequeryByRunSuccessProcess){
+        		syncSelectedAfterRequery();
+        		restoreSelectedInPage();
         	}
         	// IDEMPIERE-1334 after refresh, restore prev selected item end
+        	updateSubcontent ();
         }
     	finally
     	{
@@ -1576,7 +2002,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
     
     protected void onOk()
     {
-		if (!contentPanel.getChildren().isEmpty() && contentPanel.getSelectedRowKey()!=null)
+		if (!contentPanel.getChildren().isEmpty() && getSelectedRowInfo().size() > 0)
 		{
 		    dispose(true);
 		}
@@ -1628,6 +2054,11 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
     	}
     }
 
+    /**
+     * process action when user click to new button
+     */
+    protected void newRecordAction (){}
+    
     public void addValueChangeListener(ValueChangeListener listener)
     {
         if (listener == null)
@@ -1666,6 +2097,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
     }   //  dispose
 
 	public void sort(Comparator<Object> cmpr, boolean ascending) {
+		updateListSelected();
 		WListItemRenderer.ColumnComparator lsc = (WListItemRenderer.ColumnComparator) cmpr;
 		if (m_useDatabasePaging)
 		{
@@ -1800,5 +2232,17 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		} catch (Exception e){}
 	}
 
+	/**
+	 * field call this info panel as search editor
+	 * null in case info window open in stand-alone window (from menu, fav,...) 
+	 * @return
+	 */
+	public GridField getGridfield() {
+		return m_gridfield;
+	}
+
+	public void setGridfield(GridField m_gridfield) {
+		this.m_gridfield = m_gridfield;
+	}
 }	//	Info
 

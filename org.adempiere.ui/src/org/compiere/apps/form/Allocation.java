@@ -28,6 +28,7 @@ import org.compiere.minigrid.IMiniTable;
 import org.compiere.model.MAllocationHdr;
 import org.compiere.model.MAllocationLine;
 import org.compiere.model.MBPartner;
+import org.compiere.model.MDocType;
 import org.compiere.model.MInvoice;
 import org.compiere.model.MPayment;
 import org.compiere.model.MRole;
@@ -52,6 +53,7 @@ public class Allocation
 	private boolean     m_calculating = false;
 	public int         	m_C_Currency_ID = 0;
 	public int         m_C_Charge_ID = 0;
+	public int         m_C_DocType_ID = 0;
 	public int         	m_C_BPartner_ID = 0;
 	private int         m_noInvoices = 0;
 	private int         m_noPayments = 0;
@@ -82,6 +84,8 @@ public class Allocation
 		if (log.isLoggable(Level.INFO)) log.info("Currency=" + m_C_Currency_ID);
 		
 		m_AD_Org_ID = Env.getAD_Org_ID(Env.getCtx());
+		m_C_DocType_ID= MDocType.getDocType("CMA");
+		
 	}
 	
 	/**
@@ -655,6 +659,8 @@ public class Allocation
 		MAllocationHdr alloc = new MAllocationHdr (Env.getCtx(), true,	//	manual
 			DateTrx, C_Currency_ID, Env.getContext(Env.getCtx(), "#AD_User_Name"), trxName);
 		alloc.setAD_Org_ID(AD_Org_ID);
+		alloc.setC_DocType_ID(m_C_DocType_ID);
+		alloc.setDescription(alloc.getDescriptionForManualAllocation(m_C_BPartner_ID, trxName));
 		alloc.saveEx();
 		//	For all invoices
 		BigDecimal unmatchedApplied = Env.ZERO;

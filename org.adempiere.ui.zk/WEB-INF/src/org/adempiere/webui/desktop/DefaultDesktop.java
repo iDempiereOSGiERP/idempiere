@@ -243,12 +243,15 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
         windowContainer.createPart(windowArea);
 
         homeTab = new Tabpanel();
-        windowContainer.addWindow(homeTab, Util.cleanAmp(Msg.getMsg(Env.getCtx(), "Home")), false);
+        windowContainer.addWindow(homeTab, Util.cleanAmp(Msg.getMsg(Env.getCtx(), "Home")), false, null);
         homeTab.getLinkedTab().setSclass("desktop-hometab");
         homeTab.setSclass("desktop-home-tabpanel");
         BusyDialog busyDialog = new BusyDialog();
         busyDialog.setShadow(false);
         homeTab.appendChild(busyDialog);
+        
+        // register as 0
+        registerWindow(homeTab);
         
         BroadcastMessageWindow messageWindow = new BroadcastMessageWindow(pnlHead);
         BroadcastMsgUtil.showPendingMessage(Env.getAD_User_ID(Env.getCtx()), messageWindow);
@@ -348,16 +351,12 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 	{		
 		homeTab.getChildren().clear();		
 
-		//register as 0
-        registerWindow(homeTab);
-        
 		dashboardController.render(homeTab, this, true);
 	
 		West w = layout.getWest();
 		w.getChildren().clear();
 		sideController.render(w, this, false);
 		
-		Clients.response(new AuScript("$('.slimScroll .z-anchorlayout-body').slimScroll({height: '100%',railVisible: true, alwaysVisible: false});"));				
 	}
 
 	public void onEvent(Event event)
