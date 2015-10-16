@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION bomqtyonhand (in product_id numeric, in warehouse_id numeric, in locator_id numeric) RETURNS numeric AS
+CREATE OR REPLACE FUNCTION BOMQtyOnHand (in product_id numeric, in warehouse_id numeric, in locator_id numeric) RETURNS numeric AS
 $BODY$
 DECLARE
 	myWarehouse_ID		numeric;
@@ -37,7 +37,7 @@ BEGIN
 		WHEN OTHERS THEN
 			RETURN 0;
 	END;
-	--	Unimited capacity if no item
+	--	Unlimited capacity if no item
 	IF (v_IsBOM='N' AND (v_ProductType<>'I' OR v_IsStocked='N')) THEN
 		RETURN v_Quantity;
 	--	Stocked item
@@ -45,15 +45,14 @@ BEGIN
 		--	Get ProductQty
 		SELECT 	COALESCE(SUM(QtyOnHand), 0)
 		  INTO	v_ProductQty
-		FROM 	M_STORAGE s
-		WHERE M_Product_ID=Product_ID
-		  AND EXISTS (SELECT * FROM M_LOCATOR l WHERE s.M_Locator_ID=l.M_Locator_ID
-		  	AND l.M_Warehouse_ID=myWarehouse_ID);
+		FROM 	M_Storageonhand s
+		  JOIN M_Locator l ON (s.M_Locator_ID=l.M_Locator_ID)
+		WHERE s.M_Product_ID=Product_ID AND l.M_Warehouse_ID=myWarehouse_ID;
 		--
 		RETURN v_ProductQty;
 	END IF;
 
-	--	Go though BOM
+	--	Go through BOM
 	FOR bom IN 	--	Get BOM Product info
 		SELECT b.M_ProductBOM_ID, b.BOMQty, p.IsBOM, p.IsStocked, p.ProductType
 		FROM M_PRODUCT_BOM b, M_PRODUCT p
@@ -69,10 +68,9 @@ BEGIN
 			--	Get v_ProductQty
 			SELECT 	COALESCE(SUM(QtyOnHand), 0)
 			  INTO	v_ProductQty
-			FROM 	M_STORAGE s
-			WHERE M_Product_ID=bom.M_ProductBOM_ID
-			  AND EXISTS (SELECT * FROM M_LOCATOR l WHERE s.M_Locator_ID=l.M_Locator_ID
-			  	AND l.M_Warehouse_ID=myWarehouse_ID);
+			FROM 	M_Storageonhand s
+			  JOIN M_Locator l ON (s.M_Locator_ID=l.M_Locator_ID)
+			WHERE s.M_Product_ID=bom.M_ProductBOM_ID AND l.M_Warehouse_ID=myWarehouse_ID;
 			--	Get Rounding Precision
 			SELECT 	COALESCE(MAX(u.StdPrecision), 0)
 			  INTO	v_StdPrecision

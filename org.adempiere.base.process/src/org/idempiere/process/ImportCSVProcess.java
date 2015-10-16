@@ -46,6 +46,7 @@ import org.compiere.model.GridTab;
 import org.compiere.model.GridWindow;
 import org.compiere.model.MImportTemplate;
 import org.compiere.model.MLookup;
+import org.compiere.process.ProcessInfo;
 import org.compiere.process.ProcessInfoParameter;
 import org.compiere.process.SvrProcess;
 import org.compiere.util.Env;
@@ -139,11 +140,16 @@ public class ImportCSVProcess extends SvrProcess implements DataStatusListener {
 	protected void importFile(String filePath, IGridTabImporter csvImporter, GridTab activeTab, List<GridTab> childTabs) throws Exception {
 		m_file_istream = new FileInputStream(filePath);
 
-		File outFile = csvImporter.fileImport(activeTab, childTabs, m_file_istream, Charset.forName(m_importTemplate.getCharacterSet()), p_ImportMode);
+		File outFile = csvImporter.fileImport(activeTab, childTabs, m_file_istream, Charset.forName(m_importTemplate.getCharacterSet()), p_ImportMode, processUI);
 		// TODO: Potential improvement - traverse the outFile and call addLog with the results
 
 		if (processUI != null)
 			processUI.download(outFile);
+		else if( getProcessInfo() != null ){
+			ProcessInfo m_pi = getProcessInfo();
+			m_pi.setExportFile(outFile);
+			m_pi.setExportFileExtension("csv");
+		}
 
 		m_file_istream.close();
 	}

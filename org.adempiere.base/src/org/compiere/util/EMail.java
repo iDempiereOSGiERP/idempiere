@@ -48,7 +48,6 @@ import javax.mail.internet.MimeMultipart;
 
 import org.compiere.model.MClient;
 import org.compiere.model.MSysConfig;
-
 import com.sun.mail.smtp.SMTPMessage;
 
 /**
@@ -185,6 +184,10 @@ public final class EMail implements Serializable
 		m_smtpPort = smtpPort;
 	}
 
+	public void setAcknoledgmentReceipt(boolean ar) {
+		m_acknowledgementReceipt = ar;
+	}
+
 	/**	From Address				*/
 	private InternetAddress     m_from;
 	/** To Address					*/
@@ -205,7 +208,7 @@ public final class EMail implements Serializable
 	private String  			m_smtpHost;
 	private int					m_smtpPort;
 	private boolean				m_secureSmtp;
-
+	private boolean				m_acknowledgementReceipt;
 	
 	/**	Attachments					*/
 	private ArrayList<DataSource>	m_attachments;
@@ -222,7 +225,6 @@ public final class EMail implements Serializable
 	private String		m_sentMsg = null;
 
 	private List<ValueNamePair> additionalHeaders = new ArrayList<ValueNamePair>();
-
 	/**	Mail Sent OK Status				*/
 	public static final String      SENT_OK = "OK";
 
@@ -338,6 +340,8 @@ public final class EMail implements Serializable
 			//
 			m_msg.setSentDate(new java.util.Date());
 			m_msg.setHeader("Comments", "iDempiereMail");
+			if (m_acknowledgementReceipt)
+				m_msg.setHeader("Disposition-Notification-To", m_from.getAddress());
 		//	m_msg.setDescription("Description");
 			//	SMTP specifics
 			//m_msg.setAllow8bitMIME(true);
@@ -362,7 +366,13 @@ public final class EMail implements Serializable
 			t.connect();
 		//	t.connect(m_smtpHost, user, password);
 		//	log.fine("transport connected");
-			Transport.send(m_msg);
+			ClassLoader tcl = Thread.currentThread().getContextClassLoader();
+			try {
+				Thread.currentThread().setContextClassLoader(javax.mail.Session.class.getClassLoader());
+				Transport.send(m_msg);
+			} finally {
+				Thread.currentThread().setContextClassLoader(tcl);
+			}
 		//	t.sendMessage(msg, msg.getAllRecipients());
 			if (log.isLoggable(Level.FINE)) log.fine("Success - MessageID=" + m_msg.getMessageID());
 		}
@@ -1207,7 +1217,6 @@ public final class EMail implements Serializable
 		EMail email = new EMail(System.getProperties(), args[0], args[1], args[2], args[3], args[4]);
 		email.send();
 	}   //  main
-
 	public void setHeader(String name, String value) {
 		additionalHeaders.add(new ValueNamePair(value, name));
 	}

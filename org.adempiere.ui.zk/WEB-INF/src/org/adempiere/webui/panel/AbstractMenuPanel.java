@@ -181,12 +181,12 @@ public abstract class AbstractMenuPanel extends Panel implements EventListener<E
                 }
                 else if (mChildNode.isForm())
                 {
-                	link.setImage(ThemeManager.getThemeResource("images/mWindow.png"));
+                	link.setImage(ThemeManager.getThemeResource("images/mForm.png"));
                 	treeitem.setAttribute("menu.type", "form");
                 }
                 else if (mChildNode.isInfo())
                 {
-                	link.setImage(ThemeManager.getThemeResource("images/mWindow.png"));
+                	link.setImage(ThemeManager.getThemeResource("images/mInfo.png"));
                 	treeitem.setAttribute("menu.type", "info");
                 }
                 else // Window
@@ -212,7 +212,6 @@ public abstract class AbstractMenuPanel extends Panel implements EventListener<E
     {
     	Toolbarbutton newBtn = new Toolbarbutton(null, ThemeManager.getThemeResource("images/New10.png"));
     	newBtn.setSclass("menu-href-newbtn");
-    	newBtn.setStyle("padding-left:3px; margin-bottom:5px");
     	return newBtn;
     }
     

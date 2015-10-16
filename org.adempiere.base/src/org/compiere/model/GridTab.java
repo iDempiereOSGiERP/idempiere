@@ -41,8 +41,6 @@ import javax.swing.event.EventListenerList;
 
 import org.adempiere.base.Core;
 import org.adempiere.base.IColumnCallout;
-import org.adempiere.base.ServiceQuery;
-import org.adempiere.base.equinox.EquinoxExtensionLocator;
 import org.adempiere.model.MTabCustomization;
 import org.adempiere.util.ContextRunnable;
 import org.compiere.Adempiere;
@@ -2909,14 +2907,16 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 						if (methodStart != -1)      //  no class
 						{
 							String className = cmd.substring(0,methodStart);
-							//first, check matching extension id in extension registry
-							call = EquinoxExtensionLocator.instance().locate(Callout.class, Callout.class.getName(), className, (ServiceQuery)null).getExtension();
+							// IDEMPIERE-2732
+							method = cmd.substring(methodStart+1);
+							// get corresponding callout
+							call = Core.getCallout(className, method);
+							// end IDEMPIERE-2732
 							if (call == null) {
-								//no match from extension registry, check java classpath
+								//no match from factory, check java classpath
 								Class<?> cClass = Class.forName(className);
 								call = (Callout)cClass.newInstance();
 							}
-							method = cmd.substring(methodStart+1);
 						}
 					}
 					catch (Exception e)
