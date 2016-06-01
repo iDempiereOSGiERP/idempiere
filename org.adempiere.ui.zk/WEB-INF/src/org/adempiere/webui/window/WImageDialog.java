@@ -27,6 +27,7 @@ import org.adempiere.webui.component.ConfirmPanel;
 import org.adempiere.webui.component.Panel;
 import org.adempiere.webui.component.Textbox;
 import org.adempiere.webui.component.Window;
+import org.adempiere.webui.util.ZKUpdateUtil;
 import org.apache.commons.codec.binary.Base64;
 import org.compiere.model.MImage;
 import org.compiere.util.CLogger;
@@ -131,8 +132,8 @@ public class WImageDialog extends Window implements EventListener<Event>
 	{
 		this.setSclass("popup-dialog");
 		this.setBorder("normal");
-		this.setWidth("640px");
-		this.setHeight("540px");
+		ZKUpdateUtil.setWidth(this, "640px");
+		ZKUpdateUtil.setHeight(this, "540px");
 		this.setShadow(true);
 		this.setAttribute(Window.MODE_KEY, Window.MODE_HIGHLIGHTED);
 		this.setSizable(true);
@@ -141,8 +142,8 @@ public class WImageDialog extends Window implements EventListener<Event>
 		captureDiv = new Div();
 		this.appendChild(captureDiv);
 		captureDiv.setStyle("position: absolute;");
-		captureDiv.setHeight("480px");
-		captureDiv.setWidth("640px");
+		ZKUpdateUtil.setHeight(captureDiv, "480px");
+		ZKUpdateUtil.setWidth(captureDiv, "640px");
 		captureDiv.setVisible(false);
 		captureDiv.addEventListener("onCaptureImage", this);
 	    cancelCaptureButton = new Button(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "Cancel")));
@@ -153,8 +154,8 @@ public class WImageDialog extends Window implements EventListener<Event>
 		cancelCaptureButton.setVisible(false);
 		
 		mainLayout.setParent(this);
-		mainLayout.setHflex("1");
-		mainLayout.setVflex("1");
+		ZKUpdateUtil.setHflex(mainLayout, "1");
+		ZKUpdateUtil.setVflex(mainLayout, "1");
 		
 		fileButton.setLabel("Upload");
 		LayoutUtils.addSclass("txt-btn", fileButton);
@@ -183,8 +184,8 @@ public class WImageDialog extends Window implements EventListener<Event>
 		
 		Center center = new Center();
 		center.setSclass("dialog-content");
-		image.setHflex("true");
-		image.setVflex("true");
+		ZKUpdateUtil.setHflex(image, "true");
+		ZKUpdateUtil.setVflex(image, "true");
 		center.setParent(mainLayout);
 		center.appendChild(image);
 		
