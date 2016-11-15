@@ -1,0 +1,1182 @@
+/******************************************************************************
+ * Copyright (C) 2014 Elaine Tan                                              *
+ * Copyright (C) 2014 Trek Global
+ * This program is free software; you can redistribute it and/or modify it    *
+ * under the terms version 2 of the GNU General Public License as published   *
+ * by the Free Software Foundation. This program is distributed in the hope   *
+ * that it will be useful, but WITHOUT ANY WARRANTY; without even the implied *
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.           *
+ * See the GNU General Public License for more details.                       *
+ * You should have received a copy of the GNU General Public License along    *
+ * with this program; if not, write to the Free Software Foundation, Inc.,    *
+ * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.                     *
+ *****************************************************************************/
+
+package org.adempiere.webui.apps;
+
+import java.io.File;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+
+import org.adempiere.util.Callback;
+import org.adempiere.util.ContextRunnable;
+import org.adempiere.util.IProcessUI;
+import org.adempiere.util.ServerContext;
+import org.adempiere.webui.component.Button;
+import org.adempiere.webui.component.Checkbox;
+import org.adempiere.webui.component.Column;
+import org.adempiere.webui.component.Columns;
+import org.adempiere.webui.component.ComboItem;
+import org.adempiere.webui.component.Combobox;
+import org.adempiere.webui.component.ConfirmPanel;
+import org.adempiere.webui.component.Grid;
+import org.adempiere.webui.component.GridFactory;
+import org.adempiere.webui.component.Label;
+import org.adempiere.webui.component.Listbox;
+import org.adempiere.webui.component.Row;
+import org.adempiere.webui.component.Rows;
+import org.adempiere.webui.component.Window;
+import org.adempiere.webui.editor.WEditor;
+import org.adempiere.webui.editor.WTableDirEditor;
+import org.adempiere.webui.event.DialogEvents;
+import org.adempiere.webui.factory.ButtonFactory;
+import org.adempiere.webui.process.WProcessInfo;
+import org.adempiere.webui.util.ZKUpdateUtil;
+import org.adempiere.webui.window.FDialog;
+import org.adempiere.webui.window.MultiFileDownloadDialog;
+import org.compiere.Adempiere;
+import org.compiere.model.Lookup;
+import org.compiere.model.MAttachment;
+import org.compiere.model.MClient;
+import org.compiere.model.MLanguage;
+import org.compiere.model.MLookup;
+import org.compiere.model.MLookupFactory;
+import org.compiere.model.MLookupInfo;
+import org.compiere.model.MNote;
+import org.compiere.model.MPInstance;
+import org.compiere.model.MPInstancePara;
+import org.compiere.model.MProcess;
+import org.compiere.model.MRole;
+import org.compiere.model.MSysConfig;
+import org.compiere.model.MTable;
+import org.compiere.model.MUser;
+import org.compiere.model.Query;
+import org.compiere.model.X_AD_ReportView;
+import org.compiere.print.MPrintFormat;
+import org.compiere.process.ProcessInfo;
+import org.compiere.process.ProcessInfoUtil;
+import org.compiere.process.ServerProcessCtl;
+import org.compiere.util.AdempiereSystemError;
+import org.compiere.util.CLogger;
+import org.compiere.util.DB;
+import org.compiere.util.DisplayType;
+import org.compiere.util.Env;
+import org.compiere.util.Msg;
+import org.compiere.util.Trx;
+import org.compiere.util.Util;
+import org.zkoss.zk.au.out.AuEcho;
+import org.zkoss.zk.ui.Component;
+import org.zkoss.zk.ui.Desktop;
+import org.zkoss.zk.ui.Executions;
+import org.zkoss.zk.ui.HtmlBasedComponent;
+import org.zkoss.zk.ui.event.Event;
+import org.zkoss.zk.ui.event.EventListener;
+import org.zkoss.zk.ui.event.Events;
+import org.zkoss.zk.ui.util.Clients;
+import org.zkoss.zul.Comboitem;
+import org.zkoss.zul.Div;
+import org.zkoss.zul.Hlayout;
+import org.zkoss.zul.Html;
+import org.zkoss.zul.Space;
+import org.zkoss.zul.Vlayout;
+
+public abstract class AbstractProcessDialog extends Window implements IProcessUI, EventListener<Event>
+{
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -4807787318205732697L;
+	private static final String ON_COMPLETE = "onComplete";
+	private static final String ON_STATUS_UPDATE = "onStatusUpdate";
+	
+	private static CLogger log = CLogger.getCLogger(AbstractProcessDialog.class);
+
+	protected int m_WindowNo;
+	private Properties m_ctx;
+	private int m_AD_Process_ID;
+	private ProcessInfo m_pi = null;
+	private boolean m_disposeOnComplete;
+
+	private ProcessParameterPanel parameterPanel = null;
+	private Checkbox runAsJobField = null;
+	private WTableDirEditor notificationTypeField = null;
+
+	private BusyDialog progressWindow;	
+	
+	private String		    m_Name = null;
+	private String          m_ShowHelp = null; // Determine if a Help Process Window is shown
+	private String initialMessage;
+	
+	private boolean m_valid = true;
+	private boolean m_cancel = false;
+		
+	private Future<?> future;
+	private List<File> downloadFiles;
+	private boolean m_locked = false;
+		
+	protected AbstractProcessDialog()
+	{
+		super();		
+	}
+	
+	/**
+	 * layout as below
+	 * 
+	 * @param ctx
+	 * @param WindowNo
+	 * @param AD_Process_ID
+	 * @param pi
+	 * @param innerWidth
+	 * @param autoStart
+	 * @param isDisposeOnComplete
+	 * @return
+	 */
+	protected boolean init(Properties ctx, int WindowNo, int AD_Process_ID, ProcessInfo pi, boolean autoStart, boolean isDisposeOnComplete)
+	{
+		m_ctx = ctx;
+		m_WindowNo = WindowNo;
+		m_AD_Process_ID = AD_Process_ID;
+		setProcessInfo(pi);
+		m_disposeOnComplete = isDisposeOnComplete;
+		
+		log.config("");
+		//
+		boolean trl = !Env.isBaseLanguage(m_ctx, "AD_Process");
+		String sql = "SELECT Name, Description, Help, IsReport, ShowHelp "
+				+ "FROM AD_Process "
+				+ "WHERE AD_Process_ID=?";
+		if (trl)
+			sql = "SELECT t.Name, t.Description, t.Help, p.IsReport, p.ShowHelp "
+				+ "FROM AD_Process p, AD_Process_Trl t "
+				+ "WHERE p.AD_Process_ID=t.AD_Process_ID"
+				+ " AND p.AD_Process_ID=? AND t.AD_Language=?";
+
+		PreparedStatement pstmt = null; 
+		ResultSet rs = null;
+		try
+		{
+			pstmt = DB.prepareStatement(sql, null);
+			pstmt.setInt(1, AD_Process_ID);
+			if (trl)
+				pstmt.setString(2, Env.getAD_Language(m_ctx));
+			rs = pstmt.executeQuery();
+			StringBuilder buildMsg = new StringBuilder();
+			if (rs.next())
+			{
+				m_Name = rs.getString(1);
+				m_ShowHelp = rs.getString(5);
+				//
+				buildMsg.append("<b>");
+				String s = rs.getString(2);		//	Description
+				if (rs.wasNull())
+					buildMsg.append(Msg.getMsg(m_ctx, "StartProcess?"));
+				else
+					buildMsg.append(s);
+				buildMsg.append("</b>");
+
+				s = rs.getString(3);			//	Help
+				if (!rs.wasNull())
+					buildMsg.append("<p>").append(s).append("</p>");
+			}
+			
+			initialMessage = buildMsg.toString();
+		}
+		catch (SQLException e)
+		{
+			log.log(Level.SEVERE, sql, e);
+			return false;
+		}
+		finally
+		{
+			DB.close(rs, pstmt);
+		}
+
+		if (m_Name == null)
+			return false;
+		//
+		this.setTitle(m_Name);
+
+		//	Move from APanel.actionButton
+		if (m_pi == null)
+			m_pi = new WProcessInfo(m_Name, AD_Process_ID);
+		m_pi.setAD_User_ID (Env.getAD_User_ID(Env.getCtx()));
+		m_pi.setAD_Client_ID(Env.getAD_Client_ID(Env.getCtx()));
+		m_pi.setTitle(m_Name);
+		
+		parameterPanel = new ProcessParameterPanel(m_WindowNo, m_pi);		
+		if ( !parameterPanel.init() ) {
+			if (m_ShowHelp != null && MProcess.SHOWHELP_DonTShowHelp.equals(m_ShowHelp))
+				autoStart = true;
+			
+			if (autoStart)
+			{
+				layout();
+				bOK.setDisabled(true);
+				bCancel.setDisabled(true);
+				autoStart();
+				return true;
+			}
+		}
+
+		// Check if the process is a silent one
+		if (isValid() && m_ShowHelp != null && MProcess.SHOWHELP_RunSilently_TakeDefaults.equals(m_ShowHelp))
+		{
+			layout();
+			bOK.setDisabled(true);
+			bCancel.setDisabled(true);
+			autoStart();
+			return true;
+		}
+		
+		layout();
+
+		return true;
+	}
+	
+	protected HtmlBasedComponent topParameterLayout;
+	protected HtmlBasedComponent bottomParameterLayout;
+	protected HtmlBasedComponent mainParameterLayout;
+	private WTableDirEditor fPrintFormat;
+	private WEditor fLanguageType;
+	private Listbox freportType;
+	private Checkbox chbIsSummary;
+	protected Button bOK;
+	protected Button bCancel;
+	protected Combobox fSavedName=new Combobox();
+	private Button bSave=ButtonFactory.createNamedButton("Save");
+	private Button bDelete=ButtonFactory.createNamedButton("Delete");
+	private List<MPInstance> savedParams;
+	private Label lSaved;
+	
+	protected void layout(){
+		overalLayout();
+		topLayout(topParameterLayout);
+		bottomLayout(bottomParameterLayout);
+		
+	}
+	
+	protected void overalLayout(){
+		mainParameterLayout = new Div();
+		mainParameterLayout.setSclass("main-parameter-layout"); 
+		this.appendChild(mainParameterLayout);
+		// header and input component
+		topParameterLayout = new Vlayout();
+		topParameterLayout.setSclass("top-parameter-layout"); 
+		mainParameterLayout.appendChild(topParameterLayout);
+		ZKUpdateUtil.setVflex(topParameterLayout, "true");
+		// button and advanced control
+		bottomParameterLayout = new Vlayout();
+		bottomParameterLayout.setSclass("bottom-parameter-layout"); 
+		mainParameterLayout.appendChild(bottomParameterLayout);		
+	}
+	
+	protected void topLayout(HtmlBasedComponent topParameterLayout) {
+		// message
+		setHeadMessage (topParameterLayout, initialMessage);
+		
+		// input component
+		HtmlBasedComponent inputParameterLayout = new Div();
+		inputParameterLayout.setSclass("input-paramenter-layout"); 
+		topParameterLayout.appendChild(inputParameterLayout);
+		
+		// input parameter content
+		inputParameterLayout(inputParameterLayout);
+	}
+	
+	protected HtmlBasedComponent setHeadMessage (HtmlBasedComponent parent, String contentMsg){
+		// message
+		HtmlBasedComponent messageParameterLayout = new Vlayout();
+		parent.appendChild(messageParameterLayout);
+		messageParameterLayout.setSclass("message-parameter-layout");
+		
+		// header content
+		HtmlBasedComponent messageDiv = new Div();
+		Html content = new Html();
+		if (contentMsg != null){
+			content.setContent(contentMsg);
+		}
+		messageDiv.appendChild(content);
+		messageDiv.setSclass("message-paramenter");
+		messageParameterLayout.appendChild(messageDiv);
+		
+		return content;
+	}
+	
+	protected void inputParameterLayout (HtmlBasedComponent parent) {
+		parent.appendChild(parameterPanel);
+		
+		if (MSysConfig.getBooleanValue(MSysConfig.BACKGROUND_JOB_ALLOWED, false))
+		{
+			Grid grid = GridFactory.newGridLayout();
+			parent.appendChild(grid);
+
+			Columns columns = new Columns();
+			grid.appendChild(columns);
+			Column col = new Column();
+			ZKUpdateUtil.setWidth(col, "30%");
+			columns.appendChild(col);
+			col = new Column();
+			ZKUpdateUtil.setWidth(col, "70%");
+			columns.appendChild(col);
+			
+			Rows rows = new Rows();
+			grid.appendChild(rows);
+			
+			Row row = new Row();
+			rows.appendChild(row);
+			
+			row.appendChild(new Space());
+			runAsJobField = new Checkbox();
+			runAsJobField.setLabel(Msg.getElement(m_ctx, MPInstance.COLUMNNAME_IsRunAsJob));
+			row.appendChild(runAsJobField);
+			runAsJobField.addEventListener(Events.ON_CHECK, this);
+			
+			row = new Row();
+			rows.appendChild(row);
+			
+			Div div = new Div();
+	        div.setStyle("text-align: right;");
+	        div.appendChild(new Label(Msg.getElement(m_ctx, MPInstance.COLUMNNAME_NotificationType)));
+	        row.appendChild(div);	        
+			
+	        MLookupInfo info = MLookupFactory.getLookup_List(Env.getLanguage(m_ctx), MPInstance.NOTIFICATIONTYPE_AD_Reference_ID);
+	        notificationTypeField = new WTableDirEditor(MPInstance.COLUMNNAME_NotificationType, true, false, true, new MLookup(info, 0));
+	        Combobox combobox = notificationTypeField.getComponent();
+			List<?> items = combobox.getItems();
+			for (int i = 0; i < items.size(); i++) {
+				ComboItem item = (ComboItem)items.get(i);
+				if (MPInstance.NOTIFICATIONTYPE_None.equals(item.getValue()))
+					combobox.removeItemAt(i);
+			}
+			
+			MUser user = MUser.get(m_ctx);
+			String notificationType = user.getNotificationType();
+			if (!MPInstance.NOTIFICATIONTYPE_None.equals(notificationType))
+				notificationTypeField.setValue(notificationType);
+			
+			row.appendChild(notificationTypeField.getComponent());
+			runAsJobField.setChecked(MSysConfig.getBooleanValue(MSysConfig.BACKGROUND_JOB_BY_DEFAULT, false));
+			notificationTypeField.getComponent().getParent().setVisible(runAsJobField.isChecked());			
+		}
+	}
+	
+	protected void bottomLayout(HtmlBasedComponent bottomParameterLayout) {
+		reportOptionLayout(bottomParameterLayout);
+		
+		HtmlBasedComponent bottomContainer = new Div ();
+		bottomContainer.setSclass("bottom-container");
+		bottomParameterLayout.appendChild(bottomContainer);
+		
+		MProcess process = MProcess.get(Env.getCtx(), m_AD_Process_ID);
+	    int count = process.getParameters().length;
+	    if (count > 0)
+	    	savePrameterLayout (bottomContainer);
+		
+		buttonLayout (bottomContainer);
+	}
+	
+	protected void reportOptionLayout(HtmlBasedComponent bottomParameterLayout) {
+		if (!isReport())
+			return;//if not a report not need show this pannel
+		
+		// option control
+		HtmlBasedComponent reportOptionLayout = new Hlayout();
+		reportOptionLayout.setSclass("report-option-container");
+		bottomParameterLayout.appendChild(reportOptionLayout);
+		
+		freportType = new Listbox();
+		freportType.setSclass("option-input-parameter");
+		chbIsSummary = new Checkbox();
+		chbIsSummary.setSclass("option-input-parameter");
+		Label lPrintFormat = new Label(Msg.translate(Env.getCtx(), "AD_PrintFormat_ID"));
+		lPrintFormat.setSclass("option-input-parameter");
+		Label lreportType = new Label(Msg.translate(Env.getCtx(), "view.report"));
+		lreportType.setSclass("option-input-parameter");
+		Label lIsSummary = new Label(Msg.translate(Env.getCtx(), "Summary"));
+		lIsSummary.setSclass("option-input-parameter");
+		
+		MClient client = MClient.get(m_ctx);
+		listPrintFormat(client);
+		
+		reportOptionLayout.appendChild(lPrintFormat);
+		reportOptionLayout.appendChild(fPrintFormat.getComponent());
+		if (client.isMultiLingualDocument()){
+			Label lLanguageType = new Label(Msg.translate(Env.getCtx(), MLanguage.COLUMNNAME_AD_Language_ID));
+			reportOptionLayout.appendChild(lLanguageType);
+			reportOptionLayout.appendChild(fLanguageType.getComponent());
+			((Combobox)fLanguageType.getComponent()).setSclass("option-input-parameter");
+		}
+		fPrintFormat.getComponent().setSclass("option-input-parameter");
+		reportOptionLayout.appendChild(lreportType);
+		reportOptionLayout.appendChild(freportType);	
+		reportOptionLayout.appendChild(lIsSummary);
+		reportOptionLayout.appendChild(chbIsSummary);
+	}
+
+	protected boolean isReport () {
+		MProcess pr = new MProcess(m_ctx, m_AD_Process_ID, null);
+		return pr.isReport() && pr.getJasperReport() == null;
+		
+	}
+	
+	protected void savePrameterLayout(HtmlBasedComponent bottomParameterLayout) {
+		HtmlBasedComponent savePrameterLayout = new Div();
+		savePrameterLayout.setSclass("save-parameter-container");
+		bottomParameterLayout.appendChild(savePrameterLayout);
+		
+		lSaved = new Label(Msg.getMsg(Env.getCtx(), "SavedParameter"));
+		savePrameterLayout.appendChild(lSaved);
+		fSavedName = new Combobox();
+		fSavedName.addEventListener(Events.ON_CHANGE, this);
+		savePrameterLayout.appendChild(fSavedName);
+
+		bSave.setEnabled(false);
+		bSave.addActionListener(this);
+		savePrameterLayout.appendChild(bSave);
+
+		bDelete.setEnabled(false);
+		bDelete.addActionListener(this);
+		savePrameterLayout.appendChild(bDelete);
+		
+		querySaved();
+	}
+	
+	protected void querySaved() 
+	{
+		//user query
+		savedParams = MPInstance.get(Env.getCtx(), getAD_Process_ID(), Env.getContextAsInt(Env.getCtx(), "#AD_User_ID"));
+		fSavedName.removeAllItems();
+		for (MPInstance instance : savedParams)
+		{
+			String queries = instance.get_ValueAsString("Name");
+			fSavedName.appendItem(queries);
+		}
+
+		fSavedName.setValue("");
+	}
+	
+	protected void buttonLayout (HtmlBasedComponent bottomParameterLayout) {
+		HtmlBasedComponent confParaPanel =new Div();
+		confParaPanel.setSclass("button-container");
+		bottomParameterLayout.appendChild(confParaPanel);
+		
+		// Invert - Unify  OK/Cancel IDEMPIERE-77
+		bOK = ButtonFactory.createNamedButton(ConfirmPanel.A_OK, true, true);
+		bOK.setId("Ok");
+		bOK.addEventListener(Events.ON_CLICK, this);
+		confParaPanel.appendChild(bOK);
+		
+		bCancel = ButtonFactory.createNamedButton(ConfirmPanel.A_CANCEL, true, true);
+		bCancel.setId("Cancel");
+		bCancel.addEventListener(Events.ON_CLICK, this);
+		confParaPanel.appendChild(bCancel);
+		
+	}
+	
+	private void listPrintFormat(MClient client)
+	{
+		int AD_Column_ID = 0;
+		boolean m_isCanExport = false; 
+		
+		MProcess pr = new MProcess(m_ctx, m_AD_Process_ID, null);
+		int table_ID = 0;
+		try 
+		{
+			if (pr.getAD_ReportView_ID() > 0)
+			{
+				X_AD_ReportView m_Reportview = new X_AD_ReportView(m_ctx, pr.getAD_ReportView_ID(), null);
+				table_ID = m_Reportview.getAD_Table_ID();
+			}
+			else if (pr.getAD_PrintFormat_ID() > 0)
+			{
+				MPrintFormat format = new MPrintFormat(m_ctx, pr.getAD_PrintFormat_ID(), null);
+				table_ID = format.getAD_Table_ID();
+			}
+			String valCode = null;
+			if (table_ID > 0)
+			{
+				valCode = "AD_PrintFormat.AD_Table_ID=" + table_ID;
+				m_isCanExport = MRole.getDefault().isCanExport(table_ID);
+			}
+			Lookup lookup = MLookupFactory.get (Env.getCtx(), m_WindowNo, 
+					AD_Column_ID, DisplayType.TableDir,
+					Env.getLanguage(Env.getCtx()), "AD_PrintFormat_ID", 0, false,
+					valCode);
+			
+			fPrintFormat = new WTableDirEditor("AD_PrintFormat_ID", false, false, true, lookup);
+			
+			if (client.isMultiLingualDocument()){
+				fLanguageType = AEnv.getListDocumentLanguage(client);
+			}
+			
+		} 
+		catch (Exception e)
+		{
+			log.log(Level.SEVERE, e.getLocalizedMessage());
+		}
+		
+		freportType.removeAllItems();
+		freportType.setMold("select");
+		freportType.appendItem("HTML", "HTML");
+		
+		if (m_isCanExport)
+		{
+			freportType.appendItem("PDF", "PDF");
+			freportType.appendItem("Excel", "XLS");
+		}
+		freportType.setSelectedIndex(0);
+		
+		String where = "AD_Process_ID = ? AND AD_User_ID = ? AND Name IS NULL ";
+		
+		MPInstance lastrun = MTable.get(Env.getCtx(), MPInstance.Table_Name).createQuery(where, null).setOnlyActiveRecords(true).setClient_ID()
+			.setParameters(m_AD_Process_ID, Env.getContextAsInt(Env.getCtx(), "#AD_User_ID")).setOrderBy("Created DESC").first();
+		
+		setReportTypeAndPrintFormat(lastrun);
+	}
+	
+	private void setReportTypeAndPrintFormat(MPInstance instance)
+	{
+		if (fPrintFormat != null && instance != null) {
+			fPrintFormat.setValue((Integer) instance.getAD_PrintFormat_ID());
+		}
+		
+		if (fLanguageType != null && instance != null) {
+			fLanguageType.setValue((Integer) instance.getAD_Language_ID());
+		}
+		
+		if (freportType != null && instance != null) {
+			if (instance.getReportType() == null)
+				freportType.setValue("HTML");
+			else 
+				freportType.setValue(instance.getReportType());
+		}
+		
+       if (instance != null && chbIsSummary != null)       
+		    chbIsSummary.setSelected(instance.isSummary());
+	}
+	
+	protected void saveReportOption (){
+		if (!isReport()){
+			return;
+		}
+		if(freportType.getSelectedItem() != null) {
+			getProcessInfo().setReportType(freportType.getSelectedItem().getValue().toString());
+		}
+		if(fPrintFormat != null && fPrintFormat.getValue() != null) {
+			MPrintFormat format = new MPrintFormat(m_ctx, (Integer) fPrintFormat.getValue(), null);
+			if (format != null) {
+				getProcessInfo().setSerializableObject(format);
+			}
+		}
+		
+		getProcessInfo().setIsSummary(chbIsSummary.isChecked());
+		if (fLanguageType != null)
+			getProcessInfo().setLanguageID(fLanguageType.getValue() == null?0:(int)fLanguageType.getValue());
+	}
+	
+	protected void autoStart()
+	{
+		startProcess0();
+	}
+	
+	public void onEvent(Event event) 
+	{
+		Component component = event.getTarget();
+		if (component == runAsJobField && event.getName().equals(Events.ON_CHECK))
+		{
+			notificationTypeField.getComponent().getParent().setVisible(runAsJobField.isChecked());
+
+		}
+		else if (event.getName().equals(ON_COMPLETE))
+			onComplete();
+		else if (event.getName().equals(ON_STATUS_UPDATE))
+			onStatusUpdate(event);
+		else if (event.getTarget().equals(bSave) || event.getTarget().equals(bDelete) || event.getTarget().equals(fSavedName)){
+			String saveName = null;
+			boolean lastRun = false;
+			if (fSavedName.getRawText() != null) {
+				saveName = fSavedName.getRawText();
+				lastRun = ("** " + Msg.getMsg(Env.getCtx(), "LastRun") + " **")
+						.equals(saveName);
+			}
+			if (bSave.equals(event.getTarget()))
+				updateSaveParameter(saveName);
+			else if (bDelete.equals(event.getTarget()))
+				deleteSaveParameter(saveName);
+			else
+				chooseSaveParameter(saveName, lastRun);
+		}else if (event.getTarget().equals(bOK)){
+			saveReportOption();
+		}
+	}
+	
+	protected void updateSaveParameter(String saveName) {
+			// Update existing
+			if (fSavedName.getSelectedIndex() > -1 && savedParams != null) {
+				for (int i = 0; i < savedParams.size(); i++) {
+					if (savedParams.get(i).getName().equals(saveName)) {
+						getProcessInfo().setAD_PInstance_ID(savedParams.get(i)
+								.getAD_PInstance_ID());
+						for (MPInstancePara para : savedParams.get(i)
+								.getParameters()) {
+							para.deleteEx(true);
+						}
+						getParameterPanel().saveParameters();
+						
+						saveReportOptionToInstance(savedParams.get(i));
+						
+						savedParams.get(i).saveEx();
+					}
+				}
+			}
+			// create new
+			else {
+				MPInstance instance = null;
+				try {
+					instance = new MPInstance(Env.getCtx(),
+							getProcessInfo().getAD_Process_ID(), getProcessInfo().getRecord_ID());
+					instance.setName(saveName);
+					saveReportOptionToInstance(instance);
+					instance.saveEx();
+					getProcessInfo().setAD_PInstance_ID(instance.getAD_PInstance_ID());
+					// Get Parameters
+					if (getParameterPanel() != null) {
+						if (!getParameterPanel().saveParameters()) {
+							throw new AdempiereSystemError(Msg.getMsg(
+									Env.getCtx(), "SaveParameterError"));
+						}
+					}
+				} catch (Exception ex) {
+					log.log(Level.SEVERE, ex.getLocalizedMessage(), ex);
+				}
+			}
+			querySaved();
+			fSavedName.setSelectedItem(getComboItem(saveName));
+	}
+	
+	protected void saveReportOptionToInstance (MPInstance instance){
+		if (!isReport())
+			return;
+		
+		Object value = fPrintFormat.getValue();
+		if (value == null){
+			instance.setAD_PrintFormat_ID(0);
+		}else{
+			instance.setAD_PrintFormat_ID((Integer)value);
+		}
+		
+		if (fLanguageType != null){
+			value = fLanguageType.getValue();
+			if (value == null){
+				instance.setAD_Language_ID(0);
+			}else{
+				instance.setAD_Language_ID((Integer)value);
+			}
+		}
+		
+		instance.setReportType(freportType.getSelectedItem().getValue().toString());
+		instance.setIsSummary(chbIsSummary.isSelected());
+	}
+	
+	public  Comboitem getComboItem( String value) {
+		Comboitem item = null;
+		for (int i = 0; i < fSavedName.getItems().size(); i++) {
+			if (fSavedName.getItems().get(i) != null) {
+				item = (Comboitem)fSavedName.getItems().get(i);
+				if (value.equals(item.getLabel().toString())) {
+					break;
+				}
+			}
+		}
+		return item;
+	}
+		
+	protected void deleteSaveParameter(String saveName) {
+		Object o = fSavedName.getSelectedItem();
+		if (savedParams != null && o != null) {
+			String selected = fSavedName.getSelectedItem().getLabel();
+			for (int i = 0; i < savedParams.size(); i++) {
+				if (savedParams.get(i).getName().equals(selected)) {
+					savedParams.get(i).deleteEx(true);
+				}
+			}
+		}
+		querySaved();
+	}
+
+	protected void chooseSaveParameter(String saveName, boolean lastRun) {
+		if (savedParams != null && saveName != null) {
+			for (int i = 0; i < savedParams.size(); i++) {
+				if (savedParams.get(i).getName().equals(saveName)) {
+					loadSavedParams(savedParams.get(i));
+				}
+			}
+		}
+		boolean enabled = !Util.isEmpty(saveName);
+		bSave.setEnabled(enabled && !lastRun);
+		bDelete.setEnabled(enabled && fSavedName.getSelectedIndex() > -1
+				&& !lastRun);
+	
+	}
+	
+	private void loadSavedParams(MPInstance instance) {
+		getParameterPanel().loadParameters(instance);
+		setReportTypeAndPrintFormat(instance);
+	}
+	
+	protected void startProcess()
+	{
+		if (!parameterPanel.validateParameters())
+			return;
+		
+		startProcess0();
+	}
+	
+	protected void cancelProcess() 
+	{
+		m_cancel = true;
+		this.dispose();
+	}
+	
+	protected BusyDialog createBusyDialog() 
+	{
+		progressWindow = new BusyDialog();
+		this.appendChild(progressWindow);
+		return progressWindow;
+	}
+	
+	protected void closeBusyDialog() 
+	{
+		if (progressWindow != null) {
+			progressWindow.dispose();
+			progressWindow = null;
+		}
+	}
+	
+	@Override
+	public void dispose()
+	{
+		m_valid = false;
+	}	//	dispose
+	
+	private void startProcess0()
+	{		
+		if (!isBackgroundJob())
+			getProcessInfo().setPrintPreview(true);
+
+		lockUI(getProcessInfo());
+		
+		downloadFiles = new ArrayList<File>();
+
+		//use echo, otherwise lock ui wouldn't work
+		Clients.response(new AuEcho(this, isBackgroundJob() ? "runBackgroundJob" : "runProcess", this));
+	}
+	
+	public void runProcess() 
+	{
+		Events.sendEvent(DialogEvents.ON_BEFORE_RUN_PROCESS, this, null);
+		future = Adempiere.getThreadPoolExecutor().submit(new DesktopRunnable(new ProcessDialogRunnable(null), getDesktop()));
+	}
+
+	public void runBackgroundJob() 
+	{
+		Properties m_ctx = getCtx();
+		ProcessInfo m_pi = getProcessInfo();
+		MPInstance instance = null;
+		
+		try 
+		{
+			int AD_Client_ID = Env.getAD_Client_ID(m_ctx);
+			int AD_User_ID = Env.getAD_User_ID(m_ctx);
+			
+			int count = new Query(m_ctx, MPInstance.Table_Name, "Coalesce(AD_User_ID,0)=? AND IsProcessing='Y' AND IsRunAsJob='Y' ", null)
+			.setOnlyActiveRecords(true)
+			.setClient_ID()
+			.setParameters(AD_User_ID)
+			.count();
+			if (count >= MSysConfig.getIntValue(MSysConfig.BACKGROUND_JOB_MAX_PER_USER, 5, AD_Client_ID))
+				throw new IllegalStateException(Msg.getMsg(m_ctx, "BackgroundJobExceedMaxPerUser"));
+			
+			count = new Query(m_ctx, MPInstance.Table_Name, "IsProcessing='Y' AND IsRunAsJob='Y' ", null)
+			.setOnlyActiveRecords(true)
+			.setClient_ID()
+			.count();
+			if (count >= MSysConfig.getIntValue(MSysConfig.BACKGROUND_JOB_MAX_PER_CLIENT, 10, AD_Client_ID))
+				throw new IllegalStateException(Msg.getMsg(m_ctx, "BackgroundJobExceedMaxPerClient"));
+			
+			count = new Query(m_ctx, MPInstance.Table_Name, "IsProcessing='Y' AND IsRunAsJob='Y' ", null)
+			.setOnlyActiveRecords(true)
+			.count();
+			if (count >= MSysConfig.getIntValue(MSysConfig.BACKGROUND_JOB_MAX_IN_SYSTEM, 20))
+				throw new IllegalStateException(Msg.getMsg(m_ctx, "BackgroundJobExceedMaxInSystem"));
+			
+			instance = new MPInstance(m_ctx, m_pi.getAD_Process_ID(), m_pi.getRecord_ID());
+			instance.setIsRunAsJob(true);
+			instance.setIsProcessing(true);
+			instance.setNotificationType(getNotificationType());
+			instance.saveEx();
+			
+			m_pi.setAD_PInstance_ID(instance.getAD_PInstance_ID());
+			getParameterPanel().saveParameters();
+			
+			MPInstance.publishChangedEvent(AD_User_ID);
+			Adempiere.getThreadPoolExecutor().schedule(new BackgroundJobRunnable(getCtx()), 1000, TimeUnit.MILLISECONDS);
+			
+			m_pi.setSummary(Msg.getMsg(m_ctx, "BackgroundJobScheduled"));
+		} catch (Exception e) {
+			m_pi.setSummary(e.getLocalizedMessage());
+			m_pi.setError(true);
+
+			if (instance != null)
+			{
+				instance.setIsProcessing(false);
+				instance.saveEx();
+			}
+		}
+		finally {
+			unlockUI(m_pi);
+			
+			if (m_disposeOnComplete)
+				dispose();
+		}
+	}
+	
+	private void onComplete()
+	{
+		ProcessInfo m_pi = getProcessInfo();
+		
+		if (future != null) {
+			try {
+				future.get();
+			} catch (Exception e) {
+				log.log(Level.SEVERE, e.getLocalizedMessage(), e);
+				if (!m_pi.isError()) {
+					m_pi.setSummary(e.getLocalizedMessage(), true);
+				}
+			}
+		}
+		future = null;
+		unlockUI(m_pi);
+		if (downloadFiles.size() > 0) {
+			MultiFileDownloadDialog downloadDialog = new MultiFileDownloadDialog(downloadFiles.toArray(new File[0]));
+			downloadDialog.setPage(getPage());
+			downloadDialog.setTitle(m_pi.getTitle());
+			Events.postEvent(downloadDialog, new Event(MultiFileDownloadDialog.ON_SHOW));
+		}
+		
+		if (m_disposeOnComplete)
+			dispose();
+	}
+	
+	private void onStatusUpdate(Event event) 
+	{
+		String message = (String) event.getData();
+		if (progressWindow != null)
+			progressWindow.statusUpdate(message);
+	}
+
+	@Override
+	public void lockUI(ProcessInfo pi) {
+		if (m_locked || Executions.getCurrent() == null) 
+			return;
+		m_locked = true;
+		showBusyDialog();
+	}
+	
+	public abstract void showBusyDialog();
+
+	@Override
+	public void unlockUI(ProcessInfo pi) {
+		if (!m_locked) 
+			return;
+		m_locked = false;
+		
+		if (Executions.getCurrent() == null) 
+		{
+			if (getDesktop() != null) 
+			{
+				Executions.schedule(getDesktop(), new EventListener<Event>() 
+				{
+					@Override
+					public void onEvent(Event event) throws Exception {
+						doUnlockUI();
+					}
+				}, new Event("onUnLockUI"));
+			}
+		} else {
+			doUnlockUI();
+		}
+	}
+	
+	private void doUnlockUI()
+	{
+		hideBusyDialog();
+		updateUI();		
+	}
+	
+	public abstract void hideBusyDialog();
+	
+	public abstract void updateUI();
+
+	@Override
+	public boolean isUILocked() {
+		return m_locked;
+	}
+
+	@Override
+	public void statusUpdate(String message) {
+		Desktop desktop = getDesktop();
+		if (desktop != null && desktop.isAlive())
+			Executions.schedule(desktop, this, new Event(ON_STATUS_UPDATE, this, message));
+	}
+
+	@Override
+	public void ask(final String message, final Callback<Boolean> callback) {
+		Executions.schedule(getDesktop(), new EventListener<Event>() {
+			@Override
+			public void onEvent(Event event) throws Exception {
+				FDialog.ask(getWindowNo(), null, message, callback);
+			}
+		}, new Event("onAsk"));
+	}
+
+	@Override
+	public void download(File file) {
+		downloadFiles.add(file);
+	}
+
+	/**
+	 * 
+	 * @return ProcessInfo
+	 */
+	public ProcessInfo getProcessInfo() {
+		return m_pi;
+	}
+	
+	public void setProcessInfo(ProcessInfo pi) {
+		m_pi = pi;
+	}
+
+	/**
+	 * is dialog still valid
+	 * @return boolean
+	 */
+	public boolean isValid()
+	{
+		return m_valid;
+	}
+	
+	/**
+	 * @return true if user have press the cancel button to close the dialog
+	 */
+	public boolean isCancel()
+	{
+		return m_cancel;
+	}
+	
+	public Properties getCtx()
+	{
+		return m_ctx;
+	}
+
+	public int getWindowNo()
+	{
+		return m_WindowNo;
+	}
+	
+	public int getAD_Process_ID()
+	{
+		return m_AD_Process_ID;
+	}
+		
+	public ProcessParameterPanel getParameterPanel()
+	{
+		return parameterPanel;
+	}
+	
+	public String getName()
+	{
+		return m_Name;
+	}
+
+	public String getShowHelp()
+	{
+		return m_ShowHelp;
+	}
+
+	public String getInitialMessage()
+	{
+		return initialMessage;
+	}
+	
+	public boolean isBackgroundJob()
+	{
+		return runAsJobField != null && runAsJobField.isChecked();
+	}
+	
+	public String getNotificationType()
+	{
+		return (String) notificationTypeField.getValue();
+	}
+	
+	public List<File> getDownloadFiles()
+	{
+		return downloadFiles;
+	}
+	
+	private class ProcessDialogRunnable extends ContextRunnable
+	{
+		private Trx m_trx;
+		
+		private ProcessDialogRunnable(Trx trx) 
+		{
+			super();			
+			m_trx = trx;
+		}
+		
+		protected void doRun() 
+		{
+			ProcessInfo m_pi = getProcessInfo();
+			try {
+				if (log.isLoggable(Level.INFO))
+					log.log(Level.INFO, "Process Info=" + m_pi + " AD_Client_ID="+ Env.getAD_Client_ID(Env.getCtx()));
+				WProcessCtl.process(AbstractProcessDialog.this, getWindowNo(), getParameterPanel(), m_pi, m_trx);
+			} catch (Exception ex) {
+				m_pi.setError(true);
+				m_pi.setSummary(ex.getLocalizedMessage());
+				log.log(Level.SEVERE, ex.getLocalizedMessage(), ex);
+			} finally {
+				Executions.schedule(getDesktop(), AbstractProcessDialog.this, new Event(ON_COMPLETE, AbstractProcessDialog.this, null));
+			}		
+		}
+	}
+	
+	private class BackgroundJobRunnable implements Runnable
+	{
+		private Properties m_ctx;
+		
+		private BackgroundJobRunnable(Properties ctx) 
+		{
+			super();
+			
+			m_ctx = new Properties();
+			Env.setContext(m_ctx, "#AD_Client_ID", ctx.getProperty("#AD_Client_ID"));
+			Env.setContext(m_ctx, "#AD_Org_ID", ctx.getProperty("#AD_Org_ID"));
+			Env.setContext(m_ctx, "#AD_Role_ID", ctx.getProperty("#AD_Role_ID"));
+			Env.setContext(m_ctx, "#M_Warehouse_ID", ctx.getProperty("#M_Warehouse_ID"));
+			Env.setContext(m_ctx, "#AD_Language", ctx.getProperty("#AD_Language"));
+			Env.setContext(m_ctx, "#AD_User_ID", ctx.getProperty("#AD_User_ID"));
+			Env.setContext(m_ctx, "#Date", ctx.getProperty("#Date"));
+		}
+		
+		@Override
+		public void run() {
+			try {
+				ServerContext.setCurrentInstance(m_ctx);
+				doRun();
+			} finally {
+				ServerContext.dispose();
+			}
+		}
+		
+		private void doRun()
+		{			
+			ProcessInfo m_pi = getProcessInfo();
+			m_pi.setIsBatch(true);
+			m_pi.setPrintPreview(true);
+			
+			MPInstance instance = new MPInstance(m_ctx, m_pi.getAD_PInstance_ID(), null);
+			String notificationType = instance.getNotificationType();
+			boolean sendEmail = notificationType.equals(MPInstance.NOTIFICATIONTYPE_EMail) || notificationType.equals(MPInstance.NOTIFICATIONTYPE_EMailPlusNotice);
+			boolean createNotice = notificationType.equals(MPInstance.NOTIFICATIONTYPE_Notice) || notificationType.equals(MPInstance.NOTIFICATIONTYPE_EMailPlusNotice);
+			
+			int AD_Client_ID = Env.getAD_Client_ID(m_ctx);
+			int AD_User_ID = Env.getAD_User_ID(m_ctx);
+			
+			try {
+				m_pi.setSummary(""); // reset summary
+				
+				MProcess process = new MProcess(m_ctx, m_pi.getAD_Process_ID(), null);	
+				ServerProcessCtl.process(m_pi, null);
+				ProcessInfoUtil.setLogFromDB(m_pi);
+				if (!m_pi.isError())
+				{					
+					boolean isReport = (process.isReport() || process.getAD_ReportView_ID() > 0 || process.getJasperReport() != null || process.getAD_PrintFormat_ID() > 0);
+					if (isReport)
+					{
+						download(m_pi.getPDFReport());
+					}
+					
+					if (m_pi.isExport() && m_pi.getExportFile() != null)
+						download(m_pi.getExportFile());										
+				}
+				
+				if (sendEmail)
+				{
+					MClient client = MClient.get(m_ctx, AD_Client_ID);
+					client.sendEMailAttachments(AD_User_ID, process.get_Translation("Name", Env.getAD_Language(Env.getCtx())), m_pi.getSummary() + " " + m_pi.getLogInfo(), getDownloadFiles());
+				}
+				
+				if (createNotice)
+				{
+					MNote note = new MNote(m_ctx, "BackgroundJob", AD_User_ID, null);
+					note.setTextMsg(process.get_Translation("Name", Env.getAD_Language(Env.getCtx())) + "\n" + m_pi.getSummary());
+					note.setRecord(MPInstance.Table_ID, m_pi.getAD_PInstance_ID());
+					note.saveEx();
+					
+					MAttachment attachment = null;
+					if (getDownloadFiles().size() > 0)
+					{
+						attachment = note.createAttachment();
+						for (File downloadFile : getDownloadFiles())
+							attachment.addEntry(downloadFile);						
+					}
+					String log = m_pi.getLogInfo(true);
+					if (log != null && log.trim().length() > 0) {
+						if (attachment == null)
+							attachment = note.createAttachment();
+						attachment.addEntry("ProcessLog.html", log.getBytes("UTF-8"));
+					}
+					if (attachment != null)
+						attachment.saveEx();
+				}
+			} catch (Exception e) {
+				log.log(Level.SEVERE, e.getLocalizedMessage());				
+			} finally {
+				instance.setIsProcessing(false);
+				instance.saveEx();
+				
+				MPInstance.publishChangedEvent(AD_User_ID);
+			}
+		}
+	}
+
+	@Override
+	public void askForInput(final String message, final Callback<String> callback) {
+		Executions.schedule(getDesktop(), new EventListener<Event>() {
+			@Override
+			public void onEvent(Event event) throws Exception {
+				FDialog.askForInput(m_WindowNo, null, message, callback);
+			}
+		}, new Event("onAskForInput"));
+	}
+
+}
