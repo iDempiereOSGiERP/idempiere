@@ -1,0 +1,115 @@
+<!-- ====================================================== -->
+<!-- Adempiere Distribution Setup                            -->
+<!-- ====================================================== -->
+<!-- $Header: /cvs/adempiere/install/Adempiere/build.xml,v 1.4 2006/07/03 16:51:31 jjanke Exp $-->
+
+<project name="setup" default="setup" basedir=".">
+
+	<description>
+	This buildfile is used to setup the idempiere Environment.
+	</description>
+
+	<property environment="env" />
+	<property name="envFile" value="idempiereEnv.properties" />
+
+	<!-- ==================================================== -->
+	<!-- Init                                                 -->
+	<!-- ==================================================== -->
+	<target name="setupInit"
+		description="initialization target">
+
+		<echo message="iDempiere Server Setup ===================" />
+		<echo message="IDEMPIERE_HOME = ${env.IDEMPIERE_HOME}" />
+
+		<!-- create the time stamp and environment -->
+		<tstamp />
+		<available file="${envFile}" property="envFileExists" />
+		<fail message="**** RUN_setup was not successful - please re-run ****" unless="envFileExists" />
+		<property file="${envFile}"/>
+		<filter filtersfile="${envFile}" />
+
+		<echo message="Environment   = ${envFile}" />
+		<echo message="Java VM       = ${ADEMPIERE_JAVA_TYPE}" />
+		<echo message="Database      = ${ADEMPIERE_DB_TYPE}" />
+
+
+		<!-- Environment variables -->
+		<condition property="isWindows">
+			<os family="windows" />
+		</condition>
+		<echo message="Windows=${isWindows}" />
+
+		<copy file="jettyhome/etc/jetty-template.xml"
+			tofile="jettyhome/etc/jetty.xml" filtering="yes" overwrite="yes"/>
+		<copy file="jettyhome/etc/jetty-ssl-template.xml"
+					tofile="jettyhome/etc/jetty-ssl.xml" filtering="yes" overwrite="yes"/>
+		<copy file="jettyhome/etc/jetty-selector-template.xml"
+					tofile="jettyhome/etc/jetty-selector.xml" filtering="yes" overwrite="yes"/>
+		<copy file="jettyhome/etc/jetty-ssl-context-template.xml"
+							tofile="jettyhome/etc/jetty-ssl-context.xml" filtering="yes" overwrite="yes"/>		
+		<copy file="jettyhome/etc/jetty-http-template.xml"
+							tofile="jettyhome/etc/jetty-http.xml" filtering="yes" overwrite="yes"/>
+		<copy file="hazelcast-template.xml"
+							tofile="hazelcast.xml" filtering="yes" overwrite="yes"/>
+
+	</target>
+
+	<!-- ==================================================== -->
+	<!-- Windows Setup                                        -->
+	<!-- ==================================================== -->
+	<target name="setupWin" depends="setupInit" if="isWindows"
+		description="Windows Setup">
+
+		<!--	Filter files No Overwrite	-->
+		<copy file="utils/myDBcopyTemplate.bat"
+			tofile="utils/myDBcopy.bat" filtering="yes" overwrite="no" />
+
+		<!--	Filter files Overwrite		-->
+		<copy file="utils/myEnvironmentTemplate.bat"
+			tofile="utils/myEnvironment.bat" filtering="yes" overwrite="yes" />
+
+		<copy file="utils/RUN_WinEnvTemplate.bat"
+			tofile="utils/RUN_WinEnv.bat" filtering="yes" overwrite="yes" />
+
+		<delete>
+			<fileset dir="." includes="**/*.sh" />
+		</delete>
+
+	</target>
+
+
+	<!-- ==================================================== -->
+	<!-- Non Windows Setup                                    -->
+	<!-- ==================================================== -->
+	<target name="setupNonWin" depends="setupInit" unless="isWindows"
+		description="Non Windows Setup">
+
+		<!--	Filter files No Overwrite	-->
+		<copy file="utils/myDBcopyTemplate.sh"
+			tofile="utils/myDBcopy.sh" filtering="yes" overwrite="no" />
+
+		<!--	Filter files Overwrite		-->
+		<copy file="utils/myEnvironmentTemplate.sh"
+			tofile="utils/myEnvironment.sh" filtering="yes" overwrite="yes" />
+
+		<copy file="utils/RUN_UnixEnvTemplate.sh"
+			tofile="utils/RUN_UnixEnv.sh" filtering="yes" overwrite="yes" />
+
+		<!--	Fix OS stuff	-->
+		<fixcrlf srcdir="." eol="lf" eof="remove" includes="**/*.sh" />
+		<chmod dir="." perm="ugo+x" includes="**/*.sh" />
+
+		<delete>
+			<fileset dir="." includes="*.bat" />
+			<fileset dir="utils" includes="**/*.bat" />
+		</delete>
+
+	</target>
+
+	<!-- ==================================================== -->
+	<!-- Setup (Main)                                         -->
+	<!-- ==================================================== -->
+	<target name="setup" depends="setupInit, setupWin, setupNonWin"
+		description="Setup Adempiere">
+	</target>
+</project>

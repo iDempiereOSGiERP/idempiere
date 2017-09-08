@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension-point id="org.adempiere.base.IColumnCallout" name="Callout" schema="schema/org.adempiere.base.Callout.exsd"/>
+   <extension-point id="org.adempiere.base.Process" name="Process" schema="schema/org.adempiere.base.Process.exsd"/>
+   <extension-point id="org.adempiere.base.ModelValidator" name="Model Validator" schema="schema/org.adempiere.base.ModelValidator.exsd"/>
+   <extension-point id="org.adempiere.base.IGridTabExporter" name="Grid data export extension" schema="schema/org.adempiere.base.IGridTabExporter.exsd"/>
+   <extension-point id="org.adempiere.base.IGridTabImporter" name="Grid data import extension" schema="schema/org.adempiere.base.IGridTabImporter.exsd"/>
+   <extension-point id="org.compiere.model.PaymentProcessor" name="Payment Processor" schema="schema/org.compiere.model.PaymentProcessor.exsd"/>
+   <extension-point id="org.compiere.model.Callout" name="Callout" schema="schema/org.compiere.model.Callout.exsd"/>
+   <extension-point id="org.adempiere.model.IShipmentProcessor" name="Shipment Processor" schema="schema/org.adempiere.model.IShipmentProcessor.exsd"/>
+   <extension-point id="org.adempiere.model.IAddressValidation" name="Address Validation" schema="schema/org.adempiere.model.IAddressValidation.exsd"/>
+   <extension-point id="org.adempiere.model.ITaxProvider" name="Tax Provider" schema="schema/org.adempiere.model.ITaxProvider.exsd"/>
+   <extension
+         id="org.adempiere.impexp.GridTabXlsExporter"
+         name="Grid data excel exporter"
+         point="org.adempiere.base.IGridTabExporter">
+      <exporter
+            class="org.adempiere.impexp.GridTabExcelExporter"
+            priority="0">
+      </exporter>
+   </extension>
+   <extension
+         id="org.adempiere.impexp.GridTabCSVExporter"
+         name="Grid data CSV exporter"
+         point="org.adempiere.base.IGridTabExporter">
+      <exporter
+            class="org.adempiere.impexp.GridTabCSVExporter"
+            priority="0">
+      </exporter>
+   </extension>
+   <extension
+         id="org.adempiere.impexp.GridTabCSVImporter"
+         name="Grid data CSV importer"
+         point="org.adempiere.base.IGridTabImporter">
+      <importer
+            class="org.adempiere.impexp.GridTabCSVImporter"
+            priority="0">
+      </importer>
+   </extension>
+   <extension
+         id="org.adempiere.base.ModelGeneratorApplication"
+         name="Model Generator"
+         point="org.eclipse.core.runtime.applications">
+      <application
+            cardinality="singleton-global"
+            thread="main"
+            visible="true">
+         <run
+               class="org.adempiere.base.ModelGeneratorApplication">
+         </run>
+      </application>
+   </extension>
+   <extension
+         id="org.adempiere.base.PostMigration"
+         name="Post Migration"
+         point="org.eclipse.core.runtime.applications">
+      <application
+            cardinality="singleton-global"
+            thread="main"
+            visible="true">
+         <run
+               class="org.adempiere.base.PostMigrationApplication">
+         </run>
+      </application>
+   </extension>
+   <extension
+         id="org.adempiere.model.CalloutInfoWindow.element"
+         point="org.adempiere.base.IColumnCallout">
+      <callout
+            class="org.adempiere.model.CalloutInfoWindow"
+            columnName="AD_Element_ID"
+            priority="0"
+            tableName="AD_InfoColumn">
+      </callout>
+   </extension>
+   <extension
+         id="org.adempiere.model.CalloutInfoWindow.table"
+         point="org.adempiere.base.IColumnCallout">
+      <callout
+            class="org.adempiere.model.CalloutInfoWindow"
+            columnName="AD_Table_ID"
+            priority="0"
+            tableName="AD_InfoWindow">
+      </callout>
+   </extension>
+   <extension
+         id="org.adempiere.model.CalloutInfoWindow.reference"
+         point="org.adempiere.base.IColumnCallout">
+      <callout
+            class="org.adempiere.model.CalloutInfoWindow"
+            columnName="AD_Reference_ID"
+            priority="0"
+            tableName="AD_InfoColumn">
+      </callout>
+   </extension>
+   <extension
+         id="org.compiere.model.StandardTaxProvider"
+         name="Standard Tax Provider"
+         point="org.adempiere.model.ITaxProvider">
+      <provider
+            class="org.compiere.model.StandardTaxProvider"
+            priority="0">
+      </provider>
+   </extension>
+   <extension
+         id="org.adempiere.base.SignDatabaseBuildApplication"
+         name="Sign Database Build"
+         point="org.eclipse.core.runtime.applications">
+      <application
+            cardinality="singleton-global"
+            thread="main"
+            visible="true">
+      	 <run
+               class="org.adempiere.base.SignDatabaseBuildApplication">
+         </run>
+      </application>
+   </extension>
+   <extension
+         id="org.adempiere.install.translation"
+         point="org.eclipse.core.runtime.applications">
+      <application
+            cardinality="singleton-global"
+            thread="main"
+            visible="true">
+      	 <run
+               class="org.compiere.install.Translation">
+         </run>
+      </application>
+   </extension>
+</plugin>
