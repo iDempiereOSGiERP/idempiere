@@ -37,7 +37,7 @@ public class MCtxHelp extends X_AD_CtxHelp {
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 2824732566905179805L;
+	private static final long serialVersionUID = 6004459503884638672L;
 
 	/**
 	 * 	Standard Constructor
@@ -58,5 +58,13 @@ public class MCtxHelp extends X_AD_CtxHelp {
 	public MCtxHelp (Properties ctx, ResultSet rs, String trxName) {
 		super(ctx, rs, trxName);
 	}	//	MCtxHelp
+
+	/* (non-Javadoc)
+	 * @see org.compiere.model.PO#setClientOrg(int, int)
+	 */
+	@Override
+	public void setClientOrg(int AD_Client_ID, int AD_Org_ID) {
+		super.setClientOrg(AD_Client_ID, AD_Org_ID);
+	}
 
 }	//	MCtxHelp
