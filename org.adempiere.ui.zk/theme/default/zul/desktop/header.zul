@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<zk>
+	<div sclass="desktop-header" use="org.adempiere.webui.panel.HeaderPanel" id="header">
+		<hlayout vflex="1" sclass="desktop-header">
+			<hbox  height="100%" pack="center" align="left" sclass="desktop-header-left">
+					<image id="logo"/>
+					<div id="menuLookup"/>
+					<button id="menuButton" sclass="btn-small"/>
+			</hbox>
+			<vbox  apply="org.adempiere.webui.panel.UserPanel" align="right"
+					sclass="desktop-user-panel">
+					<vbox  align="right">
+						<label use="org.adempiere.webui.component.Label" id="loginUserAndRole" 
+							style="cursor: pointer;"
+							sclass="desktop-header-font desktop-header-username"/>
+						<hbox align="center">
+							<toolbarbutton use="org.adempiere.webui.component.ToolBarButton"
+								sclass="desktop-header-font link" id="feedback"/>
+							<separator orient="vertical" bar="true" height="13px"/>
+							<toolbarbutton use="org.adempiere.webui.component.ToolBarButton"
+								sclass="desktop-header-font link" id="preference"/>
+							<separator orient="vertical" bar="true" height="13px"/>
+							<toolbarbutton use="org.adempiere.webui.component.ToolBarButton"
+								sclass="desktop-header-font link" id="changeRole"/>
+							<separator orient="vertical" bar="true" height="13px"/>
+							<toolbarbutton use="org.adempiere.webui.component.ToolBarButton"
+								sclass="desktop-header-font link" id="logout"/>
+						</hbox>
+					</vbox>
+				</vbox>
+		</hlayout>
+	</div>
+</zk>

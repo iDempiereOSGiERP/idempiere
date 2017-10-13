@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+	<!--
+		zk.xml Copyright (C) 2006 Potix Corporation. All Rights Reserved.
+	-->
+
+<zk>
+	<!-- idempiere thread session context handler -->
+	<listener>
+		<description>iDempiere WebUI Context management</description>
+		<listener-class>org.adempiere.webui.session.SessionContextListener
+		</listener-class>
+	</listener>
+	
+	<listener>
+		<description>iDempiere Web app init for register handle change in table system configuration</description>
+    	<listener-class>org.adempiere.webui.DefaultWebAppInit</listener-class>
+	</listener>
+
+	<!-- uncomment following to debug server event flow -->
+	<!-- listener>
+	    <listener-class>org.adempiere.webui.util.LogEventInterceptor</listener-class>
+	</listener -->
+
+	<!--  false to use compress js which is much smaller. change to true if you need to debug -->
+	<client-config>
+		<debug-js>true</debug-js>
+		<processing-prompt-delay>500</processing-prompt-delay>
+	</client-config>
+
+	<desktop-config>
+	    <desktop-timeout>-1</desktop-timeout>
+	</desktop-config>
+	<!--
+		<language-config> <addon-uri>/WEB-INF/lang-addon.xml</addon-uri>
+		</language-config>
+	-->
+
+	<session-config>
+		<device-type>ajax</device-type>
+		<automatic-timeout/> <!-- the same as <automatic-timeout>true</automatic-timeout> -->
+		<timeout-uri>/timeout.zul</timeout-uri>
+	</session-config>
+
+	<!--
+		Turn on the following if used with WebLogic 9.1 <system-config>
+		<cache-provider-class>org.zkoss.zk.ui.sys.GlobalDesktopCacheProvider</cache-provider-class>
+		</system-config>
+	-->
+
+	<!-- uncomment the following for selenium testing / see zk-selenium.xml for an easier way -->
+	<!--  system-config>
+		<id-generator-class>org.adempiere.webui.AdempiereIdGenerator</id-generator-class>
+	</system-config -->
+
+	<!--
+		polling - org.zkoss.zkex.ui.impl.PollingServerPush
+		comet - org.zkoss.zkmax.ui.comet.CometServerPush ( enterprise edition only )
+	-->
+	<device-config>
+ 		<device-type>ajax</device-type>
+      	<server-push-class>fi.jawsy.jawwa.zk.atmosphere.AtmosphereServerPush</server-push-class>
+	</device-config>
+
+	<!-- true for better performance and lower resource usage -->
+	<system-config>
+		<disable-event-thread>true</disable-event-thread>
+	</system-config>
+
+    <!-- Configure the progress message to show in the center -->
+	<library-property>
+		<name>org.zkoss.zul.progressbox.position</name>
+		<value>center</value>
+	</library-property>
+	<library-property>
+		<name>org.zkoss.zul.theme.fontSizeM
+		</name>
+		<value>11px</value>
+	</library-property>
+	<library-property>
+		<name>org.zkoss.zul.theme.fontSizeS
+		</name>
+		<value>10px</value>
+	</library-property>
+	<library-property>
+		<name>org.zkoss.zul.theme.fontSizeXS
+		</name>
+		<value>9px</value>
+	</library-property>
+	<library-property>
+		<name>org.zkoss.zul.theme.fontSizeMS
+		</name>
+		<value>11px</value>
+	</library-property>	
+	<!-- turn off borderlayout animation -->	
+	<library-property>
+    	<name>org.zkoss.zul.borderlayout.animation.disabed</name>
+    	<value>true</value>
+	</library-property>
+	<library-property>
+	    <name>org.zkoss.zul.grid.DataLoader.class</name>
+	    <value>org.zkoss.zul.impl.CustomGridDataLoader</value>
+	</library-property>
+	<library-property>
+	    <name>org.zkoss.zul.grid.rod</name>
+	    <value>true</value>
+	</library-property>
+		
+	<preference>
+    	<name>org.zkoss.zk.ui.WebApp.name</name>
+    	<value>iDempiere</value>
+	</preference>
+</zk>
