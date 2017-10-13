@@ -16,7 +16,28 @@ Copyright (C) 2007 Ashley G Ramdass.
 			zk._Erbx.push = function(msg) {
 				if (console) console.log(msg);
 			};
-			
+
+            // default non th, tr, td use clone method to create ghost element
+            // this code implement same behavior for li to get drag-drop effect
+            // still have room for improve: https://www.zkoss.org/wiki/ZK_Client-side_Reference/Customization/Drag-and-Drop_Effects  
+			var superghost = zk.DnD.ghost;
+            zk.DnD.ghost = function (drag, ofs, msg) {
+                if (msg == null && drag.node){
+                    var dragNode = jq(drag.node)[0];
+                    var dragWg = zk.Widget.$(dragNode);
+                    
+                    var textNote = dragWg.$n('real') || dragWg.getCaveNode();
+                    
+                    if (jq.nodeName(dragNode, 'li')){
+                        msg = textNote ? textNote.textContent || textNote.innerText || '' : '';
+                    }
+                }
+                
+                return superghost(drag, ofs, msg);
+            };
+            
+            
+
 			zk.$package('id.zk');
 			
 			id.zk.Extend = zk.$extends(zk.Object, {}, {
@@ -141,6 +162,24 @@ Copyright (C) 2007 Ashley G Ramdass.
 				
 				this.domUnlisten_(this.$n(), "onChange", "onAutofill"); //unlisten
 			});
+			
+			zk.override(zul.inp.Combobox.prototype, "doKeyDown_", function (evt) {
+                // avoid confuse of idempiere shortcut key and function key of combobox
+                if ( (evt.altKey || evt.ctrlKey || evt.shiftKey)  && 
+                        (evt.keyCode == 33 || evt.keyCode == 34 || evt.keyCode == 35 || evt.keyCode == 36 || evt.keyCode == 38 || evt.keyCode == 40 || evt.keyCode == 37 || evt.keyCode == 39) ){//page up | page down | end | home | up | down | left | write
+                    
+                    if (this.isOpen())//close drop down if already open. it will let combobox select current item, it's consistent with lost focus
+                        this.close({sendOnOpen: true});
+                        
+                    return;
+                    // TODO:current idempiere use alt + down/up to move child parrent tab, but combobox also use it to open, close drop down
+                    // at the moment, idempiere shortcut is more useful, so just get it work
+                }else{
+                    this.$doKeyDown_(evt);
+                }
+                
+            });
+                
 			
 		});
 		
