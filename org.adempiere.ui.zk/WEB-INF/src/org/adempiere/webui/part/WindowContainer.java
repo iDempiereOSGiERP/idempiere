@@ -33,6 +33,7 @@ import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
+import org.zkoss.zk.ui.event.KeyEvent;
 import org.zkoss.zk.ui.event.SwipeEvent;
 import org.zkoss.zul.Menuitem;
 
@@ -41,7 +42,7 @@ import org.zkoss.zul.Menuitem;
  * @author Low Heng Sin
  *
  */
-public class WindowContainer extends AbstractUIPart 
+public class WindowContainer extends AbstractUIPart implements EventListener<Event>
 {
 	private static final String ON_DEFER_SET_SELECTED_TAB = "onDeferSetSelectedTab";
 
@@ -73,6 +74,10 @@ public class WindowContainer extends AbstractUIPart
     protected Component doCreatePart(Component parent)
     {
         tabbox = new Tabbox();
+        tabbox.addEventListener("onPageAttached", this);
+        tabbox.addEventListener("onPageDetached", this);
+        tabbox.setSupportTabDragDrop(true);
+        tabbox.setActiveBySeq(true);
         tabbox.setSclass("desktop-tabbox");
         tabbox.setId("desktop_tabbox");
         tabbox.setMaximalHeight(true);
@@ -208,6 +213,9 @@ public class WindowContainer extends AbstractUIPart
 			public void onEvent(Event event) throws Exception {
 				Tab tab = (Tab)event.getTarget();
 				org.zkoss.zul.Tabpanel panel = tab.getLinkedPanel();
+				if (panel == null) {
+					System.console().printf("error");
+				}
 				Component component = panel.getFirstChild();
 				if (component != null && component.getAttribute(ITabOnSelectHandler.ATTRIBUTE_KEY) instanceof ITabOnSelectHandler)
 				{
@@ -431,5 +439,31 @@ public class WindowContainer extends AbstractUIPart
 	 */
 	public Tabbox getComponent() {
 		return tabbox;
+	}
+
+	@Override
+	public void onEvent(Event event) throws Exception {
+		
+		if (event.getTarget() == tabbox && "onPageDetached".equals(event.getName())) {
+			try {
+				SessionManager.getSessionApplication().getKeylistener().removeEventListener(Events.ON_CTRL_KEY, this);
+			} catch (Exception e) {}
+		}else if (event.getTarget() == tabbox && "onPageAttached".equals(event.getName())) {
+			try {
+				SessionManager.getSessionApplication().getKeylistener().addEventListener(Events.ON_CTRL_KEY, this);
+			} catch (Exception e) {}
+		}else if (Events.ON_CTRL_KEY.equals(event.getName())) {
+			KeyEvent keyEvent = (KeyEvent) event;
+			if (keyEvent.isAltKey() && keyEvent.getKeyCode() == KeyEvent.PAGE_DOWN
+					&& tabbox.getSelectedTab() != null && tabbox.getSelectedTab().getNextSibling() != null) {
+				tabbox.setSelectedTab((org.zkoss.zul.Tab)tabbox.getSelectedTab().getNextSibling());
+				keyEvent.stopPropagation();
+			}else if (keyEvent.isAltKey() && keyEvent.getKeyCode() == KeyEvent.PAGE_UP
+					&& tabbox.getSelectedTab() != null && tabbox.getSelectedTab().getPreviousSibling() != null) {
+				tabbox.setSelectedTab((org.zkoss.zul.Tab)tabbox.getSelectedTab().getPreviousSibling());
+				keyEvent.stopPropagation();
+			}
+		}
+		
 	}
 }

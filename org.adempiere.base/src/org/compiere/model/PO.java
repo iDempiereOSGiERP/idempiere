@@ -108,7 +108,7 @@ public abstract class PO
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -2997116608353367498L;
+	private static final long serialVersionUID = -6777678451696979575L;
 
 	public static final String LOCAL_TRX_PREFIX = "POSave";
 
@@ -1883,7 +1883,7 @@ public abstract class PO
 
 	public String get_Translation (String columnName, String AD_Language)
 	{
-		return get_Translation(columnName, AD_Language, false);
+		return get_Translation(columnName, AD_Language, false, true);
 	}
 
 	/**
@@ -1892,11 +1892,12 @@ public abstract class PO
 	 * If there is no translation then it fallback to original value.
 	 * @param columnName
 	 * @param AD_Language
-	 * @boolean reload
+	 * @param reload don't use cache, reload from DB
+	 * @param fallback fallback to base if no translation found
 	 * @return translated string
 	 * @throws IllegalArgumentException if columnName or AD_Language is null or model has multiple PK
 	 */
-	public String get_Translation (String columnName, String AD_Language, boolean reload)
+	public String get_Translation (String columnName, String AD_Language, boolean reload, boolean fallback)
 	{
 		//
 		// Check if columnName, AD_Language is valid or table support translation (has 1 PK) => error
@@ -1934,7 +1935,7 @@ public abstract class PO
 		}
 		//
 		// If no translation found or not translated, fallback to original:
-		if (retValue == null) {
+		if (retValue == null && fallback) {
 			Object val = get_Value(columnName);
 			retValue = (val != null ? val.toString() : null);
 		}
@@ -1950,13 +1951,33 @@ public abstract class PO
 
 	/**
 	 * Get Translation of column
-	 * @param ctx context
 	 * @param columnName
-	 * @return translation
 	 */
 	public String get_Translation (String columnName)
 	{
-		return get_Translation(columnName, Env.getAD_Language(getCtx()));
+		return get_Translation(columnName, true);
+	}
+	
+	/**
+	 * Get Translation of column
+	 * @param columnName
+	 * @param AD_Language
+	 * @param reload don't use cache, reload from DB
+	 */
+	public String get_Translation (String columnName, String AD_Language, boolean reload)
+	{
+		return get_Translation(columnName, AD_Language, reload, true);
+	}
+	
+	/**
+	 * Get Translation of column
+	 * @param columnName
+	 * @param fallback fallback to base if no translation found
+	 * @return translation
+	 */
+	public String get_Translation (String columnName, boolean fallback)
+	{
+		return get_Translation(columnName, Env.getAD_Language(getCtx()), false, fallback);
 	}
 
 	/**
