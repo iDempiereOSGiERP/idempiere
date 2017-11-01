@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE scr:component>
+<scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0" name="org.adempiere.webui.window.ZkJRViewerProvider">
+   <implementation class="org.adempiere.webui.window.ZkJRViewerProvider"/>
+   <service>
+      <provide interface="org.adempiere.report.jasper.JRViewerProvider"/>
+      <provide interface="org.adempiere.report.jasper.JRViewerProviderList"/>
+   </service>
+</scr:component>
